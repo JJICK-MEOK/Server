@@ -1,7 +1,9 @@
 package com.jjikmeok.app.domain.auth.controller;
 
 import com.jjikmeok.app.domain.auth.dto.request.EmailVerificationSendReq;
+import com.jjikmeok.app.domain.auth.dto.request.EmailVerificationVerifyReq;
 import com.jjikmeok.app.domain.auth.dto.response.EmailVerificationSendRes;
+import com.jjikmeok.app.domain.auth.dto.response.EmailVerificationVerifyRes;
 import com.jjikmeok.app.domain.auth.service.EmailVerificationService;
 import com.jjikmeok.app.global.common.response.ApiResponse;
 
@@ -33,6 +35,18 @@ public class EmailVerificationController {
             @Valid @RequestBody final EmailVerificationSendReq request
     ) {
         final EmailVerificationSendRes response = emailVerificationService.sendVerificationCode(request);
+        return ApiResponse.success(response);
+    }
+
+    @Operation(
+            summary = "이메일 인증번호 검증",
+            description = "이메일로 발송된 인증번호를 검증합니다."
+    )
+    @PostMapping("/verify-code")
+    public ApiResponse<EmailVerificationVerifyRes> verifyVerificationCode(
+            @Valid @RequestBody final EmailVerificationVerifyReq request
+    ) {
+        final EmailVerificationVerifyRes response = emailVerificationService.verifyVerificationCode(request);
         return ApiResponse.success(response);
     }
 }

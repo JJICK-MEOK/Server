@@ -29,7 +29,7 @@ public class User extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 150)
+    @Column(nullable = false, length = 150)
     private String email;
 
     @Column(name = "password_hash", length = 200)

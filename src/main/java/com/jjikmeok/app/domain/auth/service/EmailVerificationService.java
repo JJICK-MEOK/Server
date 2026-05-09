@@ -3,7 +3,9 @@ package com.jjikmeok.app.domain.auth.service;
 import java.security.SecureRandom;
 import java.time.Duration;
 
+import com.jjikmeok.app.domain.auth.dto.request.EmailVerificationVerifyReq;
 import com.jjikmeok.app.domain.auth.dto.response.EmailVerificationSendRes;
+import com.jjikmeok.app.domain.auth.dto.response.EmailVerificationVerifyRes;
 import com.jjikmeok.app.domain.auth.store.VerificationCodeStore;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +27,7 @@ public class EmailVerificationService {
     private static final Duration VERIFICATION_CODE_TTL = Duration.ofMinutes(3);
     private static final int VERIFICATION_CODE_BOUND = 1_000_000;
 
-    private final VerificationCodeStore RedisVerificationCodeStore;
+    private final VerificationCodeStore verificationCodeStore;
     private final UserRepository userRepository;
     private final MailService mailService;
     private final SecureRandom secureRandom = new SecureRandom();
@@ -37,7 +39,7 @@ public class EmailVerificationService {
         validateEmailNotExists(email);
 
         final String code = generateVerificationCode();
-        RedisVerificationCodeStore.saveCode(email, code, VERIFICATION_CODE_TTL);
+        verificationCodeStore.saveCode(email, code, VERIFICATION_CODE_TTL);
 
         final String html = buildVerificationMailHtml(code);
 
@@ -53,6 +55,25 @@ public class EmailVerificationService {
                 email,
                 (int) VERIFICATION_CODE_TTL.toSeconds()
         );
+    }
+
+    @Transactional
+    public EmailVerificationVerifyRes verifyVerificationCode(final EmailVerificationVerifyReq request) {
+        final String email = request.email();
+
+        validateEmailNotExists(email);
+
+        final String savedCode = verificationCodeStore.getCode(email)
+                .orElseThrow(() -> new CustomException(ErrorCode.MAIL_VERIFICATION_CODE_EXPIRED));
+
+        if (!savedCode.equals(request.code())) {
+            throw new CustomException(ErrorCode.MAIL_VERIFICATION_CODE_INVALID);
+        }
+
+        verificationCodeStore.deleteCode(email);
+        log.info("이메일 인증번호 검증 완료. email={}", email);
+
+        return new EmailVerificationVerifyRes(email, true);
     }
 
     private void validateEmailNotExists(final String email) {

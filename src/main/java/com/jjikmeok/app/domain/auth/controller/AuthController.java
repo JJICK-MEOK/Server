@@ -1,6 +1,8 @@
 package com.jjikmeok.app.domain.auth.controller;
 
+import com.jjikmeok.app.domain.auth.dto.request.LoginReq;
 import com.jjikmeok.app.domain.auth.dto.request.SignupReq;
+import com.jjikmeok.app.domain.auth.dto.response.LoginRes;
 import com.jjikmeok.app.domain.auth.dto.response.SignupRes;
 import com.jjikmeok.app.domain.auth.service.AuthService;
 import com.jjikmeok.app.global.common.response.ApiResponse;
@@ -30,6 +32,16 @@ public class AuthController {
     @PostMapping("/signup")
     public ApiResponse<SignupRes> signup(@Valid @RequestBody SignupReq request) {
         final SignupRes response = authService.signup(request);
+        return ApiResponse.success(response);
+    }
+
+    @Operation(
+            summary = "로그인",
+            description = "이메일과 비밀번호로 로그인하고 access token과 refresh token을 발급합니다."
+    )
+    @PostMapping("/login")
+    public ApiResponse<LoginRes> login(@Valid @RequestBody final LoginReq request) {
+        final LoginRes response = authService.login(request);
         return ApiResponse.success(response);
     }
 }

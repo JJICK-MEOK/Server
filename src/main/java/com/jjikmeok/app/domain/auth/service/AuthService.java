@@ -35,10 +35,10 @@ public class AuthService {
 
     @Transactional
     public SignupRes signup(final SignupReq request) {
-        final String email = normalizeEmail(request.getEmail());
+        final String email = normalizeEmail(request.email());
         validateEmailNotExists(email);
 
-        final String encodedPassword = passwordEncoder.encode(request.getPassword());
+        final String encodedPassword = passwordEncoder.encode(request.password());
         final User user = User.createForSignup(email, encodedPassword);
         final User saved = saveUserOrThrowDuplicateEmail(user, email);
 

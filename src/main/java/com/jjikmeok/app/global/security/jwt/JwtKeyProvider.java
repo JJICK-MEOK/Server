@@ -4,6 +4,7 @@ import javax.crypto.SecretKey;
 
 import com.jjikmeok.app.global.common.exception.ErrorCode;
 import com.jjikmeok.app.global.security.exception.JwtTokenException;
+import io.jsonwebtoken.security.WeakKeyException;
 import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.io.Decoders;
@@ -22,11 +23,10 @@ public class JwtKeyProvider {
 
         try {
             keyBytes = Decoders.BASE64.decode(jwtProperties.getSecret());
-        } catch (IllegalArgumentException | DecodingException e) {
+            this.signingKey = Keys.hmacShaKeyFor(keyBytes);
+        } catch (IllegalArgumentException | DecodingException | WeakKeyException e) {
             throw new JwtTokenException(ErrorCode.JWT_INVALID_SECRET);
         }
-
-        this.signingKey = Keys.hmacShaKeyFor(keyBytes);
 
         if (log.isDebugEnabled()) {
             log.debug(

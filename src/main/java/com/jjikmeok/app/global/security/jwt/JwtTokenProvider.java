@@ -33,14 +33,13 @@ public class JwtTokenProvider {
         final Date now = new Date();
         final Date expiry = new Date(now.getTime() + jwtProperties.getAccessTokenExpirationMs());
 
-        JwtBuilder builder = Jwts.builder()
+        return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .issuedAt(now)
                 .expiration(expiry)
                 .claim(CLAIM_ROLE, role)
-                .signWith(jwtKeyProvider.getSigningKey());
-
-        return builder.compact();
+                .signWith(jwtKeyProvider.getSigningKey())
+                .compact();
     }
 
     public String createRefreshToken(final Long userId) {

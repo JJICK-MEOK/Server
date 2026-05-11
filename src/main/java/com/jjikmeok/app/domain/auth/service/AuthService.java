@@ -21,6 +21,8 @@ import com.jjikmeok.app.global.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Locale;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -66,7 +68,7 @@ public class AuthService {
     }
 
     private String normalizeEmail(final String email) {
-        return email.trim().toLowerCase();
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 
     private void validateEmailNotExists(final String email) {

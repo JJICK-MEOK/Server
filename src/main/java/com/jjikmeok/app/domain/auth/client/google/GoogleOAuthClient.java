@@ -19,7 +19,7 @@ import org.springframework.web.client.RestClientException;
 public class GoogleOAuthClient {
 
     private static final String GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
-    private static final String GOOGLE_USER_INFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
+    private static final String GOOGLE_USER_INFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
     private static final String GRANT_TYPE_AUTHORIZATION_CODE = "authorization_code";
 
     private final RestClient restClient;

@@ -16,7 +16,7 @@ public final class AuthUtils {
     }
 
     public static String resolveRole(final UserRole role) {
-        return "ROLE_" + role.name();
+        return role.name();
     }
 
     public static int accessTokenExpiresInSeconds(final JwtProperties jwtProperties) {

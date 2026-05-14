@@ -46,10 +46,13 @@ public class ActivityServiceImpl implements ActivityService {
     @Override
     @Transactional
     public ActivityDetailResponse getActivity(Long activityId) {
+        int updatedCount = activityRepository.incrementViewCount(activityId);
+        if (updatedCount == 0) {
+            throw new CustomException(ErrorCode.ACTIVITY_NOT_FOUND);
+        }
+
         Activity activity = activityRepository.findByIdWithRegion(activityId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACTIVITY_NOT_FOUND));
-
-        activity.increaseViewCount();
         return ActivityConverter.toDetailResponse(activity);
     }
 

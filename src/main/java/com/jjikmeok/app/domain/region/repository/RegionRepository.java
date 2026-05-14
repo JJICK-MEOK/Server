@@ -9,6 +9,7 @@ public interface RegionRepository extends JpaRepository<Region, Long> {
     List<Region> findByParentIdIsNull();
     List<Region> findByParentId(Long parentId);
 
+    boolean existsByParentId(Long parentId);
     boolean existsByParentIsNullAndName(String name);
     boolean existsByParentIsNullAndNameAndIdNot(String name, Long id);
     boolean existsByParentIdAndName(Long parentId, String name);

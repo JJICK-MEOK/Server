@@ -1,6 +1,7 @@
 package com.jjikmeok.app.domain.activity.dto.request;
 
 import com.jjikmeok.app.domain.activity.enums.AgeRange;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
@@ -16,7 +17,7 @@ public record ActivityRequest(
         LocalDateTime activityStartAt,
         LocalDateTime activityEndAt,
         AgeRange ageRange,
-        Integer price,
+        @Min(value = 0, message = "가격은 0 이상이어야 합니다.") Integer price,
         @NotBlank(message = "상세 설명은 필수입니다.") String description,
         Boolean isActive
 ) {}

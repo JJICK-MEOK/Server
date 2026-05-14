@@ -81,6 +81,12 @@ public class RegionServiceImpl implements RegionService {
         Region region = regionRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ErrorCode.REGION_NOT_FOUND));
 
+        if (region.getDepth() == RegionDepth.PROVINCE
+                && request.depth() == RegionDepth.DISTRICT
+                && regionRepository.existsByParentId(id)) {
+            throw new CustomException(ErrorCode.REGION_HAS_CHILDREN);
+        }
+
         if (request.parentId() != null && request.parentId().equals(id)) {
             throw new CustomException(ErrorCode.REGION_SELF_PARENT_NOT_ALLOWED);
         }
@@ -98,6 +104,10 @@ public class RegionServiceImpl implements RegionService {
     public void deleteRegion(Long id) {
         Region region = regionRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ErrorCode.REGION_NOT_FOUND));
+
+        if (regionRepository.existsByParentId(id)) {
+            throw new CustomException(ErrorCode.REGION_HAS_CHILDREN);
+        }
 
         if (activityRepository.existsByRegionId(id)) {
             throw new CustomException(ErrorCode.REGION_IN_USE);

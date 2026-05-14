@@ -50,20 +50,20 @@ public class Activity extends BaseEntity {
     private AgeRange ageRange;
 
     @Column(nullable = false)
-    private Integer price = 0;
+    private Integer price;
 
     @Lob
     @Column(nullable = false)
     private String description;
 
     @Column(name = "view_count", nullable = false)
-    private Integer viewCount = 0;
+    private Integer viewCount;
 
     @Column(name = "like_count", nullable = false)
-    private Integer likeCount = 0;
+    private Integer likeCount;
 
     @Column(name = "review_count", nullable = false)
-    private Integer reviewCount = 0;
+    private Integer reviewCount;
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
@@ -81,9 +81,12 @@ public class Activity extends BaseEntity {
         this.recruitEndAt = recruitEndAt;
         this.activityStartAt = activityStartAt;
         this.activityEndAt = activityEndAt;
-        this.ageRange = ageRange; // Enum 적용
+        this.ageRange = ageRange;
         this.price = price != null ? price : 0;
         this.description = description;
+        this.viewCount = 0;
+        this.likeCount = 0;
+        this.reviewCount = 0;
         this.isActive = isActive != null ? isActive : true;
     }
 
@@ -100,7 +103,7 @@ public class Activity extends BaseEntity {
         this.activityStartAt = activityStartAt;
         this.activityEndAt = activityEndAt;
         this.ageRange = ageRange;
-        this.price = price;
+        this.price = price != null ? price : 0;
         this.description = description;
         if (isActive != null) {
             this.isActive = isActive;

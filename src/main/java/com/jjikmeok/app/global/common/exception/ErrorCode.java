@@ -52,6 +52,7 @@ public enum ErrorCode {
     // Region
     REGION_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION_404", "해당 지역 정보를 찾을 수 없습니다."),
     REGION_IN_USE(HttpStatus.CONFLICT, "REGION_409_IN_USE", "사용 중인 지역이라 삭제할 수 없습니다."),
+    REGION_HAS_CHILDREN(HttpStatus.CONFLICT, "REGION_409_HAS_CHILDREN", "하위 지역이 존재하여 삭제하거나 하위 지역으로 변경할 수 없습니다."),
     REGION_PARENT_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION_404_PARENT", "상위 지역 정보를 찾을 수 없습니다."),
     REGION_PARENT_REQUIRED(HttpStatus.BAD_REQUEST, "REGION_400_PARENT_REQUIRED", "하위 지역(DISTRICT)은 상위 지역이 필요합니다."),
     REGION_PARENT_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "REGION_400_PARENT_NOT_ALLOWED", "상위 지역(PROVINCE)은 parent를 가질 수 없습니다."),

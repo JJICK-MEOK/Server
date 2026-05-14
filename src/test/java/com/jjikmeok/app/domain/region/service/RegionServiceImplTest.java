@@ -208,6 +208,18 @@ class RegionServiceImplTest {
     }
 
     @Test
+    void updateRegion_whenProvinceHasChildrenAndChangesToDistrict_throwsRegionHasChildren() {
+        Region region = region(1L, "Seoul", RegionDepth.PROVINCE, null);
+        RegionRequest request = new RegionRequest(2L, "Seoul", RegionDepth.DISTRICT);
+        when(regionRepository.findById(1L)).thenReturn(Optional.of(region));
+        when(regionRepository.existsByParentId(1L)).thenReturn(true);
+
+        CustomException exception = assertThrows(CustomException.class,
+                () -> regionService.updateRegion(1L, request));
+
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.REGION_HAS_CHILDREN);
+    }
+    @Test
     void updateRegion_updatesNameAndParent() {
         Region oldParent = region(1L, "서울", RegionDepth.PROVINCE, null);
         Region newParent = region(2L, "경기", RegionDepth.PROVINCE, null);
@@ -236,6 +248,19 @@ class RegionServiceImplTest {
         verify(regionRepository).delete(region);
     }
 
+    @Test
+    void deleteRegion_whenRegionHasChildren_throwsRegionHasChildren() {
+        Region region = region(1L, "Seoul", RegionDepth.PROVINCE, null);
+        when(regionRepository.findById(1L)).thenReturn(Optional.of(region));
+        when(regionRepository.existsByParentId(1L)).thenReturn(true);
+
+        CustomException exception = assertThrows(CustomException.class,
+                () -> regionService.deleteRegion(1L));
+
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.REGION_HAS_CHILDREN);
+        verify(regionRepository, never()).delete(any());
+        verify(activityRepository, never()).existsByRegionId(1L);
+    }
     @Test
     void deleteRegion_whenActivityUsesRegion_throwsRegionInUse() {
         Region region = region(1L, "서울", RegionDepth.PROVINCE, null);

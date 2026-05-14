@@ -28,6 +28,7 @@ class ActivityRegionErrorCodeTest {
                 Arguments.of(ErrorCode.ACTIVITY_INVALID_URI, HttpStatus.BAD_REQUEST, "ACTIVITY_400_URI"),
                 Arguments.of(ErrorCode.REGION_NOT_FOUND, HttpStatus.NOT_FOUND, "REGION_404"),
                 Arguments.of(ErrorCode.REGION_IN_USE, HttpStatus.CONFLICT, "REGION_409_IN_USE"),
+                Arguments.of(ErrorCode.REGION_HAS_CHILDREN, HttpStatus.CONFLICT, "REGION_409_HAS_CHILDREN"),
                 Arguments.of(ErrorCode.REGION_PARENT_NOT_FOUND, HttpStatus.NOT_FOUND, "REGION_404_PARENT"),
                 Arguments.of(ErrorCode.REGION_PARENT_REQUIRED, HttpStatus.BAD_REQUEST, "REGION_400_PARENT_REQUIRED"),
                 Arguments.of(ErrorCode.REGION_PARENT_NOT_ALLOWED, HttpStatus.BAD_REQUEST, "REGION_400_PARENT_NOT_ALLOWED"),

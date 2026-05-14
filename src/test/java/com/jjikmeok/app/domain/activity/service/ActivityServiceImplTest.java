@@ -26,6 +26,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -193,29 +194,31 @@ class ActivityServiceImplTest {
     }
 
     @Test
-    void getActivity_increasesViewCount() {
-        Region region = region(10L, "서울", RegionDepth.PROVINCE, null);
+    void getActivity_increasesViewCountAtomically() {
+        Region region = region(10L, "Seoul", RegionDepth.PROVINCE, null);
         Activity activity = activity(region);
         setId(activity, 1L);
+        ReflectionTestUtils.setField(activity, "viewCount", 1);
+        when(activityRepository.incrementViewCount(1L)).thenReturn(1);
         when(activityRepository.findByIdWithRegion(1L)).thenReturn(Optional.of(activity));
 
         ActivityDetailResponse response = activityService.getActivity(1L);
 
         assertThat(response.viewCount()).isEqualTo(1);
-        assertThat(activity.getViewCount()).isEqualTo(1);
+        verify(activityRepository).incrementViewCount(1L);
     }
 
     @Test
-    void getActivity_whenNotFound_throwsActivityNotFound() {
-        when(activityRepository.findByIdWithRegion(1L)).thenReturn(Optional.empty());
+    void getActivity_whenAtomicIncrementTargetNotFound_throwsActivityNotFound() {
+        when(activityRepository.incrementViewCount(1L)).thenReturn(0);
 
         CustomException exception = assertThrows(CustomException.class,
                 () -> activityService.getActivity(1L));
 
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ACTIVITY_NOT_FOUND);
+        verify(activityRepository, never()).findByIdWithRegion(1L);
     }
-
-    @Test
+@Test
     void updateActivity_updatesFields() {
         Region oldRegion = region(10L, "서울", RegionDepth.PROVINCE, null);
         Region newRegion = region(20L, "경기", RegionDepth.PROVINCE, null);

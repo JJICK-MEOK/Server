@@ -11,7 +11,6 @@ import com.jjikmeok.app.domain.auth.dto.response.LoginRes;
 import com.jjikmeok.app.domain.auth.dto.response.SignupRes;
 import com.jjikmeok.app.domain.user.entity.AuthProvider;
 import com.jjikmeok.app.domain.user.entity.User;
-import com.jjikmeok.app.domain.user.entity.UserRole;
 import com.jjikmeok.app.domain.user.repository.UserRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
@@ -20,8 +19,6 @@ import com.jjikmeok.app.global.security.jwt.JwtTokenProvider;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.Locale;
 
 @Service
 @Slf4j
@@ -37,7 +34,7 @@ public class AuthService {
 
     @Transactional
     public SignupRes signup(final SignupReq request) {
-        final String email = normalizeEmail(request.email());
+        final String email = AuthUtils.normalizeEmail(request.email());
         validateEmailNotExists(email);
 
         final String encodedPassword = passwordEncoder.encode(request.password());
@@ -50,25 +47,21 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public LoginRes login(final LoginReq request) {
-        final String email = normalizeEmail(request.email());
+        final String email = AuthUtils.normalizeEmail(request.email());
         final User user = findUserOrThrowInvalidCredentials(email);
 
         validateLocalLogin(user);
         validatePasswordMatches(request.password(), user.getPasswordHash());
 
         final Long userId = user.getId();
-        final String role = resolveRole(user.getRole());
+        final String role = AuthUtils.resolveRole(user.getRole());
         final String accessToken = jwtTokenProvider.createAccessToken(userId, role);
         final String refreshToken = jwtTokenProvider.createRefreshToken(userId);
-        final int expiresIn = accessTokenExpiresInSeconds();
+        final int expiresIn = AuthUtils.accessTokenExpiresInSeconds(jwtProperties);
 
         //To do: refresh token 세션 저장
 
         return new LoginRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn);
-    }
-
-    private String normalizeEmail(final String email) {
-        return email.trim().toLowerCase(Locale.ROOT);
     }
 
     private void validateEmailNotExists(final String email) {
@@ -103,11 +96,4 @@ public class AuthService {
         }
     }
 
-    private String resolveRole(final UserRole role) {
-        return "ROLE_" + role.name();
-    }
-
-    private int accessTokenExpiresInSeconds() {
-        return Math.toIntExact(jwtProperties.getAccessTokenExpirationMs() / 1000);
-    }
 }

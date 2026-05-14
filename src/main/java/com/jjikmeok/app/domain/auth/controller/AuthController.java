@@ -1,10 +1,13 @@
 package com.jjikmeok.app.domain.auth.controller;
 
 import com.jjikmeok.app.domain.auth.dto.request.LoginReq;
+import com.jjikmeok.app.domain.auth.dto.request.SocialLoginReq;
 import com.jjikmeok.app.domain.auth.dto.request.SignupReq;
 import com.jjikmeok.app.domain.auth.dto.response.LoginRes;
 import com.jjikmeok.app.domain.auth.dto.response.SignupRes;
 import com.jjikmeok.app.domain.auth.service.AuthService;
+import com.jjikmeok.app.domain.auth.service.GoogleAuthService;
+import com.jjikmeok.app.domain.auth.service.KakaoAuthService;
 import com.jjikmeok.app.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +27,8 @@ import lombok.RequiredArgsConstructor;
 public class AuthController {
 
     private final AuthService authService;
+    private final GoogleAuthService googleAuthService;
+    private final KakaoAuthService kakaoAuthService;
 
     @Operation(
             summary = "회원가입",
@@ -42,6 +47,26 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<LoginRes> login(@Valid @RequestBody final LoginReq request) {
         final LoginRes response = authService.login(request);
+        return ApiResponse.success(response);
+    }
+
+    @Operation(
+            summary = "구글 로그인",
+            description = "구글 인가 코드를 받아 소셜 로그인 후 access token과 refresh token을 발급합니다."
+    )
+    @PostMapping("/google/login")
+    public ApiResponse<LoginRes> googleLogin(@Valid @RequestBody final SocialLoginReq request) {
+        final LoginRes response = googleAuthService.googleLogin(request.code());
+        return ApiResponse.success(response);
+    }
+
+    @Operation(
+            summary = "카카오 로그인",
+            description = "카카오 인가 코드를 받아 소셜 로그인 후 access token과 refresh token을 발급합니다."
+    )
+    @PostMapping("/kakao/login")
+    public ApiResponse<LoginRes> kakaoLogin(@Valid @RequestBody final SocialLoginReq request) {
+        final LoginRes response = kakaoAuthService.kakaoLogin(request.code());
         return ApiResponse.success(response);
     }
 }

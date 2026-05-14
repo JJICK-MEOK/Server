@@ -40,7 +40,25 @@ public enum ErrorCode {
     JWT_MISSING_ROLE_CLAIM(HttpStatus.UNAUTHORIZED, "JWT_401_ROLE", "JWT role claim이 존재하지 않습니다."),
 
     // OAuth
-    INVALID_PROVIDER(HttpStatus.BAD_REQUEST, "AUTH_400_PROVIDER", "지원하지 않는 소셜 로그인 provider입니다.");
+    INVALID_PROVIDER(HttpStatus.BAD_REQUEST, "AUTH_400_PROVIDER", "지원하지 않는 소셜 로그인 provider입니다."),
+
+    // Activity
+    ACTIVITY_NOT_FOUND(HttpStatus.NOT_FOUND, "ACTIVITY_404", "해당 활동 정보를 찾을 수 없습니다."),
+    ACTIVITY_INVALID_RECRUIT_PERIOD(HttpStatus.BAD_REQUEST, "ACTIVITY_400_RECRUIT_PERIOD", "모집 시작일은 모집 마감일보다 늦을 수 없습니다."),
+    ACTIVITY_INVALID_ACTIVITY_PERIOD(HttpStatus.BAD_REQUEST, "ACTIVITY_400_ACTIVITY_PERIOD", "활동 시작일은 활동 종료일보다 늦을 수 없습니다."),
+    ACTIVITY_INVALID_SCHEDULE_ORDER(HttpStatus.BAD_REQUEST, "ACTIVITY_400_SCHEDULE_ORDER", "모집 마감일은 활동 시작일보다 늦을 수 없습니다."),
+    ACTIVITY_INVALID_URI(HttpStatus.BAD_REQUEST, "ACTIVITY_400_URI", "활동 URI 형식이 올바르지 않습니다."),
+
+    // Region
+    REGION_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION_404", "해당 지역 정보를 찾을 수 없습니다."),
+    REGION_IN_USE(HttpStatus.CONFLICT, "REGION_409_IN_USE", "사용 중인 지역이라 삭제할 수 없습니다."),
+    REGION_HAS_CHILDREN(HttpStatus.CONFLICT, "REGION_409_HAS_CHILDREN", "하위 지역이 존재하여 삭제하거나 하위 지역으로 변경할 수 없습니다."),
+    REGION_PARENT_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION_404_PARENT", "상위 지역 정보를 찾을 수 없습니다."),
+    REGION_PARENT_REQUIRED(HttpStatus.BAD_REQUEST, "REGION_400_PARENT_REQUIRED", "하위 지역(DISTRICT)은 상위 지역이 필요합니다."),
+    REGION_PARENT_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "REGION_400_PARENT_NOT_ALLOWED", "상위 지역(PROVINCE)은 parent를 가질 수 없습니다."),
+    REGION_INVALID_PARENT_DEPTH(HttpStatus.BAD_REQUEST, "REGION_400_PARENT_DEPTH", "하위 지역의 상위는 PROVINCE만 가능합니다."),
+    REGION_SELF_PARENT_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "REGION_400_SELF_PARENT", "자기 자신을 상위 지역으로 지정할 수 없습니다."),
+    REGION_DUPLICATE_NAME(HttpStatus.CONFLICT, "REGION_409_DUPLICATE_NAME", "같은 상위 지역 내에 동일한 지역명이 이미 존재합니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

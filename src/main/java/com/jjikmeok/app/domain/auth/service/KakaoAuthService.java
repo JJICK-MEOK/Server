@@ -5,7 +5,6 @@ import com.jjikmeok.app.domain.auth.client.kakao.KakaoOAuthRes;
 import com.jjikmeok.app.domain.auth.dto.response.LoginRes;
 import com.jjikmeok.app.domain.user.entity.AuthProvider;
 import com.jjikmeok.app.domain.user.entity.User;
-import com.jjikmeok.app.domain.user.entity.UserRole;
 import com.jjikmeok.app.domain.user.repository.UserRepository;
 import com.jjikmeok.app.global.security.jwt.JwtProperties;
 import com.jjikmeok.app.global.security.jwt.JwtTokenProvider;
@@ -13,8 +12,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Locale;
 
 @Slf4j
 @Service
@@ -39,17 +36,17 @@ public class KakaoAuthService {
         final User user = findOrCreateUser(userInfo);
 
         final Long userId = user.getId();
-        final String role = resolveRole(user.getRole());
+        final String role = AuthUtils.resolveRole(user.getRole());
         final String accessToken = jwtTokenProvider.createAccessToken(userId, role);
         final String refreshToken = jwtTokenProvider.createRefreshToken(userId);
-        final int expiresIn = accessTokenExpiresInSeconds();
+        final int expiresIn = AuthUtils.accessTokenExpiresInSeconds(jwtProperties);
 
         return new LoginRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn);
     }
 
     private User findOrCreateUser(final KakaoOAuthRes.UserInfoResponse userInfo) {
         final String providerId = String.valueOf(userInfo.id());
-        final String email = normalizeEmail(userInfo.kakaoAccount().email());
+        final String email = AuthUtils.normalizeEmail(userInfo.kakaoAccount().email());
 
         return userRepository.findByAuthProviderAndProviderId(AuthProvider.KAKAO, providerId)
                 .orElseGet(() -> {
@@ -59,15 +56,4 @@ public class KakaoAuthService {
                 });
     }
 
-    private String normalizeEmail(final String email) {
-        return email.trim().toLowerCase(Locale.ROOT);
-    }
-
-    private String resolveRole(final UserRole role) {
-        return "ROLE_" + role.name();
-    }
-
-    private int accessTokenExpiresInSeconds() {
-        return Math.toIntExact(jwtProperties.getAccessTokenExpirationMs() / 1000);
-    }
 }

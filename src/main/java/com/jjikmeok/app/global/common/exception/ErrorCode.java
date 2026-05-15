@@ -17,7 +17,7 @@ public enum ErrorCode {
 
     // Auth
     AUTH_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "AUTH_401", "인증이 필요합니다."),
-    AUTH_INVALID_CODE(HttpStatus.UNAUTHORIZED, "AUTH_401_CODE", "유효하지 않은 소셜 인가 코드입니다."),
+    AUTH_INVALID_CODE(HttpStatus.UNAUTHORIZED, "AUTH_401_CODE", "유효하지 않은 인증 코드입니다."),
     AUTH_INVALID_SOCIAL_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_401_SOCIAL_ACCESS", "유효하지 않은 소셜 액세스 토큰입니다."),
     AUTH_INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "AUTH_401_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다."),
     AUTH_ACCESS_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "AUTH_401_ACCESS", "Access Token이 만료되었습니다."),
@@ -51,14 +51,21 @@ public enum ErrorCode {
 
     // Region
     REGION_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION_404", "해당 지역 정보를 찾을 수 없습니다."),
-    REGION_IN_USE(HttpStatus.CONFLICT, "REGION_409_IN_USE", "사용 중인 지역이라 삭제할 수 없습니다."),
+    REGION_IN_USE(HttpStatus.CONFLICT, "REGION_409_IN_USE", "사용 중인 지역이어서 삭제할 수 없습니다."),
     REGION_HAS_CHILDREN(HttpStatus.CONFLICT, "REGION_409_HAS_CHILDREN", "하위 지역이 존재하여 삭제하거나 하위 지역으로 변경할 수 없습니다."),
     REGION_PARENT_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION_404_PARENT", "상위 지역 정보를 찾을 수 없습니다."),
     REGION_PARENT_REQUIRED(HttpStatus.BAD_REQUEST, "REGION_400_PARENT_REQUIRED", "하위 지역(DISTRICT)은 상위 지역이 필요합니다."),
     REGION_PARENT_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "REGION_400_PARENT_NOT_ALLOWED", "상위 지역(PROVINCE)은 parent를 가질 수 없습니다."),
     REGION_INVALID_PARENT_DEPTH(HttpStatus.BAD_REQUEST, "REGION_400_PARENT_DEPTH", "하위 지역의 상위는 PROVINCE만 가능합니다."),
     REGION_SELF_PARENT_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "REGION_400_SELF_PARENT", "자기 자신을 상위 지역으로 지정할 수 없습니다."),
-    REGION_DUPLICATE_NAME(HttpStatus.CONFLICT, "REGION_409_DUPLICATE_NAME", "같은 상위 지역 내에 동일한 지역명이 이미 존재합니다.");
+    REGION_DUPLICATE_NAME(HttpStatus.CONFLICT, "REGION_409_DUPLICATE_NAME", "같은 상위 지역 아래에 동일한 지역명이 이미 존재합니다."),
+
+    // User Profile
+    PROFILE_ALREADY_EXISTS(HttpStatus.CONFLICT, "PROFILE_409_EXISTS", "이미 사용자의 프로필이 존재합니다."),
+    NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "PROFILE_409_NICKNAME", "이미 사용 중인 닉네임입니다."),
+    REQUIRED_TERMS_NOT_AGREED(HttpStatus.BAD_REQUEST, "PROFILE_400_TERMS", "필수 약관에 동의해야 합니다."),
+    INVALID_PROFILE_GENDER(HttpStatus.BAD_REQUEST, "PROFILE_400_GENDER", "올바르지 않은 gender 값입니다."),
+    INVALID_PROFILE_STATUS(HttpStatus.BAD_REQUEST, "PROFILE_400_STATUS", "올바르지 않은 status 값입니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

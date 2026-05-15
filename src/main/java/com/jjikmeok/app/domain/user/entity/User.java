@@ -1,15 +1,7 @@
 package com.jjikmeok.app.domain.user.entity;
 
 import com.jjikmeok.app.global.common.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -42,8 +34,9 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 20)
     private UserRole role;
 
-    @Column(name = "onboarding_completed", nullable = false)
-    private Boolean onboardingCompleted;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private RegistrationStatus registrationStatus;
 
     public static User createForSignup(String email, String passwordHash) {
         User user = new User();
@@ -51,7 +44,7 @@ public class User extends BaseEntity {
         user.authProvider = AuthProvider.LOCAL;
         user.providerId = null;
         user.passwordHash = passwordHash;
-        user.onboardingCompleted = false;
+        user.registrationStatus = RegistrationStatus.NOT_STARTED;
         user.role = UserRole.USER;
 
         return user;
@@ -67,13 +60,17 @@ public class User extends BaseEntity {
         user.authProvider = provider;
         user.providerId = providerId;
         user.passwordHash = null;
-        user.onboardingCompleted = false;
+        user.registrationStatus = RegistrationStatus.NOT_STARTED;
         user.role = UserRole.USER;
 
         return user;
     }
 
+    public void completeProfile() {
+        this.registrationStatus = RegistrationStatus.PROFILE_COMPLETED;
+    }
+
     public void completeOnboarding() {
-        this.onboardingCompleted = true;
+        this.registrationStatus = RegistrationStatus.ONBOARDING_COMPLETED;
     }
 }

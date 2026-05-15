@@ -47,7 +47,7 @@ public class UserProfileServiceImpl implements UserProfileService {
         try {
             userProfileRepository.save(userProfile);
         } catch (DataIntegrityViolationException e) {
-            handleDuplicateConstraint(userId, nickname);
+             throw new CustomException(ErrorCode.RESOURCE_CONFLICT);
         }
 
         user.completeProfile();
@@ -76,15 +76,5 @@ public class UserProfileServiceImpl implements UserProfileService {
                 || !Boolean.TRUE.equals(request.privacyPolicyAgreed())) {
             throw new CustomException(ErrorCode.REQUIRED_TERMS_NOT_AGREED);
         }
-    }
-
-    private void handleDuplicateConstraint(Long userId, String nickname) {
-        if (userProfileRepository.existsByUserId(userId)) {
-            throw new CustomException(ErrorCode.PROFILE_ALREADY_EXISTS);
-        }
-        if (userProfileRepository.existsByNickname(nickname)) {
-            throw new CustomException(ErrorCode.NICKNAME_ALREADY_EXISTS);
-        }
-        throw new CustomException(ErrorCode.RESOURCE_CONFLICT);
     }
 }

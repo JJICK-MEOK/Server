@@ -12,15 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * Activity tag mapping entity.
- * <p>
- * 활동과 활동 카테고리 태그의 다대다 관계를 풀어낸 매핑 엔티티다.
- *
- * @author Codex
- * @version 1.0
- * @since 2026-05-16
- */
 @Entity
 @Getter
 @Table(

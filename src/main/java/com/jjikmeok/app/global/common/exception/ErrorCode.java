@@ -22,7 +22,7 @@ public enum ErrorCode {
     AUTH_INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "AUTH_401_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다."),
     AUTH_ACCESS_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "AUTH_401_ACCESS", "Access Token이 만료되었습니다."),
     AUTH_REFRESH_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "AUTH_401_REFRESH", "Refresh Token이 만료되었습니다. 다시 로그인해 주세요."),
-    AUTH_FORBIDDEN(HttpStatus.FORBIDDEN, "AUTH_403", "해당 API에 대한 접근 권한이 없습니다."),
+    AUTH_FORBIDDEN(HttpStatus.FORBIDDEN, "AUTH_403", "해당 API에 접근할 권한이 없습니다."),
     SIGNUP_FAILED(HttpStatus.CONFLICT, "AUTH_409_SIGNUP", "회원가입 요청을 처리할 수 없습니다."),
     MAIL_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AUTH_500_MAIL", "인증 메일 발송에 실패했습니다."),
     MAIL_VERIFICATION_CODE_INVALID(HttpStatus.BAD_REQUEST, "AUTH_400_MAIL_CODE", "인증번호가 올바르지 않습니다."),
@@ -52,10 +52,10 @@ public enum ErrorCode {
     // Region
     REGION_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION_404", "해당 지역 정보를 찾을 수 없습니다."),
     REGION_IN_USE(HttpStatus.CONFLICT, "REGION_409_IN_USE", "사용 중인 지역이어서 삭제할 수 없습니다."),
-    REGION_HAS_CHILDREN(HttpStatus.CONFLICT, "REGION_409_HAS_CHILDREN", "하위 지역이 존재하여 삭제하거나 하위 지역으로 변경할 수 없습니다."),
+    REGION_HAS_CHILDREN(HttpStatus.CONFLICT, "REGION_409_HAS_CHILDREN", "하위 지역이 존재하여 삭제하거나 상위 지역으로 변경할 수 없습니다."),
     REGION_PARENT_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION_404_PARENT", "상위 지역 정보를 찾을 수 없습니다."),
-    REGION_PARENT_REQUIRED(HttpStatus.BAD_REQUEST, "REGION_400_PARENT_REQUIRED", "하위 지역(DISTRICT)은 상위 지역이 필요합니다."),
-    REGION_PARENT_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "REGION_400_PARENT_NOT_ALLOWED", "상위 지역(PROVINCE)은 parent를 가질 수 없습니다."),
+    REGION_PARENT_REQUIRED(HttpStatus.BAD_REQUEST, "REGION_400_PARENT_REQUIRED", "하위 지역은 상위 지역이 필요합니다."),
+    REGION_PARENT_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "REGION_400_PARENT_NOT_ALLOWED", "상위 지역은 parent를 가질 수 없습니다."),
     REGION_INVALID_PARENT_DEPTH(HttpStatus.BAD_REQUEST, "REGION_400_PARENT_DEPTH", "하위 지역의 상위는 PROVINCE만 가능합니다."),
     REGION_SELF_PARENT_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "REGION_400_SELF_PARENT", "자기 자신을 상위 지역으로 지정할 수 없습니다."),
     REGION_DUPLICATE_NAME(HttpStatus.CONFLICT, "REGION_409_DUPLICATE_NAME", "같은 상위 지역 아래에 동일한 지역명이 이미 존재합니다."),
@@ -65,7 +65,12 @@ public enum ErrorCode {
     NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "PROFILE_409_NICKNAME", "이미 사용 중인 닉네임입니다."),
     REQUIRED_TERMS_NOT_AGREED(HttpStatus.BAD_REQUEST, "PROFILE_400_TERMS", "필수 약관에 동의해야 합니다."),
     INVALID_PROFILE_GENDER(HttpStatus.BAD_REQUEST, "PROFILE_400_GENDER", "올바르지 않은 gender 값입니다."),
-    INVALID_PROFILE_STATUS(HttpStatus.BAD_REQUEST, "PROFILE_400_STATUS", "올바르지 않은 status 값입니다.");
+    INVALID_PROFILE_STATUS(HttpStatus.BAD_REQUEST, "PROFILE_400_STATUS", "올바르지 않은 status 값입니다."),
+
+    // Onboarding
+    TAG_NOT_FOUND(HttpStatus.NOT_FOUND, "TAG_404", "해당 태그 정보를 찾을 수 없습니다."),
+    ONBOARDING_INVALID_TOPIC_TAG_TYPE(HttpStatus.BAD_REQUEST, "ONBOARDING_400_TOPIC_TAG_TYPE", "topicTagIds에는 TOPIC_CATEGORY 타입의 태그만 포함할 수 있습니다."),
+    ONBOARDING_INVALID_PREFERENCE_TAG_TYPE(HttpStatus.BAD_REQUEST, "ONBOARDING_400_PREFERENCE_TAG_TYPE", "preferenceTagIds에는 PREFERENCE_TAG 타입의 태그만 포함할 수 있습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

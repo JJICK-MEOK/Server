@@ -9,6 +9,7 @@ import com.jjikmeok.app.domain.auth.dto.request.LoginReq;
 import com.jjikmeok.app.domain.auth.dto.request.SignupReq;
 import com.jjikmeok.app.domain.auth.dto.response.LoginRes;
 import com.jjikmeok.app.domain.auth.dto.response.SignupRes;
+import com.jjikmeok.app.domain.auth.store.RefreshTokenStore;
 import com.jjikmeok.app.domain.user.entity.AuthProvider;
 import com.jjikmeok.app.domain.user.entity.User;
 import com.jjikmeok.app.domain.user.repository.UserRepository;
@@ -31,6 +32,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtProperties jwtProperties;
+    private final RefreshTokenStore refreshTokenStore;
 
     @Transactional
     public SignupRes signup(final SignupReq request) {
@@ -45,7 +47,7 @@ public class AuthService {
         return new SignupRes(saved.getId(), saved.getEmail());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public LoginRes login(final LoginReq request) {
         final String email = AuthUtils.normalizeEmail(request.email());
         final User user = findUserOrThrowInvalidCredentials(email);
@@ -59,7 +61,7 @@ public class AuthService {
         final String refreshToken = jwtTokenProvider.createRefreshToken(userId);
         final int expiresIn = AuthUtils.accessTokenExpiresInSeconds(jwtProperties);
 
-        //To do: refresh token 세션 저장
+        refreshTokenStore.saveToken(userId, refreshToken, AuthUtils.refreshTokenTtl(jwtProperties));
 
         return new LoginRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn);
     }
@@ -95,5 +97,4 @@ public class AuthService {
             throw new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS);
         }
     }
-
 }

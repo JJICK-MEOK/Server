@@ -1,5 +1,6 @@
 package com.jjikmeok.app.domain.auth.service;
 
+import java.time.Duration;
 import java.util.Locale;
 
 import com.jjikmeok.app.domain.user.entity.UserRole;
@@ -21,5 +22,9 @@ public final class AuthUtils {
 
     public static int accessTokenExpiresInSeconds(final JwtProperties jwtProperties) {
         return Math.toIntExact(jwtProperties.getAccessTokenExpirationMs() / 1000);
+    }
+
+    public static Duration refreshTokenTtl(final JwtProperties jwtProperties) {
+        return Duration.ofMillis(jwtProperties.getRefreshTokenExpirationMs());
     }
 }

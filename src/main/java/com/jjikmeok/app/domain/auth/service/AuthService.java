@@ -1,11 +1,7 @@
 package com.jjikmeok.app.domain.auth.service;
 
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.jjikmeok.app.domain.auth.dto.request.LoginReq;
+import com.jjikmeok.app.domain.auth.dto.request.ReissueReq;
 import com.jjikmeok.app.domain.auth.dto.request.SignupReq;
 import com.jjikmeok.app.domain.auth.dto.response.LoginRes;
 import com.jjikmeok.app.domain.auth.dto.response.SignupRes;
@@ -15,11 +11,15 @@ import com.jjikmeok.app.domain.user.entity.User;
 import com.jjikmeok.app.domain.user.repository.UserRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
+import com.jjikmeok.app.global.security.exception.JwtTokenException;
 import com.jjikmeok.app.global.security.jwt.JwtProperties;
 import com.jjikmeok.app.global.security.jwt.JwtTokenProvider;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Slf4j
@@ -66,6 +66,21 @@ public class AuthService {
         return new LoginRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn);
     }
 
+    @Transactional
+    public LoginRes reissue(final ReissueReq request) {
+        final String refreshToken = request.refreshToken();
+        final Long userId = parseRefreshTokenUserId(refreshToken);
+
+        if (!refreshTokenStore.matches(userId, refreshToken)) {
+            throw new CustomException(ErrorCode.AUTH_UNAUTHORIZED);
+        }
+
+        final User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.AUTH_UNAUTHORIZED));
+
+        return rotateAndIssueTokens(user);
+    }
+
     private void validateEmailNotExists(final String email) {
         if (userRepository.existsByEmail(email)) {
             throw new CustomException(ErrorCode.SIGNUP_FAILED);
@@ -95,6 +110,33 @@ public class AuthService {
     private void validatePasswordMatches(final String rawPassword, final String encodedPassword) {
         if (!passwordEncoder.matches(rawPassword, encodedPassword)) {
             throw new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+        }
+    }
+
+    private LoginRes rotateAndIssueTokens(final User user) {
+        final Long userId = user.getId();
+        final String role = AuthUtils.resolveRole(user.getRole());
+        final String accessToken = jwtTokenProvider.createAccessToken(userId, role);
+        final String refreshToken = jwtTokenProvider.createRefreshToken(userId);
+        final int expiresIn = AuthUtils.accessTokenExpiresInSeconds(jwtProperties);
+
+        storeRotatedRefreshToken(userId, refreshToken);
+
+        return new LoginRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn);
+    }
+
+    private void storeRotatedRefreshToken(final Long userId, final String refreshToken) {
+        refreshTokenStore.saveToken(userId, refreshToken, AuthUtils.refreshTokenTtl(jwtProperties));
+    }
+
+    private Long parseRefreshTokenUserId(final String refreshToken) {
+        try {
+            return jwtTokenProvider.getUserId(refreshToken);
+        } catch (final JwtTokenException e) {
+            if (e.getErrorCode() == ErrorCode.JWT_EXPIRED_TOKEN) {
+                throw new CustomException(ErrorCode.AUTH_REFRESH_TOKEN_EXPIRED);
+            }
+            throw new CustomException(e.getErrorCode());
         }
     }
 }

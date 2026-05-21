@@ -48,6 +48,8 @@ public enum ErrorCode {
     ACTIVITY_INVALID_ACTIVITY_PERIOD(HttpStatus.BAD_REQUEST, "ACTIVITY_400_ACTIVITY_PERIOD", "활동 시작일은 활동 종료일보다 늦을 수 없습니다."),
     ACTIVITY_INVALID_SCHEDULE_ORDER(HttpStatus.BAD_REQUEST, "ACTIVITY_400_SCHEDULE_ORDER", "모집 마감일은 활동 시작일보다 늦을 수 없습니다."),
     ACTIVITY_INVALID_URI(HttpStatus.BAD_REQUEST, "ACTIVITY_400_URI", "활동 URI 형식이 올바르지 않습니다."),
+    ACTIVITY_FAVORITE_NOT_FOUND(HttpStatus.NOT_FOUND, "ACTIVITY_FAVORITE_404", "해당 활동 찜 정보를 찾을 수 없습니다."),
+    ACTIVITY_FAVORITE_DUPLICATE(HttpStatus.CONFLICT, "ACTIVITY_FAVORITE_409", "이미 찜한 활동입니다."),
 
     // Region
     REGION_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION_404", "해당 지역 정보를 찾을 수 없습니다."),

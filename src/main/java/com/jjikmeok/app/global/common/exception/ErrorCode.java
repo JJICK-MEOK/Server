@@ -48,6 +48,9 @@ public enum ErrorCode {
     ACTIVITY_INVALID_ACTIVITY_PERIOD(HttpStatus.BAD_REQUEST, "ACTIVITY_400_ACTIVITY_PERIOD", "활동 시작일은 활동 종료일보다 늦을 수 없습니다."),
     ACTIVITY_INVALID_SCHEDULE_ORDER(HttpStatus.BAD_REQUEST, "ACTIVITY_400_SCHEDULE_ORDER", "모집 마감일은 활동 시작일보다 늦을 수 없습니다."),
     ACTIVITY_INVALID_URI(HttpStatus.BAD_REQUEST, "ACTIVITY_400_URI", "활동 URI 형식이 올바르지 않습니다."),
+    ACTIVITY_IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "ACTIVITY_IMAGE_404", "해당 활동 이미지를 찾을 수 없습니다."),
+    ACTIVITY_IMAGE_INVALID_URL(HttpStatus.BAD_REQUEST, "ACTIVITY_IMAGE_400_URL", "활동 이미지 URL 형식이 올바르지 않습니다."),
+    ACTIVITY_IMAGE_DUPLICATE_SORT_ORDER(HttpStatus.CONFLICT, "ACTIVITY_IMAGE_409_SORT_ORDER", "같은 활동에 동일한 이미지 노출 순서가 이미 존재합니다."),
 
     // Region
     REGION_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION_404", "해당 지역 정보를 찾을 수 없습니다."),

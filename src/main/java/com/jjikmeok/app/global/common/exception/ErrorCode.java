@@ -49,6 +49,11 @@ public enum ErrorCode {
     ACTIVITY_INVALID_SCHEDULE_ORDER(HttpStatus.BAD_REQUEST, "ACTIVITY_400_SCHEDULE_ORDER", "모집 마감일은 활동 시작일보다 늦을 수 없습니다."),
     ACTIVITY_INVALID_URI(HttpStatus.BAD_REQUEST, "ACTIVITY_400_URI", "활동 URI 형식이 올바르지 않습니다."),
 
+    // Advertisement
+    ADVERTISEMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "ADVERTISEMENT_404", "해당 광고 정보를 찾을 수 없습니다."),
+    ADVERTISEMENT_INVALID_PERIOD(HttpStatus.BAD_REQUEST, "ADVERTISEMENT_400_PERIOD", "광고 시작일은 광고 종료일보다 늦을 수 없습니다."),
+    ADVERTISEMENT_INVALID_URL(HttpStatus.BAD_REQUEST, "ADVERTISEMENT_400_URL", "광고 URL 형식이 올바르지 않습니다."),
+
     // Region
     REGION_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION_404", "해당 지역 정보를 찾을 수 없습니다."),
     REGION_IN_USE(HttpStatus.CONFLICT, "REGION_409_IN_USE", "사용 중인 지역이어서 삭제할 수 없습니다."),

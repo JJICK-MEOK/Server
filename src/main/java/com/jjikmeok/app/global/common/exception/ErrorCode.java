@@ -69,6 +69,8 @@ public enum ErrorCode {
 
     // Onboarding
     TAG_NOT_FOUND(HttpStatus.NOT_FOUND, "TAG_404", "해당 태그 정보를 찾을 수 없습니다."),
+    TAG_DUPLICATE_NAME(HttpStatus.CONFLICT, "TAG_409_DUPLICATE_NAME", "같은 타입에 동일한 태그명이 이미 존재합니다."),
+    TAG_IN_USE(HttpStatus.CONFLICT, "TAG_409_IN_USE", "사용 중인 태그이어서 삭제할 수 없습니다."),
     ONBOARDING_INVALID_TOPIC_TAG_TYPE(HttpStatus.BAD_REQUEST, "ONBOARDING_400_TOPIC_TAG_TYPE", "topicTagIds에는 TOPIC_CATEGORY 타입의 태그만 포함할 수 있습니다."),
     ONBOARDING_INVALID_PREFERENCE_TAG_TYPE(HttpStatus.BAD_REQUEST, "ONBOARDING_400_PREFERENCE_TAG_TYPE", "preferenceTagIds에는 PREFERENCE_TAG 타입의 태그만 포함할 수 있습니다.");
 

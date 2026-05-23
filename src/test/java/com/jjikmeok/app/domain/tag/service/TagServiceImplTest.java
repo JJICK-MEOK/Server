@@ -78,7 +78,7 @@ class TagServiceImplTest {
     void createTag_trimsNameBeforeSaving() {
         TagRequest request = new TagRequest(" 운동 ", TagType.ACTIVITY_CATEGORY);
         when(tagRepository.existsByNameAndType("운동", TagType.ACTIVITY_CATEGORY)).thenReturn(false);
-        when(tagRepository.save(any(Tag.class))).thenAnswer(invocation -> {
+        when(tagRepository.saveAndFlush(any(Tag.class))).thenAnswer(invocation -> {
             Tag saved = invocation.getArgument(0);
             setId(saved, 1L);
             return saved;
@@ -98,14 +98,14 @@ class TagServiceImplTest {
         CustomException exception = assertThrows(CustomException.class, () -> tagService.createTag(request));
 
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.TAG_DUPLICATE_NAME);
-        verify(tagRepository, never()).save(any());
+        verify(tagRepository, never()).saveAndFlush(any());
     }
 
     @Test
     void createTag_whenSaveConflicts_throwsDuplicateName() {
         TagRequest request = new TagRequest("운동", TagType.ACTIVITY_CATEGORY);
         when(tagRepository.existsByNameAndType("운동", TagType.ACTIVITY_CATEGORY)).thenReturn(false);
-        when(tagRepository.save(any(Tag.class))).thenThrow(new DataIntegrityViolationException("duplicate"));
+        when(tagRepository.saveAndFlush(any(Tag.class))).thenThrow(new DataIntegrityViolationException("duplicate"));
 
         CustomException exception = assertThrows(CustomException.class, () -> tagService.createTag(request));
 
@@ -118,6 +118,7 @@ class TagServiceImplTest {
         TagRequest request = new TagRequest(" 모임 ", TagType.TOPIC_CATEGORY);
         when(tagRepository.findById(1L)).thenReturn(Optional.of(tag));
         when(tagRepository.existsByNameAndTypeAndIdNot("모임", TagType.TOPIC_CATEGORY, 1L)).thenReturn(false);
+        when(tagRepository.saveAndFlush(tag)).thenReturn(tag);
 
         TagResponse response = tagService.updateTag(1L, request);
 
@@ -126,14 +127,28 @@ class TagServiceImplTest {
     }
 
     @Test
+    void updateTag_whenFlushConflicts_throwsDuplicateName() {
+        Tag tag = tag(1L, "운동", TagType.ACTIVITY_CATEGORY);
+        TagRequest request = new TagRequest(" 모임 ", TagType.TOPIC_CATEGORY);
+        when(tagRepository.findById(1L)).thenReturn(Optional.of(tag));
+        when(tagRepository.existsByNameAndTypeAndIdNot("모임", TagType.TOPIC_CATEGORY, 1L)).thenReturn(false);
+        when(tagRepository.saveAndFlush(tag)).thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        CustomException exception = assertThrows(CustomException.class, () -> tagService.updateTag(1L, request));
+
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.TAG_DUPLICATE_NAME);
+    }
+
+    @Test
     void deleteTag_whenRepositoryRejectsDelete_throwsTagInUse() {
         Tag tag = tag(1L, "운동", TagType.ACTIVITY_CATEGORY);
         when(tagRepository.findById(1L)).thenReturn(Optional.of(tag));
-        doThrow(new DataIntegrityViolationException("fk")).when(tagRepository).delete(tag);
+        doThrow(new DataIntegrityViolationException("fk")).when(tagRepository).flush();
 
         CustomException exception = assertThrows(CustomException.class, () -> tagService.deleteTag(1L));
 
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.TAG_IN_USE);
+        verify(tagRepository).delete(tag);
     }
 
     private Tag tag(Long id, String name, TagType type) {

@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface AdvertisementRepository extends JpaRepository<Advertisement, Long> {
 
@@ -22,6 +23,19 @@ public interface AdvertisementRepository extends JpaRepository<Advertisement, Lo
             """)
     List<Advertisement> findVisibleAdvertisements(
             @Param("position") AdvertisementPosition position,
+            @Param("now") LocalDateTime now
+    );
+
+    @Query("""
+            select advertisement
+            from Advertisement advertisement
+            where advertisement.id = :id
+              and advertisement.isActive = true
+              and (advertisement.startAt is null or advertisement.startAt <= :now)
+              and (advertisement.endAt is null or advertisement.endAt >= :now)
+            """)
+    Optional<Advertisement> findVisibleAdvertisementById(
+            @Param("id") Long id,
             @Param("now") LocalDateTime now
     );
 }

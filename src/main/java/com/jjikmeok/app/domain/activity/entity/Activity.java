@@ -118,6 +118,16 @@ public class Activity extends BaseEntity {
         this.isActive = false;
     }
 
+    public void increaseReviewCount() {
+        this.reviewCount++;
+    }
+
+    public void decreaseReviewCount() {
+        if (this.reviewCount > 0) {
+            this.reviewCount--;
+        }
+    }
+
     public void increaseLikeCount() {
         this.likeCount++;
     }

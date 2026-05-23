@@ -117,4 +117,14 @@ public class Activity extends BaseEntity {
     public void deactivate() {
         this.isActive = false;
     }
+
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decreaseLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
+    }
 }

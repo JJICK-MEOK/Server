@@ -33,7 +33,7 @@ public class AdvertisementServiceImpl implements AdvertisementService {
 
     @Override
     public AdvertisementResponse getAdvertisement(Long id) {
-        return AdvertisementConverter.toResponse(findAdvertisementOrThrow(id));
+        return AdvertisementConverter.toResponse(findVisibleAdvertisementOrThrow(id));
     }
 
     @Override
@@ -74,6 +74,11 @@ public class AdvertisementServiceImpl implements AdvertisementService {
                 .orElseThrow(() -> new CustomException(ErrorCode.ADVERTISEMENT_NOT_FOUND));
     }
 
+    private Advertisement findVisibleAdvertisementOrThrow(Long id) {
+        return advertisementRepository.findVisibleAdvertisementById(id, LocalDateTime.now())
+                .orElseThrow(() -> new CustomException(ErrorCode.ADVERTISEMENT_NOT_FOUND));
+    }
+
     private void validateRequest(AdvertisementRequest request) {
         validatePeriod(request.startAt(), request.endAt());
         validateUrl(request.imageUrl());
@@ -94,7 +99,8 @@ public class AdvertisementServiceImpl implements AdvertisementService {
         try {
             URI uri = new URI(value.trim());
             String scheme = uri.getScheme();
-            if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
+            boolean validScheme = "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme);
+            if (!validScheme || uri.getHost() == null) {
                 throw new CustomException(ErrorCode.ADVERTISEMENT_INVALID_URL);
             }
         } catch (URISyntaxException | IllegalArgumentException e) {

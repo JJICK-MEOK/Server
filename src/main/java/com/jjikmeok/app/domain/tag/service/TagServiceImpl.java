@@ -45,7 +45,7 @@ public class TagServiceImpl implements TagService {
         validateDuplicateName(name, request.type());
 
         try {
-            return TagConverter.toResponse(tagRepository.save(Tag.create(name, request.type())));
+            return TagConverter.toResponse(tagRepository.saveAndFlush(Tag.create(name, request.type())));
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(ErrorCode.TAG_DUPLICATE_NAME);
         }
@@ -61,8 +61,12 @@ public class TagServiceImpl implements TagService {
             throw new CustomException(ErrorCode.TAG_DUPLICATE_NAME);
         }
 
-        tag.update(name, request.type());
-        return TagConverter.toResponse(tag);
+        try {
+            tag.update(name, request.type());
+            return TagConverter.toResponse(tagRepository.saveAndFlush(tag));
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.TAG_DUPLICATE_NAME);
+        }
     }
 
     @Override
@@ -72,6 +76,7 @@ public class TagServiceImpl implements TagService {
 
         try {
             tagRepository.delete(tag);
+            tagRepository.flush();
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(ErrorCode.TAG_IN_USE);
         }

@@ -11,7 +11,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: user040131/jjikmeok-backend
+  IMAGE_NAME: jjick-meok/server
 
 jobs:
   build-and-deploy:

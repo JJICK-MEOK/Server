@@ -50,6 +50,14 @@ public enum ErrorCode {
     ACTIVITY_INVALID_URI(HttpStatus.BAD_REQUEST, "ACTIVITY_400_URI", "활동 URI 형식이 올바르지 않습니다."),
     ACTIVITY_FAVORITE_NOT_FOUND(HttpStatus.NOT_FOUND, "ACTIVITY_FAVORITE_404", "해당 활동 찜 정보를 찾을 수 없습니다."),
     ACTIVITY_FAVORITE_DUPLICATE(HttpStatus.CONFLICT, "ACTIVITY_FAVORITE_409", "이미 찜한 활동입니다."),
+    ACTIVITY_IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "ACTIVITY_IMAGE_404", "해당 활동 이미지를 찾을 수 없습니다."),
+    ACTIVITY_IMAGE_INVALID_URL(HttpStatus.BAD_REQUEST, "ACTIVITY_IMAGE_400_URL", "활동 이미지 URL 형식이 올바르지 않습니다."),
+    ACTIVITY_IMAGE_DUPLICATE_SORT_ORDER(HttpStatus.CONFLICT, "ACTIVITY_IMAGE_409_SORT_ORDER", "같은 활동에 동일한 이미지 노출 순서가 이미 존재합니다."),
+
+    // Advertisement
+    ADVERTISEMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "ADVERTISEMENT_404", "해당 광고 정보를 찾을 수 없습니다."),
+    ADVERTISEMENT_INVALID_PERIOD(HttpStatus.BAD_REQUEST, "ADVERTISEMENT_400_PERIOD", "광고 시작일은 광고 종료일보다 늦을 수 없습니다."),
+    ADVERTISEMENT_INVALID_URL(HttpStatus.BAD_REQUEST, "ADVERTISEMENT_400_URL", "광고 URL 형식이 올바르지 않습니다."),
 
     // Region
     REGION_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION_404", "해당 지역 정보를 찾을 수 없습니다."),
@@ -71,6 +79,8 @@ public enum ErrorCode {
 
     // Onboarding
     TAG_NOT_FOUND(HttpStatus.NOT_FOUND, "TAG_404", "해당 태그 정보를 찾을 수 없습니다."),
+    TAG_DUPLICATE_NAME(HttpStatus.CONFLICT, "TAG_409_DUPLICATE_NAME", "같은 타입에 동일한 태그명이 이미 존재합니다."),
+    TAG_IN_USE(HttpStatus.CONFLICT, "TAG_409_IN_USE", "사용 중인 태그이어서 삭제할 수 없습니다."),
     ONBOARDING_INVALID_TOPIC_TAG_TYPE(HttpStatus.BAD_REQUEST, "ONBOARDING_400_TOPIC_TAG_TYPE", "topicTagIds에는 TOPIC_CATEGORY 타입의 태그만 포함할 수 있습니다."),
     ONBOARDING_INVALID_PREFERENCE_TAG_TYPE(HttpStatus.BAD_REQUEST, "ONBOARDING_400_PREFERENCE_TAG_TYPE", "preferenceTagIds에는 PREFERENCE_TAG 타입의 태그만 포함할 수 있습니다.");
 

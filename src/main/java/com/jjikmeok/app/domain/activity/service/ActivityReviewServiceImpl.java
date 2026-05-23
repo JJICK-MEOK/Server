@@ -13,10 +13,10 @@ import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -28,11 +28,10 @@ public class ActivityReviewServiceImpl implements ActivityReviewService {
     private final UserRepository userRepository;
 
     @Override
-    public List<ActivityReviewResponse> getReviews(Long activityId) {
+    public Page<ActivityReviewResponse> getReviews(Long activityId, Pageable pageable) {
         findActivityOrThrow(activityId);
-        return reviewRepository.findAllByActivityIdOrderByCreatedAtDesc(activityId).stream()
-                .map(ActivityReviewConverter::toResponse)
-                .toList();
+        return reviewRepository.findAllByActivityId(activityId, pageable)
+                .map(ActivityReviewConverter::toResponse);
     }
 
     @Override
@@ -83,7 +82,7 @@ public class ActivityReviewServiceImpl implements ActivityReviewService {
 
     private User findUserOrThrow(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.AUTH_UNAUTHORIZED));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 
     private Activity findActivityOrThrow(Long activityId) {

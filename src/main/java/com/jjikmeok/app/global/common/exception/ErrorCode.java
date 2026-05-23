@@ -42,6 +42,9 @@ public enum ErrorCode {
     // OAuth
     INVALID_PROVIDER(HttpStatus.BAD_REQUEST, "AUTH_400_PROVIDER", "지원하지 않는 소셜 로그인 provider입니다."),
 
+    // User
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_404", "해당 사용자 정보를 찾을 수 없습니다."),
+
     // Activity
     ACTIVITY_NOT_FOUND(HttpStatus.NOT_FOUND, "ACTIVITY_404", "해당 활동 정보를 찾을 수 없습니다."),
     ACTIVITY_INVALID_RECRUIT_PERIOD(HttpStatus.BAD_REQUEST, "ACTIVITY_400_RECRUIT_PERIOD", "모집 시작일은 모집 마감일보다 늦을 수 없습니다."),

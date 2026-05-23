@@ -17,9 +17,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,6 +43,22 @@ class ActivityReviewServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new ActivityReviewServiceImpl(reviewRepository, activityRepository, userRepository);
+    }
+
+    @Test
+    void getReviews_returnsPagedReviews() {
+        User user = user(1L);
+        Activity activity = activity(2L);
+        ActivityReview review = review(3L, user, activity);
+        PageRequest pageable = PageRequest.of(0, 20);
+        when(activityRepository.findById(2L)).thenReturn(Optional.of(activity));
+        when(reviewRepository.findAllByActivityId(2L, pageable))
+                .thenReturn(new PageImpl<>(List.of(review), pageable, 1));
+
+        var response = service.getReviews(2L, pageable);
+
+        assertThat(response.getTotalElements()).isEqualTo(1);
+        assertThat(response.getContent().get(0).id()).isEqualTo(3L);
     }
 
     @Test
@@ -86,6 +105,7 @@ class ActivityReviewServiceImplTest {
         User user = user(1L);
         Activity activity = activity(2L);
         ActivityReview review = review(3L, user, activity);
+        int beforeReviewCount = activity.getReviewCount();
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(activityRepository.findById(2L)).thenReturn(Optional.of(activity));
         when(reviewRepository.findByIdAndActivityIdAndUserId(3L, 2L, 1L)).thenReturn(Optional.of(review));
@@ -93,7 +113,52 @@ class ActivityReviewServiceImplTest {
         var response = service.updateReview(1L, 2L, 3L, new ActivityReviewRequest(3, "수정"));
 
         assertThat(response.rating()).isEqualTo(3);
+        assertThat(activity.getReviewCount()).isEqualTo(beforeReviewCount);
         assertThat(response.reason()).isEqualTo("수정");
+    }
+
+    @Test
+    void updateReview_whenRatingInvalid_throwsBadRequest() {
+        CustomException exception = assertThrows(CustomException.class,
+                () -> service.updateReview(1L, 2L, 3L, new ActivityReviewRequest(6, "bad")));
+
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ACTIVITY_REVIEW_INVALID_RATING);
+        verify(userRepository, never()).findById(any());
+    }
+
+    @Test
+    void updateReview_whenUserNotFound_throwsUserNotFound() {
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+        CustomException exception = assertThrows(CustomException.class,
+                () -> service.updateReview(1L, 2L, 3L, new ActivityReviewRequest(3, "user")));
+
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
+        verify(activityRepository, never()).findById(any());
+    }
+
+    @Test
+    void updateReview_whenActivityNotFound_throwsActivityNotFound() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(activityRepository.findById(2L)).thenReturn(Optional.empty());
+
+        CustomException exception = assertThrows(CustomException.class,
+                () -> service.updateReview(1L, 2L, 3L, new ActivityReviewRequest(3, "activity")));
+
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ACTIVITY_NOT_FOUND);
+        verify(reviewRepository, never()).findByIdAndActivityIdAndUserId(any(), any(), any());
+    }
+
+    @Test
+    void updateReview_whenReviewNotOwned_throwsReviewNotFound() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(activityRepository.findById(2L)).thenReturn(Optional.of(activity(2L)));
+        when(reviewRepository.findByIdAndActivityIdAndUserId(3L, 2L, 1L)).thenReturn(Optional.empty());
+
+        CustomException exception = assertThrows(CustomException.class,
+                () -> service.updateReview(1L, 2L, 3L, new ActivityReviewRequest(3, "review")));
+
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ACTIVITY_REVIEW_NOT_FOUND);
     }
 
     @Test
@@ -110,6 +175,18 @@ class ActivityReviewServiceImplTest {
 
         assertThat(activity.getReviewCount()).isZero();
         verify(reviewRepository).delete(review);
+    }
+
+    @Test
+    void deleteReview_whenReviewNotOwned_throwsReviewNotFound() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L)));
+        when(activityRepository.findById(2L)).thenReturn(Optional.of(activity(2L)));
+        when(reviewRepository.findByIdAndActivityIdAndUserId(3L, 2L, 1L)).thenReturn(Optional.empty());
+
+        CustomException exception = assertThrows(CustomException.class,
+                () -> service.deleteReview(1L, 2L, 3L));
+
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ACTIVITY_REVIEW_NOT_FOUND);
     }
 
     private User user(Long id) {

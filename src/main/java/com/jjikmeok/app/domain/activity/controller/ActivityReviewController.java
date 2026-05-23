@@ -8,6 +8,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,8 +24,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @Tag(name = "Activity Review", description = "활동 후기 API")
 @RestController
 @RequiredArgsConstructor
@@ -32,8 +34,10 @@ public class ActivityReviewController {
 
     @Operation(summary = "활동 후기 목록 조회")
     @GetMapping
-    public ApiResponse<List<ActivityReviewResponse>> getReviews(@PathVariable("activityId") Long activityId) {
-        return ApiResponse.success("활동 후기 목록 조회 성공", reviewService.getReviews(activityId));
+    public ApiResponse<Page<ActivityReviewResponse>> getReviews(
+            @PathVariable("activityId") Long activityId,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ApiResponse.success("활동 후기 목록 조회 성공", reviewService.getReviews(activityId, pageable));
     }
 
     @Operation(summary = "활동 후기 작성")

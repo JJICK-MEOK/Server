@@ -1,3 +1,11 @@
+##################################
+# Environment & Secrets (중요)
+##################################
+.env
+.env.*
+application-*.yml
+!application.yml
+
 HELP.md
 .gradle
 build/

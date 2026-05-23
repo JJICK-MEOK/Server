@@ -1,0 +1,39 @@
+services:
+  backend:
+    image: ghcr.io/jjick-meok/server:latest
+    container_name: jjikmeok-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./certs/global-bundle.pem:/app/certs/global-bundle.pem:ro
+    networks:
+      - jjikmeok-net
+
+  redis:
+    image: valkey/valkey:8-alpine
+    container_name: jjikmeok-redis
+    restart: unless-stopped
+    command: >
+      valkey-server
+      --appendonly no
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jjikmeok-net
+
+networks:
+  jjikmeok-net:

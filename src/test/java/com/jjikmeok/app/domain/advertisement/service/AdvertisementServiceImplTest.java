@@ -57,8 +57,20 @@ class AdvertisementServiceImplTest {
     }
 
     @Test
+    void getAdvertisement_returnsVisibleAdvertisement() {
+        Advertisement advertisement = advertisement(1L, AdvertisementPosition.ACTIVITY_LIST);
+        when(advertisementRepository.findVisibleAdvertisementById(eq(1L), any(LocalDateTime.class)))
+                .thenReturn(Optional.of(advertisement));
+
+        AdvertisementResponse response = advertisementService.getAdvertisement(1L);
+
+        assertThat(response.id()).isEqualTo(1L);
+    }
+
+    @Test
     void getAdvertisement_whenNotFound_throwsAdvertisementNotFound() {
-        when(advertisementRepository.findById(1L)).thenReturn(Optional.empty());
+        when(advertisementRepository.findVisibleAdvertisementById(eq(1L), any(LocalDateTime.class)))
+                .thenReturn(Optional.empty());
 
         CustomException exception = assertThrows(CustomException.class,
                 () -> advertisementService.getAdvertisement(1L));
@@ -107,6 +119,17 @@ class AdvertisementServiceImplTest {
     @Test
     void createAdvertisement_whenUrlInvalid_throwsInvalidUrl() {
         AdvertisementRequest request = request("ftp://example.com/banner.png", "https://example.com/event");
+
+        CustomException exception = assertThrows(CustomException.class,
+                () -> advertisementService.createAdvertisement(request));
+
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ADVERTISEMENT_INVALID_URL);
+        verify(advertisementRepository, never()).save(any());
+    }
+
+    @Test
+    void createAdvertisement_whenUrlHasNoHost_throwsInvalidUrl() {
+        AdvertisementRequest request = request("https:example.com/banner.png", "https://example.com/event");
 
         CustomException exception = assertThrows(CustomException.class,
                 () -> advertisementService.createAdvertisement(request));

@@ -4,6 +4,7 @@ import com.jjikmeok.app.domain.auth.dto.request.LoginReq;
 import com.jjikmeok.app.domain.auth.dto.request.ReissueReq;
 import com.jjikmeok.app.domain.auth.dto.request.SignupReq;
 import com.jjikmeok.app.domain.auth.dto.response.LoginRes;
+import com.jjikmeok.app.domain.auth.dto.response.ReissueRes;
 import com.jjikmeok.app.domain.auth.dto.response.SignupRes;
 import com.jjikmeok.app.domain.auth.store.RefreshTokenStore;
 import com.jjikmeok.app.domain.user.entity.AuthProvider;
@@ -63,11 +64,11 @@ public class AuthService {
 
         refreshTokenStore.saveToken(userId, refreshToken, AuthUtils.refreshTokenTtl(jwtProperties));
 
-        return new LoginRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn);
+        return new LoginRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn, user.getRegistrationStatus());
     }
 
     @Transactional
-    public LoginRes reissue(final ReissueReq request) {
+    public ReissueRes reissue(final ReissueReq request) {
         final String refreshToken = request.refreshToken();
         final Long userId = parseRefreshTokenUserId(refreshToken);
 
@@ -113,7 +114,7 @@ public class AuthService {
         }
     }
 
-    private LoginRes rotateAndIssueTokens(final User user) {
+    private ReissueRes rotateAndIssueTokens(final User user) {
         final Long userId = user.getId();
         final String role = AuthUtils.resolveRole(user.getRole());
         final String accessToken = jwtTokenProvider.createAccessToken(userId, role);
@@ -122,7 +123,7 @@ public class AuthService {
 
         storeRotatedRefreshToken(userId, refreshToken);
 
-        return new LoginRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn);
+        return new ReissueRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn);
     }
 
     private void storeRotatedRefreshToken(final Long userId, final String refreshToken) {

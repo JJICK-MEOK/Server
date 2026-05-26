@@ -44,7 +44,7 @@ public class KakaoAuthService {
 
         refreshTokenStore.saveToken(userId, refreshToken, AuthUtils.refreshTokenTtl(jwtProperties));
 
-        return new LoginRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn);
+        return new LoginRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn, user.getRegistrationStatus());
     }
 
     private User findOrCreateUser(final KakaoOAuthRes.UserInfoResponse userInfo) {

@@ -5,6 +5,7 @@ import com.jjikmeok.app.domain.auth.dto.request.ReissueReq;
 import com.jjikmeok.app.domain.auth.dto.request.SocialLoginReq;
 import com.jjikmeok.app.domain.auth.dto.request.SignupReq;
 import com.jjikmeok.app.domain.auth.dto.response.LoginRes;
+import com.jjikmeok.app.domain.auth.dto.response.ReissueRes;
 import com.jjikmeok.app.domain.auth.dto.response.SignupRes;
 import com.jjikmeok.app.domain.auth.service.AuthService;
 import com.jjikmeok.app.domain.auth.service.GoogleAuthService;
@@ -54,8 +55,8 @@ public class AuthController {
             description = "Request Body의 Refresh Token을 검증한 뒤 Access Token과 Refresh Token을 재발급합니다."
     )
     @PostMapping("/reissue")
-    public ApiResponse<LoginRes> reissue(@Valid @RequestBody final ReissueReq request) {
-        final LoginRes response = authService.reissue(request);
+    public ApiResponse<ReissueRes> reissue(@Valid @RequestBody final ReissueReq request) {
+        final ReissueRes response = authService.reissue(request);
         return ApiResponse.success(response);
     }
 

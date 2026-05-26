@@ -44,7 +44,7 @@ public class GoogleAuthService {
 
         refreshTokenStore.saveToken(userId, refreshToken, AuthUtils.refreshTokenTtl(jwtProperties));
 
-        return new LoginRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn);
+        return new LoginRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn, user.getRegistrationStatus());
     }
 
     private User findOrCreateUser(final GoogleOAuthRes.UserInfoResponse userInfo) {

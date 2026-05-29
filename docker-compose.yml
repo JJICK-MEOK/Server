@@ -1,39 +1,39 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: jickmeck-postgres
+  backend:
+    image: ghcr.io/jjick-meok/server:latest
+    container_name: jjikmeok-backend
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-jjikmeok_db}
-      POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      TZ: Asia/Seoul
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      redis:
+        condition: service_healthy
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "8080:8080"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - ./certs/global-bundle.pem:/app/certs/global-bundle.pem:ro
+    networks:
+      - jjikmeok-net
 
   redis:
-    image: redis:7-alpine
-    container_name: jickmeck-redis
+    image: valkey/valkey:8-alpine
+    container_name: jjikmeok-redis
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis-data:/data
-    command: [ "redis-server", "--appendonly", "yes" ]
+    command: >
+      valkey-server
+      --appendonly no
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - jjikmeok-net
 
-
-volumes:
-  postgres-data:
-  redis-data:
+networks:
+  jjikmeok-net:

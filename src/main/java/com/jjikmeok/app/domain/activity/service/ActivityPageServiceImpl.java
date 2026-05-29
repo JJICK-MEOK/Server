@@ -13,7 +13,7 @@ import com.jjikmeok.app.domain.activity.entity.Activity;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
-import com.jjikmeok.app.domain.favorite.repository.ActivityFavoriteRepository;
+import com.jjikmeok.app.domain.favorite.repository.FavoriteRepository;
 import com.jjikmeok.app.domain.image.entity.ActivityImage;
 import com.jjikmeok.app.domain.image.repository.ActivityImageRepository;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
@@ -50,7 +50,7 @@ public class ActivityPageServiceImpl implements ActivityPageService {
     private static final ApprovalStatus PUBLIC_STATUS = ApprovalStatus.APPROVED;
 
     private final ActivityRepository activityRepository;
-    private final ActivityFavoriteRepository activityFavoriteRepository;
+    private final FavoriteRepository activityFavoriteRepository;
     private final ActivityImageRepository activityImageRepository;
     private final UserProfileRepository userProfileRepository;
     private final UserOnboardingTagRepository userOnboardingTagRepository;
@@ -92,17 +92,19 @@ public class ActivityPageServiceImpl implements ActivityPageService {
     ) {
         int size = limit(limit, DEFAULT_LIST_LIMIT);
         String selectedSort = normalizeSort(sort);
+        LocalDateTime now = LocalDate.now(SEOUL).atStartOfDay();
         List<Activity> activities = activityRepository.findApprovedActivitiesByFilters(
                 PUBLIC_STATUS,
                 category,
                 type,
+                now,
                 PageRequest.of(0, Math.max(size, SORT_FETCH_LIMIT))
         );
 
         List<Activity> sorted = sort(activities, selectedSort).stream()
                 .limit(size)
                 .toList();
-        long totalCount = activityRepository.countApprovedActivitiesByFilters(PUBLIC_STATUS, category, type);
+        long totalCount = activityRepository.countApprovedActivitiesByFilters(PUBLIC_STATUS, category, type, now);
 
         return new ActivityCategoryPageResponse(
                 type == null ? "카테고리" : type.getLabel(),
@@ -142,12 +144,13 @@ public class ActivityPageServiceImpl implements ActivityPageService {
     @Override
     @Transactional
     public ActivityDetailPageResponse getDetailPage(Long userId, Long activityId) {
-        int updatedCount = activityRepository.incrementApprovedViewCount(activityId, PUBLIC_STATUS);
+        LocalDateTime recruitCutoff = LocalDate.now(SEOUL).atStartOfDay();
+        int updatedCount = activityRepository.incrementApprovedViewCount(activityId, PUBLIC_STATUS, recruitCutoff);
         if (updatedCount == 0) {
             throw new CustomException(ErrorCode.ACTIVITY_NOT_FOUND);
         }
 
-        Activity activity = activityRepository.findApprovedByIdWithRegion(activityId, PUBLIC_STATUS)
+        Activity activity = activityRepository.findApprovedByIdWithRegion(activityId, PUBLIC_STATUS, recruitCutoff)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACTIVITY_NOT_FOUND));
         List<ActivityImage> images = activityImageRepository.findAllByActivityIdOrderBySortOrderAscIdAsc(activityId);
         boolean liked = userId != null && activityFavoriteRepository.existsByUserIdAndActivityId(userId, activityId);
@@ -156,6 +159,7 @@ public class ActivityPageServiceImpl implements ActivityPageService {
     }
 
     private List<Activity> recommendedActivities(Long userId, int size) {
+        LocalDateTime now = LocalDate.now(SEOUL).atStartOfDay();
         List<Long> tagIds = preferenceTags(userId).stream()
                 .map(userOnboardingTag -> userOnboardingTag.getTag().getId())
                 .toList();
@@ -164,6 +168,7 @@ public class ActivityPageServiceImpl implements ActivityPageService {
             List<Activity> byTags = activityRepository.findRecommendedByPreferenceTagIds(
                     PUBLIC_STATUS,
                     tagIds,
+                    now,
                     PageRequest.of(0, size)
             );
             if (!byTags.isEmpty()) {
@@ -176,6 +181,7 @@ public class ActivityPageServiceImpl implements ActivityPageService {
             List<Activity> byRegions = activityRepository.findRecommendedByRegionIds(
                     PUBLIC_STATUS,
                     regionIds,
+                    now,
                     PageRequest.of(0, size)
             );
             if (!byRegions.isEmpty()) {
@@ -183,7 +189,7 @@ public class ActivityPageServiceImpl implements ActivityPageService {
             }
         }
 
-        return activityRepository.findApprovedLatest(PUBLIC_STATUS, PageRequest.of(0, size));
+        return activityRepository.findApprovedLatest(PUBLIC_STATUS, now, PageRequest.of(0, size));
     }
 
     private List<ActivityCardResponse> cards(Long userId, List<Activity> activities, int limit) {

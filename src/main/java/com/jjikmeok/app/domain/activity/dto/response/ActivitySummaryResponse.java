@@ -1,8 +1,12 @@
 package com.jjikmeok.app.domain.activity.dto.response;
 
-import com.jjikmeok.app.domain.activity.enums.AgeRange;
+import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
+import com.jjikmeok.app.domain.activity.enums.ActivityType;
+import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
+import com.jjikmeok.app.domain.activity.enums.SourceType;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record ActivitySummaryResponse(
         Long id,
@@ -10,12 +14,16 @@ public record ActivitySummaryResponse(
         String regionName,
         String title,
         String thumbnailUrl,
-        String location,
+        String address,
+        LocalDateTime startAt,
+        LocalDateTime endAt,
         LocalDateTime recruitEndAt,
-        LocalDateTime activityStartAt,
-        LocalDateTime activityEndAt,
-        AgeRange ageRange,
+        ActivityType activityType,
+        ActivityCategory category,
+        List<String> tags,
         Integer price,
+        SourceType sourceType,
+        ApprovalStatus approvalStatus,
         Integer viewCount,
         Integer likeCount,
         Integer reviewCount,

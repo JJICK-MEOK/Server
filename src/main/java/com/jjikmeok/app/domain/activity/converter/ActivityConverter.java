@@ -4,7 +4,10 @@ import com.jjikmeok.app.domain.activity.dto.request.ActivityRequest;
 import com.jjikmeok.app.domain.activity.dto.response.ActivityDetailResponse;
 import com.jjikmeok.app.domain.activity.dto.response.ActivitySummaryResponse;
 import com.jjikmeok.app.domain.activity.entity.Activity;
+import com.jjikmeok.app.domain.activity.entity.ActivityTag;
 import com.jjikmeok.app.domain.region.entity.Region;
+
+import java.util.List;
 
 public class ActivityConverter {
 
@@ -12,16 +15,20 @@ public class ActivityConverter {
         return Activity.builder()
                 .region(region)
                 .title(request.title())
+                .description(request.description())
                 .thumbnailUrl(request.thumbnailUrl())
-                .uri(request.uri())
-                .location(request.location())
+                .sourceUrl(request.sourceUrl())
+                .address(request.address())
+                .startAt(request.startAt())
+                .endAt(request.endAt())
                 .recruitStartAt(request.recruitStartAt())
                 .recruitEndAt(request.recruitEndAt())
-                .activityStartAt(request.activityStartAt())
-                .activityEndAt(request.activityEndAt())
-                .ageRange(request.ageRange())
                 .price(request.price())
-                .description(request.description())
+                .activityType(request.activityType())
+                .category(request.category())
+                .sourceType(request.sourceType())
+                .externalId(request.externalId())
+                .approvalStatus(request.approvalStatus())
                 .isActive(request.isActive())
                 .build();
     }
@@ -32,16 +39,21 @@ public class ActivityConverter {
                 activity.getRegion().getId(),
                 activity.getRegion().getName(),
                 activity.getTitle(),
+                activity.getDescription(),
                 activity.getThumbnailUrl(),
-                activity.getUri(),
-                activity.getLocation(),
+                activity.getSourceUrl(),
+                activity.getAddress(),
+                activity.getStartAt(),
+                activity.getEndAt(),
                 activity.getRecruitStartAt(),
                 activity.getRecruitEndAt(),
-                activity.getActivityStartAt(),
-                activity.getActivityEndAt(),
-                activity.getAgeRange(),
                 activity.getPrice(),
-                activity.getDescription(),
+                activity.getActivityType(),
+                activity.getCategory(),
+                tagNames(activity),
+                activity.getSourceType(),
+                activity.getExternalId(),
+                activity.getApprovalStatus(),
                 activity.getViewCount(),
                 activity.getLikeCount(),
                 activity.getReviewCount(),
@@ -58,16 +70,27 @@ public class ActivityConverter {
                 activity.getRegion().getName(),
                 activity.getTitle(),
                 activity.getThumbnailUrl(),
-                activity.getLocation(),
+                activity.getAddress(),
+                activity.getStartAt(),
+                activity.getEndAt(),
                 activity.getRecruitEndAt(),
-                activity.getActivityStartAt(),
-                activity.getActivityEndAt(),
-                activity.getAgeRange(),
+                activity.getActivityType(),
+                activity.getCategory(),
+                tagNames(activity),
                 activity.getPrice(),
+                activity.getSourceType(),
+                activity.getApprovalStatus(),
                 activity.getViewCount(),
                 activity.getLikeCount(),
                 activity.getReviewCount(),
                 activity.getCreatedAt()
         );
+    }
+
+    private static List<String> tagNames(Activity activity) {
+        return activity.getTags().stream()
+                .map(ActivityTag::getTag)
+                .map(tag -> tag.getName())
+                .toList();
     }
 }

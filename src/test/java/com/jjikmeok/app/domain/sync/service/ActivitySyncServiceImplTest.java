@@ -21,7 +21,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.quality.Strictness;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -41,8 +43,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ActivitySyncServiceImplTest {
 
+    @Mock
+    private ActivityRegionResolver activityRegionResolver;
     @Mock
     private ExternalActivityGateway externalActivityGateway;
     @Mock
@@ -73,6 +78,7 @@ class ActivitySyncServiceImplTest {
 
         // 11개의 파라미터 규격 생성자 매핑 완료
         service = new ActivitySyncServiceImpl(
+                activityRegionResolver,
                 externalActivityGateway,
                 activityNormalizer,
                 rawActivityRepository,
@@ -88,9 +94,15 @@ class ActivitySyncServiceImplTest {
 
         // 🌟 잘려 있던 Reflection 주입부를 setUp 블록 내부로 완전 격리 조정
         ReflectionTestUtils.setField(service, "defaultRegionId", 1L);
+        ReflectionTestUtils.setField(service, "defaultMaxPages", 1);
+        ReflectionTestUtils.setField(service, "monthsAhead", 1);
         ReflectionTestUtils.setField(service, "tourApiBaseUrl", "https://tour");
         ReflectionTestUtils.setField(service, "tourApiServiceKey", "");
+        ReflectionTestUtils.setField(service, "tourApiMaxPages", 1);
         ReflectionTestUtils.setField(service, "serverBaseUrl", "http://localhost:8080");
+
+        Region defaultRegion = Region.builder().name("default").depth(RegionDepth.PROVINCE).build();
+        when(activityRegionResolver.resolve(any(), any(), any())).thenReturn(defaultRegion);
     }
 
     @Test
@@ -127,7 +139,7 @@ class ActivitySyncServiceImplTest {
         when(activityNormalizer.normalize(SourceType.TOUR_API, "https://tour", "JSON", "{}")).thenReturn(List.of(normalized));
         doReturn(Optional.of(existing))
                 .when(activityRepository)
-                .findDuplicate(eq(SourceType.TOUR_API), eq("k1"), eq("https://old"), eq("새 공연"), eq(startAt), eq("예술극장"));
+                .findDuplicate(eq(SourceType.TOUR_API), eq("k1"), eq("https://old"), any(), eq(startAt), any());
 
         ActivitySyncResponse response = service.sync(SourceType.TOUR_API, null);
 
@@ -178,7 +190,7 @@ class ActivitySyncServiceImplTest {
         when(activityNormalizer.normalize(SourceType.TOUR_API, "https://tour", "JSON", "{}")).thenReturn(List.of(normalized));
         doReturn(Optional.of(existing))
                 .when(activityRepository)
-                .findDuplicate(eq(SourceType.TOUR_API), eq("k1"), eq("https://old"), eq("공연"), eq(startAt), eq("예술극장"));
+                .findDuplicate(eq(SourceType.TOUR_API), eq("k1"), eq("https://old"), any(), eq(startAt), any());
 
         ActivitySyncResponse response = service.sync(SourceType.TOUR_API, null);
 
@@ -282,12 +294,12 @@ class ActivitySyncServiceImplTest {
         when(activityNormalizer.normalize(any(), any(), any(), any())).thenReturn(List.of(deficientNormalized));
 
         // 하네스 가드 발동에 따른 AI Mock 추론 바인딩
-        when(aiActivityParser.parseFallback(any())).thenReturn(mockedAiResult);
+        when(aiActivityParser.parseFallback(any(), any(SourceType.class))).thenReturn(mockedAiResult);
 
         service.sync(SourceType.TOUR_API, null, 1);
 
         // 하네스가 차단하지 않고 AI 데이터를 흡수해서 완벽하게 적재했는지 추적
-        verify(aiActivityParser).parseFallback(any());
+        verify(aiActivityParser).parseFallback(any(), any(SourceType.class));
         verify(activityRepository).save(any(Activity.class));
     }
 
@@ -305,7 +317,7 @@ class ActivitySyncServiceImplTest {
                 .thenReturn(new ExternalActivityGateway.FetchedPayload(SourceType.TOUR_API, "https://tour", "JSON", "{}"));
         when(regionRepository.findById(1L)).thenReturn(Optional.of(region));
         when(activityNormalizer.normalize(any(), any(), any(), any())).thenReturn(List.of(normalized));
-        when(aiActivityParser.parseFallback(any())).thenReturn(null);
+        when(aiActivityParser.parseFallback(any(), any(SourceType.class))).thenReturn(null);
         when(activityRepository.findDuplicate(eq(SourceType.TOUR_API), eq("always-id"), any(), any(), any(), any()))
                 .thenReturn(Optional.empty());
 

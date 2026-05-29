@@ -1,5 +1,6 @@
 package com.jjikmeok.app.domain.auth.dto.response;
 
+import com.jjikmeok.app.domain.user.entity.RegistrationStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "로그인 응답")
@@ -15,6 +16,9 @@ public record LoginRes(
         String tokenType,
 
         @Schema(description = "Access Token 만료 시간(초)", example = "3600")
-        int expiresIn
+        int expiresIn,
+
+        @Schema(description = "사용자 등록 상태", example = "PROFILE_COMPLETED")
+        RegistrationStatus registrationStatus
 ) {
 }

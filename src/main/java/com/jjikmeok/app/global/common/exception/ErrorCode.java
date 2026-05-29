@@ -11,9 +11,14 @@ public enum ErrorCode {
     // Common
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_500", "서버 오류가 발생했습니다. 관리자에게 문의해 주세요."),
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "COMMON_400", "잘못된 요청입니다."),
+    INVALID_REQUEST_BODY(HttpStatus.BAD_REQUEST, "COMMON_400_BODY", "요청 본문 형식이 올바르지 않습니다."),
+    INVALID_REQUEST_PARAMETER(HttpStatus.BAD_REQUEST, "COMMON_400_PARAMETER", "요청 파라미터가 올바르지 않습니다."),
+    VALIDATION_FAILED(HttpStatus.BAD_REQUEST, "COMMON_400_VALIDATION", "요청 값 검증에 실패했습니다."),
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_404", "요청한 리소스를 찾을 수 없습니다."),
+    REQUEST_PATH_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_404_PATH", "요청한 API 경로를 찾을 수 없습니다."),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "COMMON_405", "지원하지 않는 HTTP 메서드입니다."),
     RESOURCE_CONFLICT(HttpStatus.CONFLICT, "COMMON_409", "이미 존재하는 데이터입니다."),
+    DATA_INTEGRITY_VIOLATION(HttpStatus.CONFLICT, "COMMON_409_DATA_INTEGRITY", "데이터 제약 조건을 위반했습니다."),
 
     // Auth
     AUTH_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "AUTH_401", "인증이 필요합니다."),
@@ -42,12 +47,32 @@ public enum ErrorCode {
     // OAuth
     INVALID_PROVIDER(HttpStatus.BAD_REQUEST, "AUTH_400_PROVIDER", "지원하지 않는 소셜 로그인 provider입니다."),
 
+    // User
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_404", "해당 사용자 정보를 찾을 수 없습니다."),
+
     // Activity
     ACTIVITY_NOT_FOUND(HttpStatus.NOT_FOUND, "ACTIVITY_404", "해당 활동 정보를 찾을 수 없습니다."),
     ACTIVITY_INVALID_RECRUIT_PERIOD(HttpStatus.BAD_REQUEST, "ACTIVITY_400_RECRUIT_PERIOD", "모집 시작일은 모집 마감일보다 늦을 수 없습니다."),
     ACTIVITY_INVALID_ACTIVITY_PERIOD(HttpStatus.BAD_REQUEST, "ACTIVITY_400_ACTIVITY_PERIOD", "활동 시작일은 활동 종료일보다 늦을 수 없습니다."),
     ACTIVITY_INVALID_SCHEDULE_ORDER(HttpStatus.BAD_REQUEST, "ACTIVITY_400_SCHEDULE_ORDER", "모집 마감일은 활동 시작일보다 늦을 수 없습니다."),
     ACTIVITY_INVALID_URI(HttpStatus.BAD_REQUEST, "ACTIVITY_400_URI", "활동 URI 형식이 올바르지 않습니다."),
+    ACTIVITY_REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "ACTIVITY_REVIEW_404", "해당 활동 후기를 찾을 수 없습니다."),
+    ACTIVITY_REVIEW_DUPLICATE(HttpStatus.CONFLICT, "ACTIVITY_REVIEW_409", "이미 후기를 작성한 활동입니다."),
+    ACTIVITY_REVIEW_INVALID_RATING(HttpStatus.BAD_REQUEST, "ACTIVITY_REVIEW_400_RATING", "활동 후기 별점은 1점부터 5점까지 가능합니다."),
+    ACTIVITY_FAVORITE_NOT_FOUND(HttpStatus.NOT_FOUND, "ACTIVITY_FAVORITE_404", "해당 활동 찜 정보를 찾을 수 없습니다."),
+    ACTIVITY_FAVORITE_DUPLICATE(HttpStatus.CONFLICT, "ACTIVITY_FAVORITE_409", "이미 찜한 활동입니다."),
+    ACTIVITY_IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "ACTIVITY_IMAGE_404", "해당 활동 이미지를 찾을 수 없습니다."),
+    ACTIVITY_IMAGE_INVALID_URL(HttpStatus.BAD_REQUEST, "ACTIVITY_IMAGE_400_URL", "활동 이미지 URL 형식이 올바르지 않습니다."),
+    ACTIVITY_IMAGE_DUPLICATE_SORT_ORDER(HttpStatus.CONFLICT, "ACTIVITY_IMAGE_409_SORT_ORDER", "같은 활동에 동일한 이미지 노출 순서가 이미 존재합니다."),
+    ACTIVITY_SYNC_CONFIG_MISSING(HttpStatus.BAD_REQUEST, "ACTIVITY_SYNC_400_CONFIG", "활동 동기화 API 설정값이 없습니다."),
+    ACTIVITY_SYNC_INVALID_URL(HttpStatus.BAD_REQUEST, "ACTIVITY_SYNC_400_URL", "활동 동기화 API 요청 URL 설정이 올바르지 않습니다."),
+    ACTIVITY_SYNC_EXTERNAL_FAILED(HttpStatus.BAD_GATEWAY, "ACTIVITY_SYNC_502_EXTERNAL", "외부 활동 API 호출에 실패했습니다."),
+    ACTIVITY_SYNC_UNSUPPORTED_SOURCE(HttpStatus.BAD_REQUEST, "ACTIVITY_SYNC_400_SOURCE", "지원하지 않는 활동 동기화 소스입니다."),
+
+    // Advertisement
+    ADVERTISEMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "ADVERTISEMENT_404", "해당 광고 정보를 찾을 수 없습니다."),
+    ADVERTISEMENT_INVALID_PERIOD(HttpStatus.BAD_REQUEST, "ADVERTISEMENT_400_PERIOD", "광고 시작일은 광고 종료일보다 늦을 수 없습니다."),
+    ADVERTISEMENT_INVALID_URL(HttpStatus.BAD_REQUEST, "ADVERTISEMENT_400_URL", "광고 URL 형식이 올바르지 않습니다."),
 
     // Region
     REGION_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION_404", "해당 지역 정보를 찾을 수 없습니다."),
@@ -69,6 +94,9 @@ public enum ErrorCode {
 
     // Onboarding
     TAG_NOT_FOUND(HttpStatus.NOT_FOUND, "TAG_404", "해당 태그 정보를 찾을 수 없습니다."),
+    TAG_DUPLICATE_NAME(HttpStatus.CONFLICT, "TAG_409_DUPLICATE_NAME", "같은 타입에 동일한 태그명이 이미 존재합니다."),
+    TAG_INVALID_NAME(HttpStatus.BAD_REQUEST, "TAG_400_INVALID_NAME", "정의된 카테고리 또는 취향 해시태그 값만 사용할 수 있습니다."),
+    TAG_IN_USE(HttpStatus.CONFLICT, "TAG_409_IN_USE", "사용 중인 태그이어서 삭제할 수 없습니다."),
     ONBOARDING_INVALID_TOPIC_TAG_TYPE(HttpStatus.BAD_REQUEST, "ONBOARDING_400_TOPIC_TAG_TYPE", "topicTagIds에는 TOPIC_CATEGORY 타입의 태그만 포함할 수 있습니다."),
     ONBOARDING_INVALID_PREFERENCE_TAG_TYPE(HttpStatus.BAD_REQUEST, "ONBOARDING_400_PREFERENCE_TAG_TYPE", "preferenceTagIds에는 PREFERENCE_TAG 타입의 태그만 포함할 수 있습니다.");
 

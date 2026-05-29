@@ -4,7 +4,10 @@ import com.jjikmeok.app.domain.activity.dto.request.ActivityRequest;
 import com.jjikmeok.app.domain.activity.dto.response.ActivityDetailResponse;
 import com.jjikmeok.app.domain.activity.dto.response.ActivitySummaryResponse;
 import com.jjikmeok.app.domain.activity.entity.Activity;
-import com.jjikmeok.app.domain.activity.enums.AgeRange;
+import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
+import com.jjikmeok.app.domain.activity.enums.ActivityType;
+import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
+import com.jjikmeok.app.domain.activity.enums.SourceType;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
 import com.jjikmeok.app.domain.region.entity.Region;
 import com.jjikmeok.app.domain.region.enums.RegionDepth;
@@ -26,6 +29,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -54,15 +59,15 @@ class ActivityServiceImplTest {
         Region region = region(10L, "서울", RegionDepth.PROVINCE, null);
         Activity activity = activity(region);
         setId(activity, 1L);
-        when(activityRepository.findActiveActivitiesWithRegion()).thenReturn(List.of(activity));
+        when(activityRepository.findActiveActivitiesByFilters(isNull(), isNull(), isNull(), isNull(), any(LocalDateTime.class))).thenReturn(List.of(activity));
 
-        List<ActivitySummaryResponse> responses = activityService.getActivities(null);
+        List<ActivitySummaryResponse> responses = activityService.getActivities(null, null, null, null);
 
         assertThat(responses).hasSize(1);
         assertThat(responses.getFirst().id()).isEqualTo(1L);
         assertThat(responses.getFirst().regionId()).isEqualTo(10L);
         assertThat(responses.getFirst().price()).isEqualTo(1000);
-        verify(activityRepository).findActiveActivitiesWithRegion();
+        verify(activityRepository).findActiveActivitiesByFilters(isNull(), isNull(), isNull(), isNull(), any(LocalDateTime.class));
     }
 
     @Test
@@ -71,14 +76,14 @@ class ActivityServiceImplTest {
         Activity activity = activity(region);
         setId(activity, 1L);
         when(regionRepository.existsById(10L)).thenReturn(true);
-        when(activityRepository.findActiveActivitiesByRegionIdWithRegion(10L)).thenReturn(List.of(activity));
+        when(activityRepository.findActiveActivitiesByFilters(eq(10L), isNull(), isNull(), isNull(), any(LocalDateTime.class))).thenReturn(List.of(activity));
 
-        List<ActivitySummaryResponse> responses = activityService.getActivities(10L);
+        List<ActivitySummaryResponse> responses = activityService.getActivities(10L, null, null, null);
 
         assertThat(responses).hasSize(1);
         assertThat(responses.getFirst().regionId()).isEqualTo(10L);
         verify(regionRepository).existsById(10L);
-        verify(activityRepository).findActiveActivitiesByRegionIdWithRegion(10L);
+        verify(activityRepository).findActiveActivitiesByFilters(eq(10L), isNull(), isNull(), isNull(), any(LocalDateTime.class));
     }
 
     @Test
@@ -86,7 +91,7 @@ class ActivityServiceImplTest {
         when(regionRepository.existsById(999L)).thenReturn(false);
 
         CustomException exception = assertThrows(CustomException.class,
-                () -> activityService.getActivities(999L));
+                () -> activityService.getActivities(999L, null, null, null));
 
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.REGION_NOT_FOUND);
         verifyNoInteractions(activityRepository);
@@ -199,24 +204,24 @@ class ActivityServiceImplTest {
         Activity activity = activity(region);
         setId(activity, 1L);
         ReflectionTestUtils.setField(activity, "viewCount", 1);
-        when(activityRepository.incrementViewCount(1L)).thenReturn(1);
-        when(activityRepository.findByIdWithRegion(1L)).thenReturn(Optional.of(activity));
+        when(activityRepository.incrementViewCount(eq(1L), any(LocalDateTime.class))).thenReturn(1);
+        when(activityRepository.findOpenByIdWithRegion(eq(1L), any(LocalDateTime.class))).thenReturn(Optional.of(activity));
 
         ActivityDetailResponse response = activityService.getActivity(1L);
 
         assertThat(response.viewCount()).isEqualTo(1);
-        verify(activityRepository).incrementViewCount(1L);
+        verify(activityRepository).incrementViewCount(eq(1L), any(LocalDateTime.class));
     }
 
     @Test
     void getActivity_whenAtomicIncrementTargetNotFound_throwsActivityNotFound() {
-        when(activityRepository.incrementViewCount(1L)).thenReturn(0);
+        when(activityRepository.incrementViewCount(eq(1L), any(LocalDateTime.class))).thenReturn(0);
 
         CustomException exception = assertThrows(CustomException.class,
                 () -> activityService.getActivity(1L));
 
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ACTIVITY_NOT_FOUND);
-        verify(activityRepository, never()).findByIdWithRegion(1L);
+        verify(activityRepository, never()).findOpenByIdWithRegion(eq(1L), any(LocalDateTime.class));
     }
 @Test
     void updateActivity_updatesFields() {
@@ -272,26 +277,30 @@ class ActivityServiceImplTest {
 
     private ActivityRequest activityRequest(LocalDateTime recruitStartAt, LocalDateTime recruitEndAt,
                                             LocalDateTime activityStartAt, LocalDateTime activityEndAt,
-                                            String uri) {
-        return activityRequest(recruitStartAt, recruitEndAt, activityStartAt, activityEndAt, uri, 0);
+                                            String sourceUrl) {
+        return activityRequest(recruitStartAt, recruitEndAt, activityStartAt, activityEndAt, sourceUrl, 0);
     }
 
     private ActivityRequest activityRequest(LocalDateTime recruitStartAt, LocalDateTime recruitEndAt,
                                             LocalDateTime activityStartAt, LocalDateTime activityEndAt,
-                                            String uri, Integer price) {
+                                            String sourceUrl, Integer price) {
         return new ActivityRequest(
                 10L,
                 "테스트 활동",
+                "활동 상세 설명",
                 "https://example.com/thumb.png",
-                uri,
+                sourceUrl,
                 "서울마포도서관",
-                recruitStartAt,
-                recruitEndAt,
                 activityStartAt,
                 activityEndAt,
-                AgeRange.ANYONE,
+                recruitStartAt,
+                recruitEndAt,
                 price,
-                "활동 상세 설명",
+                ActivityType.ONE_DAY,
+                ActivityCategory.CRAFT,
+                SourceType.URL_MANUAL,
+                null,
+                ApprovalStatus.PENDING,
                 true
         );
     }
@@ -300,16 +309,19 @@ class ActivityServiceImplTest {
         return Activity.builder()
                 .region(region)
                 .title("기존 활동")
+                .description("기존 상세 설명")
                 .thumbnailUrl("https://example.com/old-thumb.png")
-                .uri("https://example.com/old-apply")
-                .location("기존 장소")
+                .sourceUrl("https://example.com/old-apply")
+                .address("기존 장소")
                 .recruitStartAt(BASE_TIME)
                 .recruitEndAt(BASE_TIME.plusDays(7))
-                .activityStartAt(BASE_TIME.plusDays(8))
-                .activityEndAt(BASE_TIME.plusDays(9))
-                .ageRange(AgeRange.ANYONE)
+                .startAt(BASE_TIME.plusDays(8))
+                .endAt(BASE_TIME.plusDays(9))
+                .activityType(ActivityType.PROGRAM)
+                .category(ActivityCategory.SELF_DEVELOPMENT)
+                .sourceType(SourceType.URL_MANUAL)
+                .approvalStatus(ApprovalStatus.PENDING)
                 .price(1000)
-                .description("기존 상세 설명")
                 .isActive(true)
                 .build();
     }

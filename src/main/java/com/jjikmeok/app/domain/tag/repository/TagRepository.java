@@ -9,7 +9,15 @@ import java.util.List;
 
 public interface TagRepository extends JpaRepository<Tag, Long> {
 
+    List<Tag> findAllByOrderByTypeAscNameAsc();
+
+    List<Tag> findAllByTypeOrderByNameAsc(TagType type);
+
     List<Tag> findAllByIdIn(Collection<Long> ids);
 
     List<Tag> findAllByIdInAndType(Collection<Long> ids, TagType type);
+
+    boolean existsByNameAndType(String name, TagType type);
+
+    boolean existsByNameAndTypeAndIdNot(String name, TagType type, Long id);
 }

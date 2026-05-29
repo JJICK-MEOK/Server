@@ -42,15 +42,21 @@ public class ActivityController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "지역을 찾을 수 없음",
                     content = @Content(mediaType = "application/json",
                             examples = @ExampleObject(name = "REGION_404", value = "{\"code\":\"REGION_404\",\"message\":\"해당 지역 정보를 찾을 수 없습니다.\"}"))),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "서버 오류",
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "요청 파라미터 오류",
                     content = @Content(mediaType = "application/json",
-                            examples = @ExampleObject(name = "COMMON_500", value = "{\"code\":\"COMMON_500\",\"message\":\"서버 오류가 발생했습니다. 관리자에게 문의해 주세요.\"}")))
+                            examples = @ExampleObject(name = "COMMON_400_PARAMETER", value = "{\"code\":\"COMMON_400_PARAMETER\",\"message\":\"요청 파라미터가 올바르지 않습니다.\"}")))
     })
     @GetMapping
     public ApiResponse<List<ActivitySummaryResponse>> getActivities(
             @Parameter(description = "조회할 지역 ID. 생략하면 전체 활동을 조회합니다.", example = "1")
-            @RequestParam(value = "regionId", required = false) Long regionId) {
-        return ApiResponse.success("활동 목록 조회 성공", activityService.getActivities(regionId));
+            @RequestParam(value = "regionId", required = false) Long regionId,
+            @Parameter(description = "활동 카테고리 필터", example = "CULTURE")
+            @RequestParam(value = "category", required = false) com.jjikmeok.app.domain.activity.enums.ActivityCategory category,
+            @Parameter(description = "활동 타입 필터", example = "PROGRAM")
+            @RequestParam(value = "type", required = false) com.jjikmeok.app.domain.activity.enums.ActivityType type,
+            @Parameter(description = "검색 키워드 (제목, 내용 포함)", example = "페스티벌")
+            @RequestParam(value = "keyword", required = false) String keyword) {
+        return ApiResponse.success("활동 목록 조회 성공", activityService.getActivities(regionId, category, type, keyword));
     }
 
     @Operation(summary = "활동 상세 조회", description = "활동 ID로 특정 활동의 상세 정보를 조회합니다.")
@@ -58,10 +64,7 @@ public class ActivityController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "활동 상세 조회 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "활동을 찾을 수 없음",
                     content = @Content(mediaType = "application/json",
-                            examples = @ExampleObject(name = "ACTIVITY_404", value = "{\"code\":\"ACTIVITY_404\",\"message\":\"해당 활동 정보를 찾을 수 없습니다.\"}"))),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "서버 오류",
-                    content = @Content(mediaType = "application/json",
-                            examples = @ExampleObject(name = "COMMON_500", value = "{\"code\":\"COMMON_500\",\"message\":\"서버 오류가 발생했습니다. 관리자에게 문의해 주세요.\"}")))
+                            examples = @ExampleObject(name = "ACTIVITY_404", value = "{\"code\":\"ACTIVITY_404\",\"message\":\"해당 활동 정보를 찾을 수 없습니다.\"}")))
     })
     @GetMapping("/{activityId}")
     public ApiResponse<ActivityDetailResponse> getActivity(

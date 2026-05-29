@@ -1,0 +1,12 @@
+package com.jjikmeok.app.domain.favorite.service;
+
+import com.jjikmeok.app.domain.favorite.dto.request.FavoriteRequest;
+import com.jjikmeok.app.domain.favorite.dto.response.FavoriteResponse;
+
+import java.util.List;
+
+public interface FavoriteService {
+    List<FavoriteResponse> getFavorites(Long userId);
+    FavoriteResponse createFavorite(Long userId, FavoriteRequest request);
+    void deleteFavorite(Long userId, Long activityId);
+}

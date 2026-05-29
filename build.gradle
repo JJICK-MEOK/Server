@@ -1,14 +1,7 @@
 plugins {
-    // Java 기본 플러그인
     id 'java'
-
-    // Spring Boot
     id 'org.springframework.boot' version '3.5.9'
-
-    // 의존성 버전 관리
     id 'io.spring.dependency-management' version '1.1.7'
-
-    // REST Docs (Asciidoctor 변환)
     id 'org.asciidoctor.jvm.convert' version '4.0.5'
 }
 
@@ -17,7 +10,6 @@ version = '0.0.1-SNAPSHOT'
 
 java {
     toolchain {
-        // Java 21 사용
         languageVersion = JavaLanguageVersion.of(21)
     }
 }
@@ -29,75 +21,46 @@ configurations {
 }
 
 repositories {
-    // Maven 중앙 저장소
     mavenCentral()
 }
 
 ext {
-    // REST Docs 스니펫 경로
     set('snippetsDir', file("build/generated-snippets"))
+    set('springAiVersion', "1.0.3")
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+    }
 }
 
 dependencies {
-
-    // JPA
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-
-    // PostgreSQL
     runtimeOnly 'org.postgresql:postgresql'
-
-    // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-
-    // Spring Security
     implementation 'org.springframework.boot:spring-boot-starter-security'
-
-    // OAuth2
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
-
-    // Spring MVC (REST API)
     implementation 'org.springframework.boot:spring-boot-starter-web'
-
-    // Swagger (OpenAPI)
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17'
-
-    //bean validation
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-
-    //smtp
     implementation 'org.springframework.boot:spring-boot-starter-mail'
-
-    // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-
-    //jwt 의존성 추가
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
-
-    // AWS S3 연동을 위한 라이브러리 (Spring Cloud AWS v3)
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:3.1.0'
 
-    // Test
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+    implementation 'org.springframework.ai:spring-ai-starter-vector-store-pgvector'
 
-    // JPA 테스트
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-
-    // Redis 테스트
     testImplementation 'org.springframework.boot:spring-boot-starter-data-redis'
-
-    // REST Docs 테스트
     testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
-
-    // Security 테스트
     testImplementation 'org.springframework.security:spring-security-test'
-
-    // Web / JUnit / AssertJ / Mockito / Spring Test 통합
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-
-    // JUnit 플랫폼 런처
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'com.h2database:h2'
 }
 
 tasks.named('test') {

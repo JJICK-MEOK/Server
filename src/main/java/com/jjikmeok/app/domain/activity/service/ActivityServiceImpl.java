@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -27,18 +29,12 @@ public class ActivityServiceImpl implements ActivityService {
     private final RegionRepository regionRepository;
 
     @Override
-    public List<ActivitySummaryResponse> getActivities(Long regionId) {
-        if (regionId == null) {
-            return activityRepository.findActiveActivitiesWithRegion().stream()
-                    .map(ActivityConverter::toSummaryResponse)
-                    .toList();
-        }
-
-        if (!regionRepository.existsById(regionId)) {
+    public List<ActivitySummaryResponse> getActivities(Long regionId, com.jjikmeok.app.domain.activity.enums.ActivityCategory category, com.jjikmeok.app.domain.activity.enums.ActivityType type, String keyword) {
+        if (regionId != null && !regionRepository.existsById(regionId)) {
             throw new CustomException(ErrorCode.REGION_NOT_FOUND);
         }
 
-        return activityRepository.findActiveActivitiesByRegionIdWithRegion(regionId).stream()
+        return activityRepository.findActiveActivitiesByFilters(regionId, category, type, keyword, LocalDate.now().atStartOfDay()).stream()
                 .map(ActivityConverter::toSummaryResponse)
                 .toList();
     }
@@ -46,12 +42,13 @@ public class ActivityServiceImpl implements ActivityService {
     @Override
     @Transactional
     public ActivityDetailResponse getActivity(Long activityId) {
-        int updatedCount = activityRepository.incrementViewCount(activityId);
+        LocalDateTime recruitCutoff = LocalDate.now().atStartOfDay();
+        int updatedCount = activityRepository.incrementViewCount(activityId, recruitCutoff);
         if (updatedCount == 0) {
             throw new CustomException(ErrorCode.ACTIVITY_NOT_FOUND);
         }
 
-        Activity activity = activityRepository.findByIdWithRegion(activityId)
+        Activity activity = activityRepository.findOpenByIdWithRegion(activityId, recruitCutoff)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACTIVITY_NOT_FOUND));
         return ActivityConverter.toDetailResponse(activity);
     }
@@ -82,9 +79,23 @@ public class ActivityServiceImpl implements ActivityService {
                 .orElseThrow(() -> new CustomException(ErrorCode.REGION_NOT_FOUND));
 
         activity.update(
-                region, request.title(), request.thumbnailUrl(), request.uri(), request.location(),
-                request.recruitStartAt(), request.recruitEndAt(), request.activityStartAt(),
-                request.activityEndAt(), request.ageRange(), request.price(), request.description(), request.isActive()
+                region,
+                request.title(),
+                request.description(),
+                request.thumbnailUrl(),
+                request.sourceUrl(),
+                request.address(),
+                request.startAt(),
+                request.endAt(),
+                request.recruitStartAt(),
+                request.recruitEndAt(),
+                request.price(),
+                request.activityType(),
+                request.category(),
+                request.sourceType(),
+                request.externalId(),
+                request.approvalStatus(),
+                request.isActive()
         );
 
         return ActivityConverter.toDetailResponse(activity);
@@ -103,7 +114,7 @@ public class ActivityServiceImpl implements ActivityService {
         validateRecruitPeriod(request);
         validateActivityPeriod(request);
         validateRecruitBeforeActivity(request);
-        validateUri(request.uri());
+        validateUri(request.sourceUrl());
     }
 
     private void validateRecruitPeriod(ActivityRequest request) {
@@ -113,17 +124,17 @@ public class ActivityServiceImpl implements ActivityService {
     }
 
     private void validateActivityPeriod(ActivityRequest request) {
-        if (request.activityStartAt() != null
-                && request.activityEndAt() != null
-                && request.activityStartAt().isAfter(request.activityEndAt())) {
+        if (request.startAt() != null
+                && request.endAt() != null
+                && request.startAt().isAfter(request.endAt())) {
             throw new CustomException(ErrorCode.ACTIVITY_INVALID_ACTIVITY_PERIOD);
         }
     }
 
     private void validateRecruitBeforeActivity(ActivityRequest request) {
-        if (request.activityStartAt() != null
+        if (request.startAt() != null
                 && request.recruitEndAt() != null
-                && request.recruitEndAt().isAfter(request.activityStartAt())) {
+                && request.recruitEndAt().isAfter(request.startAt())) {
             throw new CustomException(ErrorCode.ACTIVITY_INVALID_SCHEDULE_ORDER);
         }
     }

@@ -7,7 +7,7 @@ import com.jjikmeok.app.domain.activity.dto.response.ActivitySummaryResponse;
 import java.util.List;
 
 public interface ActivityService {
-    List<ActivitySummaryResponse> getActivities(Long regionId);
+    List<ActivitySummaryResponse> getActivities(Long regionId, com.jjikmeok.app.domain.activity.enums.ActivityCategory category, com.jjikmeok.app.domain.activity.enums.ActivityType type, String keyword);
     ActivityDetailResponse getActivity(Long activityId);
     ActivityDetailResponse createActivity(ActivityRequest request);
     ActivityDetailResponse updateActivity(Long id, ActivityRequest request);

@@ -4,7 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jjikmeok.app.domain.activity.controller.ActivityController;
 import com.jjikmeok.app.domain.activity.dto.request.ActivityRequest;
 import com.jjikmeok.app.domain.activity.dto.response.ActivityDetailResponse;
-import com.jjikmeok.app.domain.activity.enums.AgeRange;
+import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
+import com.jjikmeok.app.domain.activity.enums.ActivityType;
+import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
+import com.jjikmeok.app.domain.activity.enums.SourceType;
 import com.jjikmeok.app.domain.activity.service.ActivityService;
 import com.jjikmeok.app.domain.region.controller.RegionController;
 import com.jjikmeok.app.domain.region.dto.request.RegionRequest;
@@ -39,6 +42,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -245,16 +249,20 @@ class ActivityRegionAdminApiSecurityTest {
         return new ActivityRequest(
                 10L,
                 "테스트 활동",
+                "활동 상세 설명",
                 "https://example.com/thumb.png",
                 "https://example.com/apply",
                 "서울마포도서관",
-                BASE_TIME,
-                BASE_TIME.plusDays(7),
                 BASE_TIME.plusDays(8),
                 BASE_TIME.plusDays(9),
-                AgeRange.ANYONE,
+                BASE_TIME,
+                BASE_TIME.plusDays(7),
                 0,
-                "활동 상세 설명",
+                ActivityType.ONE_DAY,
+                ActivityCategory.CRAFT,
+                SourceType.URL_MANUAL,
+                null,
+                ApprovalStatus.PENDING,
                 true
         );
     }
@@ -265,16 +273,21 @@ class ActivityRegionAdminApiSecurityTest {
                 10L,
                 "서울",
                 "테스트 활동",
+                "활동 상세 설명",
                 "https://example.com/thumb.png",
                 "https://example.com/apply",
                 "서울마포도서관",
-                BASE_TIME,
-                BASE_TIME.plusDays(7),
                 BASE_TIME.plusDays(8),
                 BASE_TIME.plusDays(9),
-                AgeRange.ANYONE,
+                BASE_TIME,
+                BASE_TIME.plusDays(7),
                 0,
-                "활동 상세 설명",
+                ActivityType.ONE_DAY,
+                ActivityCategory.CRAFT,
+                List.of(),
+                SourceType.URL_MANUAL,
+                null,
+                ApprovalStatus.PENDING,
                 0,
                 0,
                 0,

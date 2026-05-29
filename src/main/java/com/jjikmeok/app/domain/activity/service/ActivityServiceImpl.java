@@ -5,8 +5,6 @@ import com.jjikmeok.app.domain.activity.dto.request.ActivityRequest;
 import com.jjikmeok.app.domain.activity.dto.response.ActivityDetailResponse;
 import com.jjikmeok.app.domain.activity.dto.response.ActivitySummaryResponse;
 import com.jjikmeok.app.domain.activity.entity.Activity;
-import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
-import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
 import com.jjikmeok.app.domain.region.entity.Region;
 import com.jjikmeok.app.domain.region.repository.RegionRepository;
@@ -31,7 +29,7 @@ public class ActivityServiceImpl implements ActivityService {
     private final RegionRepository regionRepository;
 
     @Override
-    public List<ActivitySummaryResponse> getActivities(Long regionId, ActivityCategory category, ActivityType type, String keyword) {
+    public List<ActivitySummaryResponse> getActivities(Long regionId, com.jjikmeok.app.domain.activity.enums.ActivityCategory category, com.jjikmeok.app.domain.activity.enums.ActivityType type, String keyword) {
         if (regionId != null && !regionRepository.existsById(regionId)) {
             throw new CustomException(ErrorCode.REGION_NOT_FOUND);
         }

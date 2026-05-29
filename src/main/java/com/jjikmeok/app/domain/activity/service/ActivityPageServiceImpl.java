@@ -13,7 +13,7 @@ import com.jjikmeok.app.domain.activity.entity.Activity;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
-import com.jjikmeok.app.domain.favorite.repository.ActivityFavoriteRepository;
+import com.jjikmeok.app.domain.favorite.repository.FavoriteRepository;
 import com.jjikmeok.app.domain.image.entity.ActivityImage;
 import com.jjikmeok.app.domain.image.repository.ActivityImageRepository;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
@@ -50,7 +50,7 @@ public class ActivityPageServiceImpl implements ActivityPageService {
     private static final ApprovalStatus PUBLIC_STATUS = ApprovalStatus.APPROVED;
 
     private final ActivityRepository activityRepository;
-    private final ActivityFavoriteRepository activityFavoriteRepository;
+    private final FavoriteRepository activityFavoriteRepository;
     private final ActivityImageRepository activityImageRepository;
     private final UserProfileRepository userProfileRepository;
     private final UserOnboardingTagRepository userOnboardingTagRepository;

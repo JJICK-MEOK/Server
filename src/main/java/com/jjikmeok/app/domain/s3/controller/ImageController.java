@@ -1,6 +1,7 @@
 package com.jjikmeok.app.domain.s3.controller;
 
-import com.example.project.domain.image.service.S3ImageService;
+
+import com.jjikmeok.app.domain.s3.service.S3ImageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

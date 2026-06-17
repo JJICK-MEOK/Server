@@ -1,10 +1,7 @@
-package com.jjikmeok.app.domain.s3.controller;
+package com.jjikmeok.app.domain.s3.repository;
 
-import com.jjikmeok.app.domain.region.entity.Region;
+import com.jjikmeok.app.domain.s3.Entity.Image;
 import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.util.Collection;
-import java.util.List;
 
 public interface S3Repository extends JpaRepository<Image, Long> {
 

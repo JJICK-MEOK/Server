@@ -1,5 +1,7 @@
 package com.jjikmeok.app.domain.activity.repository;
 
+import com.jjikmeok.app.domain.activity.dto.response.ActivityRecommendationCandidateResponse;
+import com.jjikmeok.app.domain.activity.dto.response.ActivityRecommendationResponse;
 import com.jjikmeok.app.domain.activity.entity.Activity;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
@@ -12,7 +14,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface ActivityRepository extends JpaRepository<Activity, Long> {
@@ -221,6 +226,113 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             @Param("id") Long id,
             @Param("approvalStatus") ApprovalStatus approvalStatus,
             @Param("now") LocalDateTime now);
+
+    @Query("""
+            SELECT a.id
+            FROM ActivityTag at
+            JOIN at.activity a
+            WHERE at.tag.id IN :tagIds
+              AND a.isActive = true
+              AND a.approvalStatus = :approvalStatus
+              AND (a.recruitEndAt IS NULL OR a.recruitEndAt >= :now)
+            GROUP BY a.id, a.createdAt
+            ORDER BY COUNT(DISTINCT at.tag.id) DESC, a.createdAt DESC
+            """)
+    List<Long> findActiveActivityIdsByTagIds(
+            @Param("tagIds") List<Long> tagIds,
+            @Param("approvalStatus") ApprovalStatus approvalStatus,
+            @Param("now") LocalDateTime now);
+
+    @Query("""
+            SELECT new com.jjikmeok.app.domain.activity.dto.response.ActivityRecommendationCandidateResponse(
+                a.id,
+                CASE WHEN COUNT(f.id) > 0 THEN true ELSE false END
+            )
+            FROM ActivityTag at
+            JOIN at.activity a
+            JOIN UserOnboardingTag uot ON uot.tag = at.tag
+            LEFT JOIN Favorite f ON f.activity = a AND f.user.id = :userId
+            WHERE uot.userOnboarding.user.id = :userId
+              AND a.isActive = true
+              AND a.approvalStatus = :approvalStatus
+              AND (a.recruitEndAt IS NULL OR a.recruitEndAt >= :now)
+            GROUP BY a.id, a.createdAt
+            HAVING COUNT(DISTINCT at.tag.id) >= :minimumMatchedTagCount
+            ORDER BY COUNT(DISTINCT at.tag.id) DESC, a.createdAt DESC
+            """)
+    List<ActivityRecommendationCandidateResponse> findRecommendedActivityCandidatesByUserTags(
+            @Param("userId") Long userId,
+            @Param("minimumMatchedTagCount") Long minimumMatchedTagCount,
+            @Param("approvalStatus") ApprovalStatus approvalStatus,
+            @Param("now") LocalDateTime now,
+            Pageable pageable
+    );
+
+    @Query("""
+            SELECT DISTINCT a
+            FROM Activity a
+            JOIN FETCH a.region
+            LEFT JOIN FETCH a.tags activityTag
+            LEFT JOIN FETCH activityTag.tag
+            WHERE a.id IN :activityIds
+            """)
+    List<Activity> findAllByIdInWithSummaryAssociations(@Param("activityIds") List<Long> activityIds);
+
+    default List<Activity> findActiveActivitiesByTagIds(
+            List<Long> tagIds,
+            ApprovalStatus approvalStatus,
+            LocalDateTime now) {
+        List<Long> activityIds = findActiveActivityIdsByTagIds(tagIds, approvalStatus, now);
+        if (activityIds.isEmpty()) {
+            return List.of();
+        }
+
+        return sortActivitiesByIds(findAllByIdInWithSummaryAssociations(activityIds), activityIds);
+    }
+
+    default List<ActivityRecommendationResponse> findRecommendedActivitiesByUserTags(
+            Long userId,
+            Long minimumMatchedTagCount,
+            ApprovalStatus approvalStatus,
+            LocalDateTime now,
+            Pageable pageable) {
+        List<ActivityRecommendationCandidateResponse> candidates = findRecommendedActivityCandidatesByUserTags(
+                userId,
+                minimumMatchedTagCount,
+                approvalStatus,
+                now,
+                pageable
+        );
+
+        if (candidates.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> activityIds = candidates.stream()
+                .map(ActivityRecommendationCandidateResponse::activityId)
+                .toList();
+        List<Activity> activities = sortActivitiesByIds(findAllByIdInWithSummaryAssociations(activityIds), activityIds);
+        Map<Long, Boolean> likedByActivityId = new HashMap<>();
+        candidates.forEach(candidate -> likedByActivityId.put(candidate.activityId(), candidate.liked()));
+
+        return activities.stream()
+                .map(activity -> new ActivityRecommendationResponse(
+                        activity,
+                        likedByActivityId.getOrDefault(activity.getId(), false)
+                ))
+                .toList();
+    }
+
+    private List<Activity> sortActivitiesByIds(List<Activity> activities, List<Long> activityIds) {
+        Map<Long, Integer> orderByActivityId = new HashMap<>();
+        for (int i = 0; i < activityIds.size(); i++) {
+            orderByActivityId.put(activityIds.get(i), i);
+        }
+
+        return activities.stream()
+                .sorted(Comparator.comparing(activity -> orderByActivityId.get(activity.getId())))
+                .toList();
+    }
 
     boolean existsBySourceTypeAndExternalId(SourceType sourceType, String externalId);
 

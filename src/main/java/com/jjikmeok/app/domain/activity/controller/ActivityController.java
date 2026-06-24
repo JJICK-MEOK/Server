@@ -15,6 +15,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -57,6 +58,39 @@ public class ActivityController {
             @Parameter(description = "검색 키워드 (제목, 내용 포함)", example = "페스티벌")
             @RequestParam(value = "keyword", required = false) String keyword) {
         return ApiResponse.success("활동 목록 조회 성공", activityService.getActivities(regionId, category, type, keyword));
+    }
+
+    @Operation(summary = "태그 기반 활동 검색", description = "전달한 태그와 하나 이상 겹치는 활동을 겹치는 태그 수가 많은 순으로 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "태그 기반 활동 검색 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "태그 ID 입력값 오류",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(name = "COMMON_400", value = "{\"code\":\"COMMON_400\",\"message\":\"잘못된 요청입니다.\"}"))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(name = "COMMON_500", value = "{\"code\":\"COMMON_500\",\"message\":\"서버 오류가 발생했습니다. 관리자에게 문의해 주세요.\"}")))
+    })
+    @GetMapping("/search")
+    public ApiResponse<List<ActivitySummaryResponse>> searchActivitiesByTags(
+            @Parameter(description = "검색할 태그 ID 목록", example = "1,2,3")
+            @RequestParam("tagIds") List<Long> tagIds) {
+        return ApiResponse.success("태그 기반 활동 검색 성공", activityService.searchActivitiesByTags(tagIds));
+    }
+
+    @Operation(summary = "추천 활동 목록 조회", description = "로그인한 사용자의 온보딩 태그와 3개 이상 겹치는 활동을 겹치는 태그 수가 많은 순으로 최대 8개 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "추천 활동 목록 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(name = "AUTH_401", value = "{\"code\":\"AUTH_401\",\"message\":\"인증이 필요합니다.\"}"))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(name = "COMMON_500", value = "{\"code\":\"COMMON_500\",\"message\":\"서버 오류가 발생했습니다. 관리자에게 문의해 주세요.\"}")))
+    })
+    @GetMapping("/recommendations")
+    public ApiResponse<List<ActivitySummaryResponse>> getRecommendedActivities(
+            @AuthenticationPrincipal Long userId) {
+        return ApiResponse.success("추천 활동 목록 조회 성공", activityService.getRecommendedActivities(userId));
     }
 
     @Operation(summary = "활동 상세 조회", description = "활동 ID로 특정 활동의 상세 정보를 조회합니다.")

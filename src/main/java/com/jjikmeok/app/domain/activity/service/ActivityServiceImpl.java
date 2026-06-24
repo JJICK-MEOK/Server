@@ -5,12 +5,16 @@ import com.jjikmeok.app.domain.activity.dto.request.ActivityRequest;
 import com.jjikmeok.app.domain.activity.dto.response.ActivityDetailResponse;
 import com.jjikmeok.app.domain.activity.dto.response.ActivitySummaryResponse;
 import com.jjikmeok.app.domain.activity.entity.Activity;
+import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
+import com.jjikmeok.app.domain.activity.enums.ActivityType;
+import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
 import com.jjikmeok.app.domain.region.entity.Region;
 import com.jjikmeok.app.domain.region.repository.RegionRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +22,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 @Service
@@ -25,17 +30,53 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class ActivityServiceImpl implements ActivityService {
 
+    private static final long MINIMUM_RECOMMENDATION_MATCHED_TAG_COUNT = 3L;
+    private static final int RECOMMENDATION_LIMIT = 8;
+    private static final ApprovalStatus RECOMMENDATION_APPROVAL_STATUS = ApprovalStatus.APPROVED;
+
     private final ActivityRepository activityRepository;
     private final RegionRepository regionRepository;
 
     @Override
-    public List<ActivitySummaryResponse> getActivities(Long regionId, com.jjikmeok.app.domain.activity.enums.ActivityCategory category, com.jjikmeok.app.domain.activity.enums.ActivityType type, String keyword) {
+    public List<ActivitySummaryResponse> getActivities(Long regionId, ActivityCategory category, ActivityType type, String keyword) {
         if (regionId != null && !regionRepository.existsById(regionId)) {
             throw new CustomException(ErrorCode.REGION_NOT_FOUND);
         }
 
         return activityRepository.findActiveActivitiesByFilters(regionId, category, type, keyword, LocalDate.now().atStartOfDay()).stream()
                 .map(ActivityConverter::toSummaryResponse)
+                .toList();
+    }
+
+    @Override
+    public List<ActivitySummaryResponse> searchActivitiesByTags(List<Long> tagIds) {
+        List<Long> normalizedTagIds = normalizeTagIds(tagIds);
+        if (normalizedTagIds.isEmpty()) {
+            return List.of();
+        }
+
+        return activityRepository.findActiveActivitiesByTagIds(
+                        normalizedTagIds,
+                        RECOMMENDATION_APPROVAL_STATUS,
+                        LocalDate.now().atStartOfDay()
+                ).stream()
+                .map(ActivityConverter::toSummaryResponse)
+                .toList();
+    }
+
+    @Override
+    public List<ActivitySummaryResponse> getRecommendedActivities(Long userId) {
+        return activityRepository.findRecommendedActivitiesByUserTags(
+                        userId,
+                        MINIMUM_RECOMMENDATION_MATCHED_TAG_COUNT,
+                        RECOMMENDATION_APPROVAL_STATUS,
+                        LocalDate.now().atStartOfDay(),
+                        PageRequest.of(0, RECOMMENDATION_LIMIT)
+                ).stream()
+                .map(recommendation -> ActivityConverter.toSummaryResponse(
+                        recommendation.activity(),
+                        recommendation.liked()
+                ))
                 .toList();
     }
 
@@ -108,6 +149,16 @@ public class ActivityServiceImpl implements ActivityService {
                 .orElseThrow(() -> new CustomException(ErrorCode.ACTIVITY_NOT_FOUND));
 
         activity.deactivate();
+    }
+
+    private List<Long> normalizeTagIds(List<Long> tagIds) {
+        if (tagIds == null) {
+            return List.of();
+        }
+
+        LinkedHashSet<Long> uniqueTagIds = new LinkedHashSet<>(tagIds);
+        uniqueTagIds.remove(null);
+        return List.copyOf(uniqueTagIds);
     }
 
     private void validateActivityRequest(ActivityRequest request) {

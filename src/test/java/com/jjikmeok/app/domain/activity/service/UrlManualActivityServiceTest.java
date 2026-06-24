@@ -168,8 +168,8 @@ class UrlManualActivityServiceTest {
     @Test
     void saveManual_adminCompletesPreviewAndApprovesPublishedActivity() {
         Region region = region(1L, "서울", RegionDepth.PROVINCE, null);
-        LocalDateTime startAt = LocalDateTime.of(2026, 6, 1, 10, 0);
-        LocalDateTime endAt = LocalDateTime.of(2026, 6, 1, 12, 0);
+        LocalDateTime startAt = LocalDate.now().plusDays(7).atTime(10, 0);
+        LocalDateTime endAt = LocalDate.now().plusDays(7).atTime(12, 0);
         when(regionRepository.findById(1L)).thenReturn(Optional.of(region));
         when(activityRepository.findDuplicate(eq(SourceType.URL_MANUAL), anyString(), eq("https://example.com/event"),
                 eq("관리자 보완 제목"), eq(startAt), eq("서울 성수"))).thenReturn(Optional.empty());

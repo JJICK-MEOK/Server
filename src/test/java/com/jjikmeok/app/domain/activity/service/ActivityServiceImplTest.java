@@ -2,6 +2,7 @@ package com.jjikmeok.app.domain.activity.service;
 
 import com.jjikmeok.app.domain.activity.dto.request.ActivityRequest;
 import com.jjikmeok.app.domain.activity.dto.response.ActivityDetailResponse;
+import com.jjikmeok.app.domain.activity.dto.response.ActivityRecommendationResponse;
 import com.jjikmeok.app.domain.activity.dto.response.ActivitySummaryResponse;
 import com.jjikmeok.app.domain.activity.entity.Activity;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
@@ -95,6 +97,66 @@ class ActivityServiceImplTest {
 
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.REGION_NOT_FOUND);
         verifyNoInteractions(activityRepository);
+    }
+
+    @Test
+    void searchActivitiesByTags_returnsMatchedActivities() {
+        Region region = region(10L, "Seoul", RegionDepth.PROVINCE, null);
+        Activity activity = activity(region);
+        setId(activity, 1L);
+        when(activityRepository.findActiveActivitiesByTagIds(
+                eq(List.of(1L, 2L)),
+                eq(ApprovalStatus.APPROVED),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of(activity));
+
+        List<ActivitySummaryResponse> responses = activityService.searchActivitiesByTags(List.of(1L, 1L, 2L));
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.getFirst().id()).isEqualTo(1L);
+        assertThat(responses.getFirst().regionId()).isEqualTo(10L);
+        verify(activityRepository).findActiveActivitiesByTagIds(
+                eq(List.of(1L, 2L)),
+                eq(ApprovalStatus.APPROVED),
+                any(LocalDateTime.class)
+        );
+    }
+
+    @Test
+    void searchActivitiesByTags_withoutTagIds_returnsEmptyList() {
+        List<ActivitySummaryResponse> responses = activityService.searchActivitiesByTags(List.of());
+
+        assertThat(responses).isEmpty();
+        verify(activityRepository, never()).findActiveActivitiesByTagIds(any(), any(), any());
+    }
+
+    @Test
+    void getRecommendedActivities_returnsActivitiesMatchedByUserTags() {
+        Region region = region(10L, "Seoul", RegionDepth.PROVINCE, null);
+        Activity activity = activity(region);
+        setId(activity, 1L);
+        when(activityRepository.findRecommendedActivitiesByUserTags(
+                eq(1L),
+                eq(3L),
+                eq(ApprovalStatus.APPROVED),
+                any(LocalDateTime.class),
+                eq(PageRequest.of(0, 8))
+        ))
+                .thenReturn(List.of(new ActivityRecommendationResponse(activity, true)));
+
+        List<ActivitySummaryResponse> responses = activityService.getRecommendedActivities(1L);
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.getFirst().id()).isEqualTo(1L);
+        assertThat(responses.getFirst().regionId()).isEqualTo(10L);
+        assertThat(responses.getFirst().liked()).isTrue();
+        verify(activityRepository).findRecommendedActivitiesByUserTags(
+                eq(1L),
+                eq(3L),
+                eq(ApprovalStatus.APPROVED),
+                any(LocalDateTime.class),
+                eq(PageRequest.of(0, 8))
+        );
     }
 
     @Test

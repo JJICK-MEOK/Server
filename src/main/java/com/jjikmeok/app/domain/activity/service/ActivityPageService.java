@@ -2,10 +2,10 @@ package com.jjikmeok.app.domain.activity.service;
 
 import com.jjikmeok.app.domain.activity.dto.response.page.ActivityCategoryPageResponse;
 import com.jjikmeok.app.domain.activity.dto.response.page.ActivityCustomPageResponse;
-import com.jjikmeok.app.domain.activity.dto.response.page.ActivityDetailPageResponse;
 import com.jjikmeok.app.domain.activity.dto.response.page.ActivityHomePageResponse;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
+import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
 
 public interface ActivityPageService {
 

@@ -1,11 +1,11 @@
 package com.jjikmeok.app.domain.activity.converter;
 
-import com.jjikmeok.app.domain.activity.dto.response.page.ActivityCardResponse;
-import com.jjikmeok.app.domain.activity.dto.response.page.ActivityDetailPageResponse;
-import com.jjikmeok.app.domain.activity.dto.response.page.ActivityImageItemResponse;
 import com.jjikmeok.app.domain.activity.entity.Activity;
 import com.jjikmeok.app.domain.activity.entity.ActivityTag;
 import com.jjikmeok.app.domain.image.entity.ActivityImage;
+import com.jjikmeok.app.domain.page.dto.response.ActivityCardResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityImageItemResponse;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

@@ -1,5 +1,8 @@
 package com.jjikmeok.app.domain.activity.dto.response.page;
 
+import com.jjikmeok.app.domain.page.dto.response.ActivitySectionResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityShortcutResponse;
+
 import java.util.List;
 
 public record ActivityHomePageResponse(

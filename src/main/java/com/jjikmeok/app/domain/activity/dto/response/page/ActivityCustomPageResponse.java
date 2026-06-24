@@ -1,5 +1,7 @@
 package com.jjikmeok.app.domain.activity.dto.response.page;
 
+import com.jjikmeok.app.domain.page.dto.response.ActivitySectionResponse;
+
 import java.util.List;
 
 public record ActivityCustomPageResponse(

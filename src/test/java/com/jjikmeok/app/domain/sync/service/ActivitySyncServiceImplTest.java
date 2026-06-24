@@ -108,7 +108,7 @@ class ActivitySyncServiceImplTest {
     @Test
     void sync_updatesDuplicateActivity() {
         Region region = Region.builder().name("서울").depth(RegionDepth.PROVINCE).build();
-        LocalDateTime startAt = LocalDateTime.of(2026, 6, 1, 10, 0);
+        LocalDateTime startAt = LocalDate.now().plusDays(7).atTime(10, 0);
         Activity existing = Activity.builder()
                 .region(region)
                 .title("기존")
@@ -153,7 +153,7 @@ class ActivitySyncServiceImplTest {
     @Test
     void sync_skipsDuplicateWhenSame() {
         Region region = Region.builder().name("서울").depth(RegionDepth.PROVINCE).build();
-        LocalDateTime startAt = LocalDateTime.of(2026, 6, 1, 10, 0);
+        LocalDateTime startAt = LocalDate.now().plusDays(7).atTime(10, 0);
         LocalDateTime endAt = startAt.plusDays(1);
         LocalDateTime recruitStartAt = startAt.minusDays(2);
         LocalDateTime recruitEndAt = startAt.minusDays(1);
@@ -202,7 +202,7 @@ class ActivitySyncServiceImplTest {
     @Test
     void sync_savesLongValuesForTextColumns() {
         Region region = Region.builder().name("서울").depth(RegionDepth.PROVINCE).build();
-        LocalDateTime startAt = LocalDateTime.of(2026, 6, 1, 10, 0);
+        LocalDateTime startAt = LocalDate.now().plusDays(7).atTime(10, 0);
         String title = "가".repeat(150);
         String thumbnailUrl = "https://example.com/" + "t".repeat(600);
         String sourceUrl = "https://example.com/" + "s".repeat(600);
@@ -237,7 +237,7 @@ class ActivitySyncServiceImplTest {
     @Test
     void sync_fillsSecondPriorityFieldsWithDefaultsWhenMissing() {
         Region region = Region.builder().name("서울").depth(RegionDepth.PROVINCE).build();
-        LocalDateTime startAt = LocalDateTime.of(2026, 6, 1, 10, 0);
+        LocalDateTime startAt = LocalDate.now().plusDays(7).atTime(10, 0);
 
         NormalizedActivity normalized = new NormalizedActivity(
                 "정상 메타 활동", null, "https://thumb.png", "https://example.com/core", "체육관",
@@ -272,7 +272,7 @@ class ActivitySyncServiceImplTest {
     @Test
     void sync_triggersAiFallbackParserWhen1stPriorityFieldsAreDeficient() {
         Region region = Region.builder().name("서울").depth(RegionDepth.PROVINCE).build();
-        LocalDateTime startAt = LocalDateTime.of(2026, 6, 1, 10, 0);
+        LocalDateTime startAt = LocalDate.now().plusDays(7).atTime(10, 0);
 
         // 가격 및 일정 데이터가 꼬여서 유실된 불량 객체 인입 시뮬레이션
         NormalizedActivity deficientNormalized = new NormalizedActivity(

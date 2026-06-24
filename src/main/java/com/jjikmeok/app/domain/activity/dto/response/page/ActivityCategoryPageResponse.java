@@ -2,6 +2,8 @@ package com.jjikmeok.app.domain.activity.dto.response.page;
 
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
+import com.jjikmeok.app.domain.page.dto.response.ActivityCardResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityFilterOptionResponse;
 
 import java.util.List;
 

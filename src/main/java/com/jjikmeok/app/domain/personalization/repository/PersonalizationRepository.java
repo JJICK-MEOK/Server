@@ -1,6 +1,6 @@
 package com.jjikmeok.app.domain.personalization.repository;
 
-import com.jjikmeok.app.domain.personalization.entity.UserOnboardingTag;
+import com.jjikmeok.app.domain.user.entity.UserOnboardingTag;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

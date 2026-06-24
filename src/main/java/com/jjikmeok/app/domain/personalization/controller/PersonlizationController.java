@@ -4,6 +4,7 @@ import com.jjikmeok.app.domain.personalization.dto.PersonalizationResponse;
 import com.jjikmeok.app.domain.personalization.service.PersonlizationService;
 import com.jjikmeok.app.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,7 @@ public class PersonlizationController {
 
     @Operation(
             summary = "개인화 콘텐츠 유형 조회",
-            description = "사용자 ID를 기반으로 가장 적합한 개인화 콘텐츠 유형을 조회합니다."
+            description = "인증된 사용자를 기준으로 가장 적합한 개인화 콘텐츠 유형을 조회합니다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -32,6 +33,7 @@ public class PersonlizationController {
     })
     @GetMapping("/users/me/best-type")
     public ApiResponse<PersonalizationResponse> getPersonalizedContent(
+            @Parameter(hidden = true)
             @AuthenticationPrincipal Long userId
     ) {
         return ApiResponse.success(

@@ -27,6 +27,7 @@ public record ActivitySummaryResponse(
         Integer viewCount,
         Integer likeCount,
         Integer reviewCount,
+        Boolean liked,
         LocalDateTime createdAt
 ) {
 }

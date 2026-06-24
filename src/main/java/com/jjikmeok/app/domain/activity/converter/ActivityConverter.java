@@ -64,6 +64,10 @@ public class ActivityConverter {
     }
 
     public static ActivitySummaryResponse toSummaryResponse(Activity activity) {
+        return toSummaryResponse(activity, false);
+    }
+
+    public static ActivitySummaryResponse toSummaryResponse(Activity activity, Boolean liked) {
         return new ActivitySummaryResponse(
                 activity.getId(),
                 activity.getRegion().getId(),
@@ -83,6 +87,7 @@ public class ActivityConverter {
                 activity.getViewCount(),
                 activity.getLikeCount(),
                 activity.getReviewCount(),
+                liked,
                 activity.getCreatedAt()
         );
     }

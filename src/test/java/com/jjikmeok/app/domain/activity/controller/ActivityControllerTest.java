@@ -252,6 +252,7 @@ class ActivityControllerTest {
                 3,
                 2,
                 1,
+                false,
                 BASE_TIME.minusDays(1)
         );
     }

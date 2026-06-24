@@ -1,5 +1,6 @@
 package com.jjikmeok.app.domain.activity.repository;
 
+import com.jjikmeok.app.domain.activity.dto.response.ActivityRecommendationResponse;
 import com.jjikmeok.app.domain.activity.entity.Activity;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
@@ -221,6 +222,47 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             @Param("id") Long id,
             @Param("approvalStatus") ApprovalStatus approvalStatus,
             @Param("now") LocalDateTime now);
+
+    @Query("""
+            SELECT a
+            FROM ActivityTag at
+            JOIN at.activity a
+            WHERE at.tag.id IN :tagIds
+              AND a.isActive = true
+              AND a.approvalStatus = :approvalStatus
+              AND (a.recruitEndAt IS NULL OR a.recruitEndAt >= :now)
+            GROUP BY a
+            ORDER BY COUNT(DISTINCT at.tag.id) DESC, a.createdAt DESC
+            """)
+    List<Activity> findActiveActivitiesByTagIds(
+            @Param("tagIds") List<Long> tagIds,
+            @Param("approvalStatus") ApprovalStatus approvalStatus,
+            @Param("now") LocalDateTime now);
+
+    @Query("""
+            SELECT new com.jjikmeok.app.domain.activity.dto.response.ActivityRecommendationResponse(
+                a,
+                CASE WHEN COUNT(f.id) > 0 THEN true ELSE false END
+            )
+            FROM ActivityTag at
+            JOIN at.activity a
+            JOIN UserOnboardingTag uot ON uot.tag = at.tag
+            LEFT JOIN Favorite f ON f.activity = a AND f.user.id = :userId
+            WHERE uot.userOnboarding.user.id = :userId
+              AND a.isActive = true
+              AND a.approvalStatus = :approvalStatus
+              AND (a.recruitEndAt IS NULL OR a.recruitEndAt >= :now)
+            GROUP BY a
+            HAVING COUNT(DISTINCT at.tag.id) >= :minimumMatchedTagCount
+            ORDER BY COUNT(DISTINCT at.tag.id) DESC, a.createdAt DESC
+            """)
+    List<ActivityRecommendationResponse> findRecommendedActivitiesByUserTags(
+            @Param("userId") Long userId,
+            @Param("minimumMatchedTagCount") Long minimumMatchedTagCount,
+            @Param("approvalStatus") ApprovalStatus approvalStatus,
+            @Param("now") LocalDateTime now,
+            Pageable pageable
+    );
 
     boolean existsBySourceTypeAndExternalId(SourceType sourceType, String externalId);
 

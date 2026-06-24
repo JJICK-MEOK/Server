@@ -4,12 +4,11 @@ import com.jjikmeok.app.domain.personalization.dto.PersonalizationResponse;
 import com.jjikmeok.app.domain.personalization.service.PersonlizationService;
 import com.jjikmeok.app.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -31,10 +30,9 @@ public class PersonlizationController {
                     description = "개인화 콘텐츠 유형 조회 성공"
             )
     })
-    @GetMapping("/users/{userId}/best-type")
+    @GetMapping("/users/me/best-type")
     public ApiResponse<PersonalizationResponse> getPersonalizedContent(
-            @Parameter(description = "사용자 ID", example = "1")
-            @PathVariable("userId") Long userId
+            @AuthenticationPrincipal Long userId
     ) {
         return ApiResponse.success(
                 "개인화 콘텐츠 유형 조회 성공",

@@ -39,7 +39,7 @@ public class GoogleOAuthClient {
         this.redirectUri = redirectUri;
     }
 
-    public String getAccessToken(@NotBlank final String code) {
+    public GoogleOAuthRes.TokenResponse getToken(@NotBlank final String code) {
         try {
             final GoogleOAuthRes.TokenResponse tokenResponse = restClient.post()
                     .uri(GOOGLE_TOKEN_URL)
@@ -49,7 +49,7 @@ public class GoogleOAuthClient {
                     .body(GoogleOAuthRes.TokenResponse.class);
 
             validateTokenResponse(tokenResponse);
-            return tokenResponse.accessToken();
+            return tokenResponse;
         } catch (final RestClientException e) {
             log.error("구글 액세스 토큰 요청에 실패했습니다.", e);
             throw new CustomException(ErrorCode.AUTH_INVALID_SOCIAL_ACCESS_TOKEN);

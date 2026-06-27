@@ -32,6 +32,6 @@ public class UserProfileController {
             @Valid @RequestBody UserProfileCreateReq request
     ) {
         UserProfileCreateRes response = userProfileService.createProfile(userId, request);
-        return ApiResponse.success(response);
+        return ApiResponse.created(response);
     }
 }

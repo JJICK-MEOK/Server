@@ -70,21 +70,30 @@ class TagServiceImplTest {
     @Test
     void getPreferenceTagGroups_returnsPreferenceTagsGroupedByTaxonomy() {
         when(tagRepository.findAllByTypeOrderByNameAsc(TagType.PREFERENCE_TAG)).thenReturn(List.of(
-                tag(1L, "차분", TagType.PREFERENCE_TAG),
-                tag(2L, "활기", TagType.PREFERENCE_TAG),
-                tag(3L, "무료", TagType.PREFERENCE_TAG),
-                tag(4L, "하루", TagType.PREFERENCE_TAG)
+                tag(1L, "편안한", TagType.PREFERENCE_TAG),
+                tag(2L, "활기찬", TagType.PREFERENCE_TAG),
+                tag(3L, "사교", TagType.PREFERENCE_TAG),
+                tag(4L, "단기", TagType.PREFERENCE_TAG),
+                tag(5L, "입문", TagType.PREFERENCE_TAG),
+                tag(6L, "소규모", TagType.PREFERENCE_TAG)
         ));
 
         List<PreferenceTagGroupResponse> responses = tagService.getPreferenceTagGroups();
 
         assertThat(responses).extracting(PreferenceTagGroupResponse::group)
-                .containsExactly(PreferenceTagGroup.MOOD, PreferenceTagGroup.INTENSITY, PreferenceTagGroup.PRICE,
-                        PreferenceTagGroup.PURPOSE, PreferenceTagGroup.DURATION);
-        assertThat(responses.getFirst().label()).isEqualTo("활동 분위기");
-        assertThat(responses.getFirst().tags()).extracting(TagResponse::name).containsExactly("차분", "활기");
-        assertThat(responses.get(2).tags()).extracting(TagResponse::name).containsExactly("무료");
-        assertThat(responses.get(4).tags()).extracting(TagResponse::name).containsExactly("하루");
+                .containsExactly(
+                        PreferenceTagGroup.MOOD,
+                        PreferenceTagGroup.INTENSITY,
+                        PreferenceTagGroup.PURPOSE,
+                        PreferenceTagGroup.DURATION,
+                        PreferenceTagGroup.SIZE
+        );
+        assertThat(responses.getFirst().label()).isEqualTo("분위기 태그");
+        assertThat(responses.getFirst().tags()).extracting(TagResponse::name).containsExactly("편안한", "활기찬");
+        assertThat(responses.get(1).tags()).extracting(TagResponse::name).containsExactly("입문");
+        assertThat(responses.get(2).tags()).extracting(TagResponse::name).containsExactly("사교");
+        assertThat(responses.get(3).tags()).extracting(TagResponse::name).containsExactly("단기");
+        assertThat(responses.get(4).tags()).extracting(TagResponse::name).containsExactly("소규모");
     }
 
     @Test
@@ -137,23 +146,23 @@ class TagServiceImplTest {
     @Test
     void updateTag_updatesNameAndType() {
         Tag tag = tag(1L, "프로그램", TagType.ACTIVITY_CATEGORY);
-        TagRequest request = new TagRequest(" 운동/액티비티 ", TagType.TOPIC_CATEGORY);
+        TagRequest request = new TagRequest(" 운동 / 액티비티 ", TagType.TOPIC_CATEGORY);
         when(tagRepository.findById(1L)).thenReturn(Optional.of(tag));
-        when(tagRepository.existsByNameAndTypeAndIdNot("운동/액티비티", TagType.TOPIC_CATEGORY, 1L)).thenReturn(false);
+        when(tagRepository.existsByNameAndTypeAndIdNot("운동 / 액티비티", TagType.TOPIC_CATEGORY, 1L)).thenReturn(false);
         when(tagRepository.saveAndFlush(tag)).thenReturn(tag);
 
         TagResponse response = tagService.updateTag(1L, request);
 
-        assertThat(response.name()).isEqualTo("운동/액티비티");
+        assertThat(response.name()).isEqualTo("운동 / 액티비티");
         assertThat(response.type()).isEqualTo(TagType.TOPIC_CATEGORY);
     }
 
     @Test
     void updateTag_whenFlushConflicts_throwsDuplicateName() {
         Tag tag = tag(1L, "프로그램", TagType.ACTIVITY_CATEGORY);
-        TagRequest request = new TagRequest(" 운동/액티비티 ", TagType.TOPIC_CATEGORY);
+        TagRequest request = new TagRequest(" 운동 / 액티비티 ", TagType.TOPIC_CATEGORY);
         when(tagRepository.findById(1L)).thenReturn(Optional.of(tag));
-        when(tagRepository.existsByNameAndTypeAndIdNot("운동/액티비티", TagType.TOPIC_CATEGORY, 1L)).thenReturn(false);
+        when(tagRepository.existsByNameAndTypeAndIdNot("운동 / 액티비티", TagType.TOPIC_CATEGORY, 1L)).thenReturn(false);
         when(tagRepository.saveAndFlush(tag)).thenThrow(new DataIntegrityViolationException("duplicate"));
 
         CustomException exception = assertThrows(CustomException.class, () -> tagService.updateTag(1L, request));

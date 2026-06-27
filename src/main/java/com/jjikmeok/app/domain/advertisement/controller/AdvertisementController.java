@@ -52,7 +52,7 @@ public class AdvertisementController {
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<AdvertisementResponse> createAdvertisement(
             @RequestBody @Valid AdvertisementRequest request) {
-        return ApiResponse.success("광고 생성 성공", advertisementService.createAdvertisement(request));
+        return ApiResponse.created("광고 생성 성공", advertisementService.createAdvertisement(request));
     }
 
     @Operation(summary = "광고 수정")

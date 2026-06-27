@@ -11,7 +11,7 @@ import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
 import com.jjikmeok.app.domain.activity.enums.PreferenceTag;
 import com.jjikmeok.app.domain.activity.enums.SourceType;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
-import com.jjikmeok.app.domain.sync.service.CategoryClassifier;
+import com.jjikmeok.app.domain.activity.publicactivity.service.CategoryClassifier;
 import com.jjikmeok.app.domain.region.entity.Region;
 import com.jjikmeok.app.domain.region.repository.RegionRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
@@ -58,6 +58,8 @@ public class UrlManualActivityService {
     private final RegionRepository regionRepository;
     private final CategoryClassifier classifier;
     private final ObjectMapper objectMapper;
+    private final ActivityTagSuggestionService activityTagSuggestionService;
+    private final ActivityTagAutoAttachService activityTagAutoAttachService;
     private final RestClient restClient = RestClient.create();
 
     @Value("${app.activity-sync.default-region-id:1}")
@@ -112,7 +114,13 @@ public class UrlManualActivityService {
                 price,
                 classifier.classifyCategory(SourceType.URL_MANUAL, text),
                 classifier.classifyType(SourceType.URL_MANUAL, text, startAt, endAt),
-                suggestTags(text, price, startAt, endAt)
+                activityTagSuggestionService.suggest(
+                        text,
+                        classifier.classifyCategory(SourceType.URL_MANUAL, text),
+                        price,
+                        startAt,
+                        endAt
+                )
         );
     }
 
@@ -126,7 +134,7 @@ public class UrlManualActivityService {
         String text = title + " " + description + " " + safe(command.address());
         ActivityCategory category = command.category() != null ? command.category() : classifier.classifyCategory(SourceType.URL_MANUAL, text);
         ActivityType activityType = command.activityType() != null ? command.activityType() : classifier.classifyType(SourceType.URL_MANUAL, text, command.startAt(), command.endAt());
-        String externalId = hash(sourceUrl);
+        String externalId = createManualExternalId(sourceUrl);
         LocalDateTime recruitEndAt = command.recruitEndAt() != null ? command.recruitEndAt() : command.endAt();
         Activity existing = activityRepository.findDuplicate(SourceType.URL_MANUAL, externalId, sourceUrl, title, command.startAt(), command.address()).orElse(null);
         if (existing == null) {
@@ -154,11 +162,13 @@ public class UrlManualActivityService {
                     .build());
         } else {
             existing.update(region, title, description, command.thumbnailUrl(), sourceUrl, command.address(),
+                    command.organizer(), command.contactInfo(), command.target(),
                     command.startAt(), command.endAt(), command.recruitStartAt(),
                     recruitEndAt != null ? recruitEndAt : LocalDateTime.now().plusMonths(1), command.price(), activityType,
                     category, SourceType.URL_MANUAL, externalId, ApprovalStatus.PENDING, false);
             existing.updateExtra(command.organizer(), command.contactInfo(), command.target());
         }
+        activityTagAutoAttachService.refresh(existing);
         return ActivityConverter.toDetailResponse(existing);
     }
 
@@ -565,7 +575,25 @@ public class UrlManualActivityService {
     }
 
     private boolean looksMojibake(String value) {
-        return value.matches(".*[ÃÂìíëê][\\u0080-\\u00ff]?.*");
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+
+        for (int i = 0; i < value.length() - 1; i++) {
+            char current = value.charAt(i);
+            char next = value.charAt(i + 1);
+            boolean marker =
+                    current == '\u00C3'
+                            || current == '\u00C2'
+                            || current == '\u00EC'
+                            || current == '\u00ED'
+                            || current == '\u00EB'
+                            || current == '\u00EA';
+            if (marker && next >= '\u0080' && next <= '\u00FF') {
+                return true;
+            }
+        }
+        return false;
     }
 
     private int hangulCount(String value) {
@@ -604,7 +632,11 @@ public class UrlManualActivityService {
         return cleaned;
     }
 
-    private String hash(String value) {
+    private String createManualExternalId(String normalizedSourceUrl) {
+        return hashExternalIdSeed(normalizedSourceUrl);
+    }
+
+    private String hashExternalIdSeed(String value) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
@@ -632,8 +664,6 @@ public class UrlManualActivityService {
 
     private List<PreferenceTag> suggestTags(String text, Integer price, LocalDateTime startAt, LocalDateTime endAt) {
         List<PreferenceTag> tags = new ArrayList<>();
-        if ((price != null && price == 0) || contains(text, "무료")) add(tags, PreferenceTag.FREE);
-        if ((price != null && price > 0) || contains(text, "유료")) add(tags, PreferenceTag.PAID);
         if (contains(text, "차분", "독서", "명상")) add(tags, PreferenceTag.CALM);
         if (contains(text, "활기", "러닝", "운동", "댄스")) add(tags, PreferenceTag.LIVELY);
         if (contains(text, "힐링", "휴식")) add(tags, PreferenceTag.HEALING);

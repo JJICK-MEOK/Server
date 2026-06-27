@@ -28,7 +28,7 @@ public class RobotsPolicyService {
             }
             return parseRobots(robotsText, sourceUri.getPath());
         } catch (Exception e) {
-            log.debug("[디스커버리] robots.txt 확인에 실패했습니다. url={}", sourceUri, e);
+            log.debug("[Discovery] robots.txt 확인에 실패했습니다. url={}", sourceUri, e);
             return RobotsPolicy.UNKNOWN;
         }
     }

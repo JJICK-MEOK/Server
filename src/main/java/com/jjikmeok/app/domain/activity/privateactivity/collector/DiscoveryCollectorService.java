@@ -86,7 +86,7 @@ public class DiscoveryCollectorService {
             AtomicInteger aiAnalysisCount
     ) {
         List<SearchResultDto> searchResults = searchResults(keyword, resultLimit);
-        log.info("[디스커버리] 검색 결과를 불러왔습니다. keyword={}, count={}", keyword, searchResults.size());
+        log.info("[Discovery] 검색 결과를 불러왔습니다. keyword={}, count={}", keyword, searchResults.size());
 
         List<DiscoverySheetRowDto> rows = new ArrayList<>();
         for (SearchResultDto searchResult : searchResults) {
@@ -115,7 +115,7 @@ public class DiscoveryCollectorService {
             return processSearchResult(searchResult, batchKeys, sourceUrlKeys, keyword, aiAnalysisCount);
         } catch (Exception e) {
             log.warn(
-                    "[디스커버리] 후보 처리에 실패했습니다. keyword={}, url={}, reason={}",
+                    "[Discovery] 후보 처리에 실패했습니다. keyword={}, url={}, reason={}",
                     keyword,
                     searchResult == null ? null : searchResult.url(),
                     e.getMessage(),
@@ -144,7 +144,7 @@ public class DiscoveryCollectorService {
         var assessment = urlQualityService.evaluate(searchResult);
         SearchResultDto classifiedSearchResult = searchResult.withSourceChannel(assessment.sourceChannel());
         if (assessment.excluded()) {
-            log.info("[디스커버리] 품질 필터로 URL을 제외했습니다. platform={}, url={}", assessment.platform(), searchResult.url());
+            log.info("[Discovery] 품질 필터로 URL을 제외했습니다. platform={}, url={}", assessment.platform(), searchResult.url());
             return null;
         }
 
@@ -155,17 +155,17 @@ public class DiscoveryCollectorService {
 
         DiscoveryCandidateDto candidate = extractCandidate(classifiedSearchResult, extractionMode, assessment.confidenceScore());
         if (candidate == null || candidate.confidenceScore() < MIN_CONFIDENCE_SCORE) {
-            log.info("[디스커버리] 후보 신뢰도가 낮아 제외했습니다. url={}", searchResult.url());
+            log.info("[Discovery] 후보 신뢰도가 낮아 제외했습니다. url={}", searchResult.url());
             return null;
         }
 
         String sourceUrlKey = normalizedUrlKey(candidate.sourceUrl());
         if (sourceUrlKey == null) {
-            log.info("[디스커버리] sourceUrl 이 없습니다. keyword={}, title={}", keyword, candidate.title());
+            log.info("[Discovery] sourceUrl 이 없습니다. keyword={}, title={}", keyword, candidate.title());
             return null;
         }
         if (!sourceUrlKeys.add(sourceUrlKey)) {
-            log.info("[디스커버리] 이미 처리한 sourceUrl 입니다. url={}", candidate.sourceUrl());
+            log.info("[Discovery] 이미 처리한 sourceUrl 입니다. url={}", candidate.sourceUrl());
             return null;
         }
 
@@ -177,7 +177,7 @@ public class DiscoveryCollectorService {
         rawActivityArchiveService.archiveDiscoveryCandidate(classifiedSearchResult, candidate);
 
         if (deduplicationService.findDuplicateReason(candidate.sourceUrl(), candidate.title(), candidate.organizer()).isPresent()) {
-            log.info("[디스커버리] 저장된 활동과 중복되어 제외했습니다. url={}", candidate.sourceUrl());
+            log.info("[Discovery] 저장된 활동과 중복되어 제외했습니다. url={}", candidate.sourceUrl());
             return null;
         }
 
@@ -187,7 +187,7 @@ public class DiscoveryCollectorService {
         }
 
         if (aiAnalysisCount.get() >= maxAiAnalysisPerRun) {
-            log.info("[디스커버리] AI 분석 한도에 도달했습니다. url={}", candidate.sourceUrl());
+            log.info("[Discovery] AI 분석 한도에 도달했습니다. url={}", candidate.sourceUrl());
             return sheetRow;
         }
 
@@ -197,7 +197,7 @@ public class DiscoveryCollectorService {
     private ExtractionMode extractionMode(SearchResultDto searchResult, ExtractionMode defaultMode) {
         RobotsPolicy robotsPolicy = robotsPolicyService.evaluate(uri(searchResult.url()));
         if (robotsPolicy == RobotsPolicy.DISALLOWED) {
-            log.info("[디스커버리] robots.txt 에서 차단된 URL 입니다. url={}", searchResult.url());
+            log.info("[Discovery] robots.txt 에서 차단된 URL 입니다. url={}", searchResult.url());
             return null;
         }
         if (robotsPolicy == RobotsPolicy.UNKNOWN && defaultMode == ExtractionMode.FULL_CONTENT) {
@@ -210,7 +210,7 @@ public class DiscoveryCollectorService {
         try {
             return keywordService.keywordsFor(category, keywordLimit);
         } catch (Exception e) {
-            log.warn("[디스커버리] 키워드를 불러오지 못했습니다. category={}, reason={}", category, e.getMessage(), e);
+            log.warn("[Discovery] 키워드를 불러오지 못했습니다. category={}, reason={}", category, e.getMessage(), e);
             return List.of();
         }
     }
@@ -219,7 +219,7 @@ public class DiscoveryCollectorService {
         try {
             return searchService.search(keyword, resultLimit);
         } catch (Exception e) {
-            log.warn("[디스커버리] 검색 요청에 실패했습니다. keyword={}, reason={}", keyword, e.getMessage(), e);
+            log.warn("[Discovery] 검색 요청에 실패했습니다. keyword={}, reason={}", keyword, e.getMessage(), e);
             return List.of();
         }
     }
@@ -232,7 +232,7 @@ public class DiscoveryCollectorService {
         try {
             return metadataExtractorService.extract(searchResult, extractionMode, confidenceScore);
         } catch (Exception e) {
-            log.warn("[디스커버리] 메타데이터 추출에 실패했습니다. url={}, reason={}", searchResult.url(), e.getMessage(), e);
+            log.warn("[Discovery] 메타데이터 추출에 실패했습니다. url={}, reason={}", searchResult.url(), e.getMessage(), e);
             return null;
         }
     }
@@ -241,7 +241,7 @@ public class DiscoveryCollectorService {
         try {
             return googleSheetsService.append(candidate);
         } catch (Exception e) {
-            log.warn("[디스커버리] 후보를 시트에 추가하지 못했습니다. url={}, reason={}", candidate.sourceUrl(), e.getMessage(), e);
+            log.warn("[Discovery] 후보를 시트에 추가하지 못했습니다. url={}, reason={}", candidate.sourceUrl(), e.getMessage(), e);
             return null;
         }
     }
@@ -262,7 +262,7 @@ public class DiscoveryCollectorService {
             googleSheetsService.updateRow(analyzedRow);
             return analyzedRow;
         } catch (Exception e) {
-            log.warn("[디스커버리] AI 분석에 실패했습니다. url={}, reason={}", candidate.sourceUrl(), e.getMessage(), e);
+            log.warn("[Discovery] AI 분석에 실패했습니다. url={}, reason={}", candidate.sourceUrl(), e.getMessage(), e);
             return sheetRow;
         }
     }
@@ -277,7 +277,7 @@ public class DiscoveryCollectorService {
                 }
             }
         } catch (Exception e) {
-            log.warn("[디스커버리] 기존 시트 URL을 불러오지 못했습니다. reason={}", e.getMessage(), e);
+            log.warn("[Discovery] 기존 시트 URL을 불러오지 못했습니다. reason={}", e.getMessage(), e);
         }
         return keys;
     }

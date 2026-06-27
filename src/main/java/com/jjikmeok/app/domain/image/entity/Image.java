@@ -25,7 +25,7 @@ import lombok.NoArgsConstructor;
         }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ActivityImage extends BaseEntity {
+public class Image extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "activity_id", nullable = false)
@@ -40,13 +40,13 @@ public class ActivityImage extends BaseEntity {
     @Column(name = "is_thumbnail", nullable = false)
     private Boolean isThumbnail;
 
-    public static ActivityImage create(Activity activity, String imageUrl, Integer sortOrder, Boolean isThumbnail) {
-        ActivityImage activityImage = new ActivityImage();
-        activityImage.activity = activity;
-        activityImage.imageUrl = imageUrl;
-        activityImage.sortOrder = sortOrder != null ? sortOrder : 0;
-        activityImage.isThumbnail = isThumbnail != null ? isThumbnail : false;
-        return activityImage;
+    public static Image create(Activity activity, String imageUrl, Integer sortOrder, Boolean isThumbnail) {
+        Image image = new Image();
+        image.activity = activity;
+        image.imageUrl = imageUrl;
+        image.sortOrder = sortOrder != null ? sortOrder : 0;
+        image.isThumbnail = isThumbnail != null ? isThumbnail : false;
+        return image;
     }
 
     public void update(String imageUrl, Integer sortOrder, Boolean isThumbnail) {

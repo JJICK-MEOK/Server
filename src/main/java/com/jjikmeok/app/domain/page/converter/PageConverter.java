@@ -4,10 +4,10 @@ import com.jjikmeok.app.domain.activity.entity.Activity;
 import com.jjikmeok.app.domain.activity.entity.ActivityTag;
 import com.jjikmeok.app.domain.activity.enums.PreferenceTag;
 import com.jjikmeok.app.domain.activity.enums.PreferenceTagGroup;
-import com.jjikmeok.app.domain.image.entity.ActivityImage;
+import com.jjikmeok.app.domain.image.entity.Image;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCardResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
-import com.jjikmeok.app.domain.page.dto.response.ActivityImageItemResponse;
+import com.jjikmeok.app.domain.page.dto.response.ImageItemResponse;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -56,7 +56,7 @@ public final class PageConverter {
 
     public static ActivityDetailPageResponse toDetail(
             Activity activity,
-            List<ActivityImage> images,
+            List<Image> images,
             boolean liked,
             LocalDate today
     ) {
@@ -157,11 +157,11 @@ public final class PageConverter {
         return null;
     }
 
-    private static List<ActivityImageItemResponse> imageItems(Activity activity, List<ActivityImage> images) {
-        List<ActivityImageItemResponse> items = new ArrayList<>();
+    private static List<ImageItemResponse> imageItems(Activity activity, List<Image> images) {
+        List<ImageItemResponse> items = new ArrayList<>();
 
-        for (ActivityImage image : images) {
-            items.add(new ActivityImageItemResponse(
+        for (Image image : images) {
+            items.add(new ImageItemResponse(
                     image.getId(),
                     image.getImageUrl(),
                     image.getSortOrder(),
@@ -170,7 +170,7 @@ public final class PageConverter {
         }
 
         if (items.isEmpty() && activity.getThumbnailUrl() != null && !activity.getThumbnailUrl().isBlank()) {
-            items.add(new ActivityImageItemResponse(null, activity.getThumbnailUrl(), 0, true));
+            items.add(new ImageItemResponse(null, activity.getThumbnailUrl(), 0, true));
         }
 
         return items;

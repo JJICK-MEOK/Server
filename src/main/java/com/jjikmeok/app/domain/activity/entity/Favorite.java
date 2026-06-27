@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
         @UniqueConstraint(name = "uk_activity_favorites_user_activity", columnNames = {"user_id", "activity_id"})
 })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ActivityFavorite extends BaseEntity {
+public class Favorite extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -28,8 +28,8 @@ public class ActivityFavorite extends BaseEntity {
     @JoinColumn(name = "activity_id", nullable = false)
     private Activity activity;
 
-    public static ActivityFavorite create(User user, Activity activity) {
-        ActivityFavorite favorite = new ActivityFavorite();
+    public static Favorite create(User user, Activity activity) {
+        Favorite favorite = new Favorite();
         favorite.user = user;
         favorite.activity = activity;
         return favorite;

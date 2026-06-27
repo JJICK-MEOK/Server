@@ -1,12 +1,12 @@
 package com.jjikmeok.app.domain.activity.service;
 
-import com.jjikmeok.app.domain.activity.converter.ActivityReviewConverter;
-import com.jjikmeok.app.domain.activity.dto.request.ActivityReviewRequest;
-import com.jjikmeok.app.domain.activity.dto.response.ActivityReviewResponse;
+import com.jjikmeok.app.domain.activity.converter.ReviewConverter;
+import com.jjikmeok.app.domain.activity.dto.request.ReviewRequest;
+import com.jjikmeok.app.domain.activity.dto.response.ReviewResponse;
 import com.jjikmeok.app.domain.activity.entity.Activity;
-import com.jjikmeok.app.domain.activity.entity.ActivityReview;
+import com.jjikmeok.app.domain.activity.entity.Review;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
-import com.jjikmeok.app.domain.activity.repository.ActivityReviewRepository;
+import com.jjikmeok.app.domain.activity.repository.ReviewRepository;
 import com.jjikmeok.app.domain.user.entity.User;
 import com.jjikmeok.app.domain.user.repository.UserRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
@@ -21,22 +21,22 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class ActivityReviewServiceImpl implements ActivityReviewService {
+public class ReviewServiceImpl implements ReviewService {
 
-    private final ActivityReviewRepository reviewRepository;
+    private final ReviewRepository reviewRepository;
     private final ActivityRepository activityRepository;
     private final UserRepository userRepository;
 
     @Override
-    public Page<ActivityReviewResponse> getReviews(Long activityId, Pageable pageable) {
+    public Page<ReviewResponse> getReviews(Long activityId, Pageable pageable) {
         findActivityOrThrow(activityId);
         return reviewRepository.findAllByActivityId(activityId, pageable)
-                .map(ActivityReviewConverter::toResponse);
+                .map(ReviewConverter::toResponse);
     }
 
     @Override
     @Transactional
-    public ActivityReviewResponse createReview(Long userId, Long activityId, ActivityReviewRequest request) {
+    public ReviewResponse createReview(Long userId, Long activityId, ReviewRequest request) {
         validateRating(request.rating());
         User user = findUserOrThrow(userId);
         Activity activity = findActivityOrThrow(activityId);
@@ -44,11 +44,11 @@ public class ActivityReviewServiceImpl implements ActivityReviewService {
             throw new CustomException(ErrorCode.ACTIVITY_REVIEW_DUPLICATE);
         }
         try {
-            ActivityReview review = reviewRepository.save(
-                    ActivityReview.create(user, activity, request.rating(), request.reason())
+            Review review = reviewRepository.save(
+                    Review.create(user, activity, request.rating(), request.reason())
             );
             activity.increaseReviewCount();
-            return ActivityReviewConverter.toResponse(review);
+            return ReviewConverter.toResponse(review);
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(ErrorCode.ACTIVITY_REVIEW_DUPLICATE);
         }
@@ -56,13 +56,13 @@ public class ActivityReviewServiceImpl implements ActivityReviewService {
 
     @Override
     @Transactional
-    public ActivityReviewResponse updateReview(Long userId, Long activityId, Long reviewId, ActivityReviewRequest request) {
+    public ReviewResponse updateReview(Long userId, Long activityId, Long reviewId, ReviewRequest request) {
         validateRating(request.rating());
         findUserOrThrow(userId);
         findActivityOrThrow(activityId);
-        ActivityReview review = findReviewOrThrow(userId, activityId, reviewId);
+        Review review = findReviewOrThrow(userId, activityId, reviewId);
         review.update(request.rating(), request.reason());
-        return ActivityReviewConverter.toResponse(review);
+        return ReviewConverter.toResponse(review);
     }
 
     @Override
@@ -70,12 +70,12 @@ public class ActivityReviewServiceImpl implements ActivityReviewService {
     public void deleteReview(Long userId, Long activityId, Long reviewId) {
         findUserOrThrow(userId);
         Activity activity = findActivityOrThrow(activityId);
-        ActivityReview review = findReviewOrThrow(userId, activityId, reviewId);
+        Review review = findReviewOrThrow(userId, activityId, reviewId);
         reviewRepository.delete(review);
         activity.decreaseReviewCount();
     }
 
-    private ActivityReview findReviewOrThrow(Long userId, Long activityId, Long reviewId) {
+    private Review findReviewOrThrow(Long userId, Long activityId, Long reviewId) {
         return reviewRepository.findByIdAndActivityIdAndUserId(reviewId, activityId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACTIVITY_REVIEW_NOT_FOUND));
     }

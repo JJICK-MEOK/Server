@@ -1,11 +1,11 @@
 package com.jjikmeok.app.domain.image.service;
 
-import com.jjikmeok.app.domain.image.dto.request.ActivityImageRequest;
-import com.jjikmeok.app.domain.image.dto.response.ActivityImageResponse;
 import com.jjikmeok.app.domain.activity.entity.Activity;
-import com.jjikmeok.app.domain.image.entity.ActivityImage;
-import com.jjikmeok.app.domain.image.repository.ActivityImageRepository;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
+import com.jjikmeok.app.domain.image.dto.request.ImageRequest;
+import com.jjikmeok.app.domain.image.dto.response.ImageResponse;
+import com.jjikmeok.app.domain.image.entity.Image;
+import com.jjikmeok.app.domain.image.repository.ImageRepository;
 import com.jjikmeok.app.domain.region.entity.Region;
 import com.jjikmeok.app.domain.region.enums.RegionDepth;
 import com.jjikmeok.app.global.common.exception.CustomException;
@@ -30,7 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class ActivityImageServiceImplTest {
+class ImageServiceImplTest {
 
     private static final LocalDateTime BASE_TIME = LocalDateTime.of(2026, 5, 21, 10, 0);
 
@@ -38,54 +38,54 @@ class ActivityImageServiceImplTest {
     private ActivityRepository activityRepository;
 
     @Mock
-    private ActivityImageRepository activityImageRepository;
+    private ImageRepository imageRepository;
 
-    private ActivityImageServiceImpl activityImageService;
+    private ImageServiceImpl imageService;
 
     @BeforeEach
     void setUp() {
-        activityImageService = new ActivityImageServiceImpl(activityRepository, activityImageRepository);
+        imageService = new ImageServiceImpl(activityRepository, imageRepository);
     }
 
     @Test
-    void getActivityImages_returnsImagesInSortOrder() {
+    void getImages_returnsImagesInSortOrder() {
         Activity activity = activity(1L);
         when(activityRepository.existsById(1L)).thenReturn(true);
-        when(activityImageRepository.findAllByActivityIdOrderBySortOrderAscIdAsc(1L)).thenReturn(List.of(
+        when(imageRepository.findAllByActivityIdOrderBySortOrderAscIdAsc(1L)).thenReturn(List.of(
                 image(10L, activity, 0),
                 image(11L, activity, 1)
         ));
 
-        List<ActivityImageResponse> responses = activityImageService.getActivityImages(1L);
+        List<ImageResponse> responses = imageService.getImages(1L);
 
-        assertThat(responses).extracting(ActivityImageResponse::id).containsExactly(10L, 11L);
+        assertThat(responses).extracting(ImageResponse::id).containsExactly(10L, 11L);
     }
 
     @Test
-    void getActivityImages_whenActivityNotFound_throwsActivityNotFound() {
+    void getImages_whenActivityNotFound_throwsActivityNotFound() {
         when(activityRepository.existsById(1L)).thenReturn(false);
 
         CustomException exception = assertThrows(CustomException.class,
-                () -> activityImageService.getActivityImages(1L));
+                () -> imageService.getImages(1L));
 
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ACTIVITY_NOT_FOUND);
-        verify(activityImageRepository, never()).findAllByActivityIdOrderBySortOrderAscIdAsc(1L);
+        verify(imageRepository, never()).findAllByActivityIdOrderBySortOrderAscIdAsc(1L);
     }
 
     @Test
-    void createActivityImage_trimsImageUrl() {
+    void createImage_trimsImageUrl() {
         Activity activity = activity(1L);
         when(activityRepository.findById(1L)).thenReturn(Optional.of(activity));
-        when(activityImageRepository.existsByActivityIdAndSortOrder(1L, 0)).thenReturn(false);
-        when(activityImageRepository.save(any(ActivityImage.class))).thenAnswer(invocation -> {
-            ActivityImage saved = invocation.getArgument(0);
+        when(imageRepository.existsByActivityIdAndSortOrder(1L, 0)).thenReturn(false);
+        when(imageRepository.save(any(Image.class))).thenAnswer(invocation -> {
+            Image saved = invocation.getArgument(0);
             setId(saved, 10L);
             return saved;
         });
 
-        ActivityImageResponse response = activityImageService.createActivityImage(
+        ImageResponse response = imageService.createImage(
                 1L,
-                new ActivityImageRequest(" https://example.com/image.png ", 0, true)
+                new ImageRequest(" https://example.com/image.png ", 0, true)
         );
 
         assertThat(response.id()).isEqualTo(10L);
@@ -94,64 +94,64 @@ class ActivityImageServiceImplTest {
     }
 
     @Test
-    void createActivityImage_whenSortOrderDuplicate_throwsConflict() {
+    void createImage_whenSortOrderDuplicate_throwsConflict() {
         Activity activity = activity(1L);
         when(activityRepository.findById(1L)).thenReturn(Optional.of(activity));
-        when(activityImageRepository.existsByActivityIdAndSortOrder(1L, 0)).thenReturn(true);
+        when(imageRepository.existsByActivityIdAndSortOrder(1L, 0)).thenReturn(true);
 
         CustomException exception = assertThrows(CustomException.class,
-                () -> activityImageService.createActivityImage(
+                () -> imageService.createImage(
                         1L,
-                        new ActivityImageRequest("https://example.com/image.png", 0, false)
+                        new ImageRequest("https://example.com/image.png", 0, false)
                 ));
 
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ACTIVITY_IMAGE_DUPLICATE_SORT_ORDER);
-        verify(activityImageRepository, never()).save(any());
+        verify(imageRepository, never()).save(any());
     }
 
     @Test
-    void createActivityImage_whenSaveConflicts_throwsDuplicateSortOrder() {
+    void createImage_whenSaveConflicts_throwsDuplicateSortOrder() {
         Activity activity = activity(1L);
         when(activityRepository.findById(1L)).thenReturn(Optional.of(activity));
-        when(activityImageRepository.existsByActivityIdAndSortOrder(1L, 0)).thenReturn(false);
-        when(activityImageRepository.save(any(ActivityImage.class)))
+        when(imageRepository.existsByActivityIdAndSortOrder(1L, 0)).thenReturn(false);
+        when(imageRepository.save(any(Image.class)))
                 .thenThrow(new DataIntegrityViolationException("duplicate"));
 
         CustomException exception = assertThrows(CustomException.class,
-                () -> activityImageService.createActivityImage(
+                () -> imageService.createImage(
                         1L,
-                        new ActivityImageRequest("https://example.com/image.png", 0, false)
+                        new ImageRequest("https://example.com/image.png", 0, false)
                 ));
 
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ACTIVITY_IMAGE_DUPLICATE_SORT_ORDER);
     }
 
     @Test
-    void createActivityImage_whenUrlInvalid_throwsInvalidUrl() {
+    void createImage_whenUrlInvalid_throwsInvalidUrl() {
         Activity activity = activity(1L);
         when(activityRepository.findById(1L)).thenReturn(Optional.of(activity));
 
         CustomException exception = assertThrows(CustomException.class,
-                () -> activityImageService.createActivityImage(
+                () -> imageService.createImage(
                         1L,
-                        new ActivityImageRequest("ftp://example.com/image.png", 0, false)
+                        new ImageRequest("ftp://example.com/image.png", 0, false)
                 ));
 
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ACTIVITY_IMAGE_INVALID_URL);
     }
 
     @Test
-    void updateActivityImage_updatesFields() {
+    void updateImage_updatesFields() {
         Activity activity = activity(1L);
-        ActivityImage image = image(10L, activity, 0);
+        Image image = image(10L, activity, 0);
         when(activityRepository.existsById(1L)).thenReturn(true);
-        when(activityImageRepository.findByIdAndActivityId(10L, 1L)).thenReturn(Optional.of(image));
-        when(activityImageRepository.existsByActivityIdAndSortOrderAndIdNot(1L, 2, 10L)).thenReturn(false);
+        when(imageRepository.findByIdAndActivityId(10L, 1L)).thenReturn(Optional.of(image));
+        when(imageRepository.existsByActivityIdAndSortOrderAndIdNot(1L, 2, 10L)).thenReturn(false);
 
-        ActivityImageResponse response = activityImageService.updateActivityImage(
+        ImageResponse response = imageService.updateImage(
                 1L,
                 10L,
-                new ActivityImageRequest("https://example.com/new.png", 2, true)
+                new ImageRequest("https://example.com/new.png", 2, true)
         );
 
         assertThat(response.sortOrder()).isEqualTo(2);
@@ -160,15 +160,15 @@ class ActivityImageServiceImplTest {
     }
 
     @Test
-    void deleteActivityImage_deletesImageFromActivity() {
+    void deleteImage_deletesImageFromActivity() {
         Activity activity = activity(1L);
-        ActivityImage image = image(10L, activity, 0);
+        Image image = image(10L, activity, 0);
         when(activityRepository.existsById(1L)).thenReturn(true);
-        when(activityImageRepository.findByIdAndActivityId(10L, 1L)).thenReturn(Optional.of(image));
+        when(imageRepository.findByIdAndActivityId(10L, 1L)).thenReturn(Optional.of(image));
 
-        activityImageService.deleteActivityImage(1L, 10L);
+        imageService.deleteImage(1L, 10L);
 
-        verify(activityImageRepository).delete(image);
+        verify(imageRepository).delete(image);
     }
 
     private Activity activity(Long id) {
@@ -184,7 +184,7 @@ class ActivityImageServiceImplTest {
                 .description("설명")
                 .thumbnailUrl("https://example.com/thumb.png")
                 .sourceUrl("https://example.com/activity")
-                .address("장소")
+                .address("주소")
                 .recruitStartAt(BASE_TIME)
                 .recruitEndAt(BASE_TIME.plusDays(1))
                 .startAt(BASE_TIME.plusDays(2))
@@ -196,8 +196,8 @@ class ActivityImageServiceImplTest {
         return activity;
     }
 
-    private ActivityImage image(Long id, Activity activity, Integer sortOrder) {
-        ActivityImage image = ActivityImage.create(
+    private Image image(Long id, Activity activity, Integer sortOrder) {
+        Image image = Image.create(
                 activity,
                 "https://example.com/image-" + id + ".png",
                 sortOrder,

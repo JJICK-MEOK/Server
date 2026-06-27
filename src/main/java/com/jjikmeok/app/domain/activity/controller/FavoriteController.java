@@ -1,8 +1,8 @@
 package com.jjikmeok.app.domain.activity.controller;
 
-import com.jjikmeok.app.domain.activity.dto.request.ActivityFavoriteRequest;
-import com.jjikmeok.app.domain.activity.dto.response.ActivityFavoriteResponse;
-import com.jjikmeok.app.domain.activity.service.ActivityFavoriteService;
+import com.jjikmeok.app.domain.activity.dto.request.FavoriteRequest;
+import com.jjikmeok.app.domain.activity.dto.response.FavoriteResponse;
+import com.jjikmeok.app.domain.activity.service.FavoriteService;
 import com.jjikmeok.app.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,37 +21,37 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Tag(name = "Activity Favorite", description = "Activity favorite API")
+@Tag(name = "찜 API", description = "활동 찜 관리 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/activity-favorites")
-public class ActivityFavoriteController {
+public class FavoriteController {
 
-    private final ActivityFavoriteService activityFavoriteService;
+    private final FavoriteService favoriteService;
 
-    @Operation(summary = "Get activity favorites")
+    @Operation(summary = "찜 목록 조회")
     @GetMapping
-    public ApiResponse<List<ActivityFavoriteResponse>> getFavorites(@AuthenticationPrincipal Long userId) {
-        return ApiResponse.success("Activity favorites fetched", activityFavoriteService.getFavorites(userId));
+    public ApiResponse<List<FavoriteResponse>> getFavorites(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.success("찜 목록 조회 성공", favoriteService.getFavorites(userId));
     }
 
-    @Operation(summary = "Create activity favorite")
+    @Operation(summary = "찜 추가")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<ActivityFavoriteResponse> createFavorite(
+    public ApiResponse<FavoriteResponse> createFavorite(
             @AuthenticationPrincipal Long userId,
-            @RequestBody @Valid ActivityFavoriteRequest request
+            @RequestBody @Valid FavoriteRequest request
     ) {
-        return ApiResponse.success("Activity favorite created", activityFavoriteService.createFavorite(userId, request));
+        return ApiResponse.success("찜 추가 성공", favoriteService.createFavorite(userId, request));
     }
 
-    @Operation(summary = "Delete activity favorite")
+    @Operation(summary = "찜 삭제")
     @DeleteMapping("/{activityId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteFavorite(
             @AuthenticationPrincipal Long userId,
             @PathVariable("activityId") Long activityId
     ) {
-        activityFavoriteService.deleteFavorite(userId, activityId);
+        favoriteService.deleteFavorite(userId, activityId);
     }
 }

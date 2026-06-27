@@ -5,9 +5,9 @@ import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
 import com.jjikmeok.app.domain.activity.enums.SourceType;
-import com.jjikmeok.app.domain.activity.repository.ActivityFavoriteRepository;
+import com.jjikmeok.app.domain.activity.repository.FavoriteRepository;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
-import com.jjikmeok.app.domain.image.repository.ActivityImageRepository;
+import com.jjikmeok.app.domain.image.repository.ImageRepository;
 import com.jjikmeok.app.domain.region.entity.Region;
 import com.jjikmeok.app.domain.region.enums.RegionDepth;
 import com.jjikmeok.app.domain.user.repository.UserOnboardingRegionRepository;
@@ -37,10 +37,10 @@ class PageServiceImplTest {
     private ActivityRepository activityRepository;
 
     @Mock
-    private ActivityFavoriteRepository activityFavoriteRepository;
+    private FavoriteRepository favoriteRepository;
 
     @Mock
-    private ActivityImageRepository activityImageRepository;
+    private ImageRepository imageRepository;
 
     @Mock
     private UserProfileRepository userProfileRepository;
@@ -57,8 +57,8 @@ class PageServiceImplTest {
     void setUp() {
         pageService = new PageServiceImpl(
                 activityRepository,
-                activityFavoriteRepository,
-                activityImageRepository,
+                favoriteRepository,
+                imageRepository,
                 userProfileRepository,
                 userOnboardingTagRepository,
                 userOnboardingRegionRepository

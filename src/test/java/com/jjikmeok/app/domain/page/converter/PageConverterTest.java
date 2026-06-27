@@ -7,7 +7,7 @@ import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
 import com.jjikmeok.app.domain.activity.enums.PreferenceTag;
 import com.jjikmeok.app.domain.activity.enums.SourceType;
-import com.jjikmeok.app.domain.image.entity.ActivityImage;
+import com.jjikmeok.app.domain.image.entity.Image;
 import com.jjikmeok.app.domain.region.entity.Region;
 import com.jjikmeok.app.domain.region.enums.RegionDepth;
 import com.jjikmeok.app.domain.tag.entity.Tag;
@@ -36,14 +36,14 @@ class PageConverterTest {
     void toDetail_returnsThreeRandomHashtagsFromFiveCandidates() {
         Activity activity = activityWithTags();
 
-        assertThat(PageConverter.toDetail(activity, List.<ActivityImage>of(), false, TODAY).hashtags()).hasSize(3);
+        assertThat(PageConverter.toDetail(activity, List.<Image>of(), false, TODAY).hashtags()).hasSize(3);
     }
 
     @Test
     void toDetail_usesOnlyOneMoodTagFromTwoMoodTags() {
         Activity activity = activityWithTags();
 
-        List<String> hashtags = PageConverter.toDetail(activity, List.<ActivityImage>of(), false, TODAY).hashtags();
+        List<String> hashtags = PageConverter.toDetail(activity, List.<Image>of(), false, TODAY).hashtags();
 
         assertThat(hashtags.stream()
                 .filter(tag -> tag.equals(PreferenceTag.CALM.getHashtag()) || tag.equals(PreferenceTag.HEALING.getHashtag()))

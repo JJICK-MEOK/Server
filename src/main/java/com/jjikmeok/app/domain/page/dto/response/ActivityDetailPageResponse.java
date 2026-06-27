@@ -15,7 +15,7 @@ public record ActivityDetailPageResponse(
         String title,
         String description,
         String thumbnailUrl,
-        List<ActivityImageItemResponse> images,
+        List<ImageItemResponse> images,
         String sourceUrl,
         String address,
         String organizer,

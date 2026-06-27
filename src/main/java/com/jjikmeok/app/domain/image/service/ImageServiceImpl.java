@@ -1,12 +1,12 @@
 package com.jjikmeok.app.domain.image.service;
 
-import com.jjikmeok.app.domain.image.converter.ActivityImageConverter;
-import com.jjikmeok.app.domain.image.dto.request.ActivityImageRequest;
-import com.jjikmeok.app.domain.image.dto.response.ActivityImageResponse;
 import com.jjikmeok.app.domain.activity.entity.Activity;
-import com.jjikmeok.app.domain.image.entity.ActivityImage;
-import com.jjikmeok.app.domain.image.repository.ActivityImageRepository;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
+import com.jjikmeok.app.domain.image.converter.ImageConverter;
+import com.jjikmeok.app.domain.image.dto.request.ImageRequest;
+import com.jjikmeok.app.domain.image.dto.response.ImageResponse;
+import com.jjikmeok.app.domain.image.entity.Image;
+import com.jjikmeok.app.domain.image.repository.ImageRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -21,29 +21,29 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class ActivityImageServiceImpl implements ActivityImageService {
+public class ImageServiceImpl implements ImageService {
 
     private final ActivityRepository activityRepository;
-    private final ActivityImageRepository activityImageRepository;
+    private final ImageRepository imageRepository;
 
     @Override
-    public List<ActivityImageResponse> getActivityImages(Long activityId) {
+    public List<ImageResponse> getImages(Long activityId) {
         validateActivityExists(activityId);
-        return activityImageRepository.findAllByActivityIdOrderBySortOrderAscIdAsc(activityId).stream()
-                .map(ActivityImageConverter::toResponse)
+        return imageRepository.findAllByActivityIdOrderBySortOrderAscIdAsc(activityId).stream()
+                .map(ImageConverter::toResponse)
                 .toList();
     }
 
     @Override
     @Transactional
-    public ActivityImageResponse createActivityImage(Long activityId, ActivityImageRequest request) {
+    public ImageResponse createImage(Long activityId, ImageRequest request) {
         Activity activity = findActivityOrThrow(activityId);
         validateImageUrl(request.imageUrl());
         validateDuplicateSortOrderOnCreate(activityId, request.sortOrder());
 
         try {
-            return ActivityImageConverter.toResponse(
-                    activityImageRepository.save(ActivityImageConverter.toEntity(activity, request))
+            return ImageConverter.toResponse(
+                    imageRepository.save(ImageConverter.toEntity(activity, request))
             );
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(ErrorCode.ACTIVITY_IMAGE_DUPLICATE_SORT_ORDER);
@@ -52,22 +52,22 @@ public class ActivityImageServiceImpl implements ActivityImageService {
 
     @Override
     @Transactional
-    public ActivityImageResponse updateActivityImage(Long activityId, Long imageId, ActivityImageRequest request) {
+    public ImageResponse updateImage(Long activityId, Long imageId, ImageRequest request) {
         validateActivityExists(activityId);
         validateImageUrl(request.imageUrl());
 
-        ActivityImage activityImage = findActivityImageOrThrow(activityId, imageId);
+        Image image = findImageOrThrow(activityId, imageId);
         validateDuplicateSortOrderOnUpdate(activityId, imageId, request.sortOrder());
 
-        activityImage.update(request.imageUrl().trim(), request.sortOrder(), request.isThumbnail());
-        return ActivityImageConverter.toResponse(activityImage);
+        image.update(request.imageUrl().trim(), request.sortOrder(), request.isThumbnail());
+        return ImageConverter.toResponse(image);
     }
 
     @Override
     @Transactional
-    public void deleteActivityImage(Long activityId, Long imageId) {
+    public void deleteImage(Long activityId, Long imageId) {
         validateActivityExists(activityId);
-        activityImageRepository.delete(findActivityImageOrThrow(activityId, imageId));
+        imageRepository.delete(findImageOrThrow(activityId, imageId));
     }
 
     private Activity findActivityOrThrow(Long activityId) {
@@ -75,8 +75,8 @@ public class ActivityImageServiceImpl implements ActivityImageService {
                 .orElseThrow(() -> new CustomException(ErrorCode.ACTIVITY_NOT_FOUND));
     }
 
-    private ActivityImage findActivityImageOrThrow(Long activityId, Long imageId) {
-        return activityImageRepository.findByIdAndActivityId(imageId, activityId)
+    private Image findImageOrThrow(Long activityId, Long imageId) {
+        return imageRepository.findByIdAndActivityId(imageId, activityId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACTIVITY_IMAGE_NOT_FOUND));
     }
 
@@ -88,14 +88,14 @@ public class ActivityImageServiceImpl implements ActivityImageService {
 
     private void validateDuplicateSortOrderOnCreate(Long activityId, Integer sortOrder) {
         int normalizedSortOrder = sortOrder != null ? sortOrder : 0;
-        if (activityImageRepository.existsByActivityIdAndSortOrder(activityId, normalizedSortOrder)) {
+        if (imageRepository.existsByActivityIdAndSortOrder(activityId, normalizedSortOrder)) {
             throw new CustomException(ErrorCode.ACTIVITY_IMAGE_DUPLICATE_SORT_ORDER);
         }
     }
 
     private void validateDuplicateSortOrderOnUpdate(Long activityId, Long imageId, Integer sortOrder) {
         int normalizedSortOrder = sortOrder != null ? sortOrder : 0;
-        if (activityImageRepository.existsByActivityIdAndSortOrderAndIdNot(
+        if (imageRepository.existsByActivityIdAndSortOrderAndIdNot(
                 activityId,
                 normalizedSortOrder,
                 imageId

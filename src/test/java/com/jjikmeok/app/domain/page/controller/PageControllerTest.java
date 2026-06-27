@@ -13,7 +13,7 @@ import com.jjikmeok.app.domain.page.dto.response.ActivityCustomPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityFilterOptionResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomePageResponse;
-import com.jjikmeok.app.domain.page.dto.response.ActivityImageItemResponse;
+import com.jjikmeok.app.domain.page.dto.response.ImageItemResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivitySectionResponse;
 import com.jjikmeok.app.domain.page.service.PageService;
 import com.jjikmeok.app.global.common.exception.GlobalExceptionHandler;
@@ -181,7 +181,7 @@ class PageControllerTest {
                 "테스트 활동",
                 "상세 설명",
                 "https://example.com/thumb.png",
-                List.of(new ActivityImageItemResponse(1L, "https://example.com/image.png", 0, true)),
+                List.of(new ImageItemResponse(1L, "https://example.com/image.png", 0, true)),
                 "https://example.com/apply",
                 "서울",
                 "운영기관",

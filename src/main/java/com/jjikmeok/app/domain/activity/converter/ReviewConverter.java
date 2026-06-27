@@ -1,15 +1,15 @@
 package com.jjikmeok.app.domain.activity.converter;
 
-import com.jjikmeok.app.domain.activity.dto.response.ActivityReviewResponse;
-import com.jjikmeok.app.domain.activity.entity.ActivityReview;
+import com.jjikmeok.app.domain.activity.dto.response.ReviewResponse;
+import com.jjikmeok.app.domain.activity.entity.Review;
 
-public class ActivityReviewConverter {
+public class ReviewConverter {
 
-    private ActivityReviewConverter() {
+    private ReviewConverter() {
     }
 
-    public static ActivityReviewResponse toResponse(ActivityReview review) {
-        return new ActivityReviewResponse(
+    public static ReviewResponse toResponse(Review review) {
+        return new ReviewResponse(
                 review.getId(),
                 review.getUser().getId(),
                 review.getActivity().getId(),

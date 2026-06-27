@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
         @UniqueConstraint(name = "uk_activity_reviews_user_activity", columnNames = {"user_id", "activity_id"})
 })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ActivityReview extends BaseEntity {
+public class Review extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -38,8 +38,8 @@ public class ActivityReview extends BaseEntity {
     @Column(name = "like_count", nullable = false)
     private Integer likeCount;
 
-    public static ActivityReview create(User user, Activity activity, Integer rating, String reason) {
-        ActivityReview review = new ActivityReview();
+    public static Review create(User user, Activity activity, Integer rating, String reason) {
+        Review review = new Review();
         review.user = user;
         review.activity = activity;
         review.rating = rating;

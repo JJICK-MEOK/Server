@@ -1,10 +1,9 @@
 package com.jjikmeok.app.domain.page.dto.response;
 
-public record ActivityImageItemResponse(
+public record ImageItemResponse(
         Long id,
         String imageUrl,
         Integer sortOrder,
         Boolean thumbnail
 ) {
 }
-

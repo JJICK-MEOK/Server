@@ -1,11 +1,11 @@
 package com.jjikmeok.app.domain.activity.service;
 
-import com.jjikmeok.app.domain.activity.converter.ActivityFavoriteConverter;
-import com.jjikmeok.app.domain.activity.dto.request.ActivityFavoriteRequest;
-import com.jjikmeok.app.domain.activity.dto.response.ActivityFavoriteResponse;
+import com.jjikmeok.app.domain.activity.converter.FavoriteConverter;
+import com.jjikmeok.app.domain.activity.dto.request.FavoriteRequest;
+import com.jjikmeok.app.domain.activity.dto.response.FavoriteResponse;
 import com.jjikmeok.app.domain.activity.entity.Activity;
-import com.jjikmeok.app.domain.activity.entity.ActivityFavorite;
-import com.jjikmeok.app.domain.activity.repository.ActivityFavoriteRepository;
+import com.jjikmeok.app.domain.activity.entity.Favorite;
+import com.jjikmeok.app.domain.activity.repository.FavoriteRepository;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
 import com.jjikmeok.app.domain.user.entity.User;
 import com.jjikmeok.app.domain.user.repository.UserRepository;
@@ -21,23 +21,23 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class ActivityFavoriteServiceImpl implements ActivityFavoriteService {
+public class FavoriteServiceImpl implements FavoriteService {
 
-    private final ActivityFavoriteRepository favoriteRepository;
+    private final FavoriteRepository favoriteRepository;
     private final ActivityRepository activityRepository;
     private final UserRepository userRepository;
 
     @Override
-    public List<ActivityFavoriteResponse> getFavorites(Long userId) {
+    public List<FavoriteResponse> getFavorites(Long userId) {
         findUserOrThrow(userId);
         return favoriteRepository.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
-                .map(ActivityFavoriteConverter::toResponse)
+                .map(FavoriteConverter::toResponse)
                 .toList();
     }
 
     @Override
     @Transactional
-    public ActivityFavoriteResponse createFavorite(Long userId, ActivityFavoriteRequest request) {
+    public FavoriteResponse createFavorite(Long userId, FavoriteRequest request) {
         User user = findUserOrThrow(userId);
         Activity activity = findActivityOrThrow(request.activityId());
         if (favoriteRepository.existsByUserIdAndActivityId(userId, request.activityId())) {
@@ -45,9 +45,9 @@ public class ActivityFavoriteServiceImpl implements ActivityFavoriteService {
         }
 
         try {
-            ActivityFavorite favorite = favoriteRepository.save(ActivityFavorite.create(user, activity));
+            Favorite favorite = favoriteRepository.save(Favorite.create(user, activity));
             activity.increaseLikeCount();
-            return ActivityFavoriteConverter.toResponse(favorite);
+            return FavoriteConverter.toResponse(favorite);
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(ErrorCode.ACTIVITY_FAVORITE_DUPLICATE);
         }
@@ -58,7 +58,7 @@ public class ActivityFavoriteServiceImpl implements ActivityFavoriteService {
     public void deleteFavorite(Long userId, Long activityId) {
         findUserOrThrow(userId);
         Activity activity = findActivityOrThrow(activityId);
-        ActivityFavorite favorite = favoriteRepository.findByUserIdAndActivityId(userId, activityId)
+        Favorite favorite = favoriteRepository.findByUserIdAndActivityId(userId, activityId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACTIVITY_FAVORITE_NOT_FOUND));
         favoriteRepository.delete(favorite);
         activity.decreaseLikeCount();

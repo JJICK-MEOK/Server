@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public record ActivityImageRequest(
+public record ImageRequest(
         @NotBlank(message = "활동 이미지 URL은 필수입니다.")
         @Size(max = 500, message = "활동 이미지 URL은 500자 이하여야 합니다.")
         String imageUrl,

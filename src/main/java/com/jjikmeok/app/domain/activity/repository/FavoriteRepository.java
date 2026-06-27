@@ -1,6 +1,6 @@
 package com.jjikmeok.app.domain.activity.repository;
 
-import com.jjikmeok.app.domain.activity.entity.ActivityFavorite;
+import com.jjikmeok.app.domain.activity.entity.Favorite;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -9,17 +9,17 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface ActivityFavoriteRepository extends JpaRepository<ActivityFavorite, Long> {
+public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
 
-    List<ActivityFavorite> findAllByUserIdOrderByCreatedAtDesc(Long userId);
+    List<Favorite> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
-    Optional<ActivityFavorite> findByUserIdAndActivityId(Long userId, Long activityId);
+    Optional<Favorite> findByUserIdAndActivityId(Long userId, Long activityId);
 
     boolean existsByUserIdAndActivityId(Long userId, Long activityId);
 
     @Query("""
             SELECT f.activity.id
-            FROM ActivityFavorite f
+            FROM Favorite f
             WHERE f.user.id = :userId
               AND f.activity.id IN :activityIds
             """)

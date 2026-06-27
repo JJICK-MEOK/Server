@@ -1,7 +1,7 @@
 package com.jjikmeok.app.domain.activity.repository;
 
 import com.jjikmeok.app.domain.activity.entity.Activity;
-import com.jjikmeok.app.domain.activity.entity.ActivityFavorite;
+import com.jjikmeok.app.domain.activity.entity.Favorite;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
@@ -252,7 +252,7 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             FROM ActivityTag at
             JOIN at.activity a
             JOIN UserOnboardingTag uot ON uot.tag = at.tag
-            LEFT JOIN ActivityFavorite f ON f.activity = a AND f.user.id = :userId
+            LEFT JOIN Favorite f ON f.activity = a AND f.user.id = :userId
             WHERE uot.userOnboarding.user.id = :userId
               AND a.isActive = true
               AND a.approvalStatus = :approvalStatus

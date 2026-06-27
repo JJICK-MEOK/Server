@@ -1,8 +1,8 @@
 package com.jjikmeok.app.domain.image.controller;
 
-import com.jjikmeok.app.domain.image.dto.request.ActivityImageRequest;
-import com.jjikmeok.app.domain.image.dto.response.ActivityImageResponse;
-import com.jjikmeok.app.domain.image.service.ActivityImageService;
+import com.jjikmeok.app.domain.image.dto.request.ImageRequest;
+import com.jjikmeok.app.domain.image.dto.response.ImageResponse;
+import com.jjikmeok.app.domain.image.service.ImageService;
 import com.jjikmeok.app.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,51 +22,51 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Tag(name = "Activity Image", description = "활동 이미지 관리 API")
+@Tag(name = "이미지 API", description = "활동 이미지 관리 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/activities/{activityId}/images")
-public class ActivityImageController {
+public class ImageController {
 
-    private final ActivityImageService activityImageService;
+    private final ImageService imageService;
 
-    @Operation(summary = "활동 이미지 목록 조회")
+    @Operation(summary = "이미지 목록 조회")
     @GetMapping
-    public ApiResponse<List<ActivityImageResponse>> getActivityImages(
+    public ApiResponse<List<ImageResponse>> getImages(
             @PathVariable("activityId") Long activityId) {
-        return ApiResponse.success("활동 이미지 목록 조회 성공", activityImageService.getActivityImages(activityId));
+        return ApiResponse.success("이미지 목록 조회 성공", imageService.getImages(activityId));
     }
 
-    @Operation(summary = "활동 이미지 생성")
+    @Operation(summary = "이미지 생성")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<ActivityImageResponse> createActivityImage(
+    public ApiResponse<ImageResponse> createImage(
             @PathVariable("activityId") Long activityId,
-            @RequestBody @Valid ActivityImageRequest request) {
-        return ApiResponse.success("활동 이미지 생성 성공", activityImageService.createActivityImage(activityId, request));
+            @RequestBody @Valid ImageRequest request) {
+        return ApiResponse.success("이미지 생성 성공", imageService.createImage(activityId, request));
     }
 
-    @Operation(summary = "활동 이미지 수정")
+    @Operation(summary = "이미지 수정")
     @PutMapping("/{imageId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<ActivityImageResponse> updateActivityImage(
+    public ApiResponse<ImageResponse> updateImage(
             @PathVariable("activityId") Long activityId,
             @PathVariable("imageId") Long imageId,
-            @RequestBody @Valid ActivityImageRequest request) {
+            @RequestBody @Valid ImageRequest request) {
         return ApiResponse.success(
-                "활동 이미지 수정 성공",
-                activityImageService.updateActivityImage(activityId, imageId, request)
+                "이미지 수정 성공",
+                imageService.updateImage(activityId, imageId, request)
         );
     }
 
-    @Operation(summary = "활동 이미지 삭제")
+    @Operation(summary = "이미지 삭제")
     @DeleteMapping("/{imageId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
-    public void deleteActivityImage(
+    public void deleteImage(
             @PathVariable("activityId") Long activityId,
             @PathVariable("imageId") Long imageId) {
-        activityImageService.deleteActivityImage(activityId, imageId);
+        imageService.deleteImage(activityId, imageId);
     }
 }

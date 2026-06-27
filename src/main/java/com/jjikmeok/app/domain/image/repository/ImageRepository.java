@@ -1,16 +1,16 @@
 package com.jjikmeok.app.domain.image.repository;
 
-import com.jjikmeok.app.domain.image.entity.ActivityImage;
+import com.jjikmeok.app.domain.image.entity.Image;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface ActivityImageRepository extends JpaRepository<ActivityImage, Long> {
+public interface ImageRepository extends JpaRepository<Image, Long> {
 
-    List<ActivityImage> findAllByActivityIdOrderBySortOrderAscIdAsc(Long activityId);
+    List<Image> findAllByActivityIdOrderBySortOrderAscIdAsc(Long activityId);
 
-    Optional<ActivityImage> findByIdAndActivityId(Long id, Long activityId);
+    Optional<Image> findByIdAndActivityId(Long id, Long activityId);
 
     boolean existsByActivityIdAndSortOrder(Long activityId, Integer sortOrder);
 

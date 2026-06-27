@@ -31,6 +31,12 @@ spring:
           starttls:
             enable: true
 
+  ai:
+    openai:
+      api-key: ${SPRING_AI_OPENAI_API_KEY}
+
+  # 파일 업로드 용량 설정 (테스트 영상 업로드용 50MB)
+  # 실제 운영 환경에선 500MB로 늘릴 예정
   servlet:
     multipart:
       max-file-size: 50MB
@@ -48,7 +54,7 @@ spring:
 
 oauth2:
   kakao:
-    client-id: ${KAKAO_CLIENT_ID}
+    client-id: ${KAKAO_CLIENT_ID}          # REST API 키
     redirect-uri: "{baseUrl}/api/v2/oauth2/code/kakao"
   google:
     client-id: ${GOOGLE_CLIENT_ID}

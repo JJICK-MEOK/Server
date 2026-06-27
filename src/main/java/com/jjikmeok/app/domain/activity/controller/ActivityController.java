@@ -130,7 +130,7 @@ public class ActivityController {
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<ActivityDetailResponse> createActivity(
             @RequestBody @Valid ActivityRequest request) {
-        return ApiResponse.success("활동 생성 성공", activityService.createActivity(request));
+        return ApiResponse.created("활동 생성 성공", activityService.createActivity(request));
     }
 
     @Operation(summary = "활동 수정 (관리자)", description = "특정 활동 정보를 수정합니다.")

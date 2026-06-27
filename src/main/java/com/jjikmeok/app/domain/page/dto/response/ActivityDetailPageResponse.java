@@ -15,7 +15,7 @@ public record ActivityDetailPageResponse(
         String title,
         String description,
         String thumbnailUrl,
-        List<ActivityImageItemResponse> images,
+        List<ImageItemResponse> images,
         String sourceUrl,
         String address,
         String organizer,
@@ -25,17 +25,10 @@ public record ActivityDetailPageResponse(
         LocalDateTime endAt,
         LocalDateTime recruitStartAt,
         LocalDateTime recruitEndAt,
-        String activityPeriodText,
-        String recruitPeriodText,
-        String dDay,
-        Long daysUntilRecruitEnd,
-        String deadlineText,
+        Integer deadline,
         Integer price,
-        String priceLabel,
         ActivityType activityType,
-        String activityTypeLabel,
         ActivityCategory category,
-        String categoryLabel,
         List<String> hashtags,
         SourceType sourceType,
         String externalId,
@@ -49,3 +42,4 @@ public record ActivityDetailPageResponse(
         LocalDateTime updatedAt
 ) {
 }
+

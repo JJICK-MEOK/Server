@@ -36,6 +36,7 @@ public class ActivityServiceImpl implements ActivityService {
 
     private final ActivityRepository activityRepository;
     private final RegionRepository regionRepository;
+    private final ActivityTagAutoAttachService activityTagAutoAttachService;
 
     @Override
     public List<ActivitySummaryResponse> getActivities(Long regionId, ActivityCategory category, ActivityType type, String keyword) {
@@ -104,6 +105,7 @@ public class ActivityServiceImpl implements ActivityService {
 
         Activity activity = ActivityConverter.toEntity(request, region);
         Activity savedActivity = activityRepository.save(activity);
+        activityTagAutoAttachService.refresh(savedActivity);
 
         return ActivityConverter.toDetailResponse(savedActivity);
     }
@@ -126,6 +128,9 @@ public class ActivityServiceImpl implements ActivityService {
                 request.thumbnailUrl(),
                 request.sourceUrl(),
                 request.address(),
+                request.organizer(),
+                request.contactInfo(),
+                request.target(),
                 request.startAt(),
                 request.endAt(),
                 request.recruitStartAt(),
@@ -138,6 +143,7 @@ public class ActivityServiceImpl implements ActivityService {
                 request.approvalStatus(),
                 request.isActive()
         );
+        activityTagAutoAttachService.refresh(activity);
 
         return ActivityConverter.toDetailResponse(activity);
     }

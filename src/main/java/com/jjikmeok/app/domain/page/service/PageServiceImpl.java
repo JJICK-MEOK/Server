@@ -197,11 +197,34 @@ public class PageServiceImpl implements PageService {
                 .limit(limit)
                 .toList();
         Set<Long> likedActivityIds = likedActivityIds(userId, distinctActivities);
+        Set<Long> adActivityIds = adActivityIds(distinctActivities);
         LocalDate today = LocalDate.now(SEOUL);
 
         return distinctActivities.stream()
-                .map(activity -> PageConverter.toCard(activity, likedActivityIds.contains(activity.getId()), today))
+                .map(activity -> PageConverter.toCard(
+                        activity,
+                        likedActivityIds.contains(activity.getId()),
+                        adActivityIds.contains(activity.getId()),
+                        today
+                ))
                 .toList();
+    }
+
+    private Set<Long> adActivityIds(List<Activity> activities) {
+        List<Activity> ranked = activities.stream()
+                .sorted(Comparator
+                        .comparing(Activity::getViewCount, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(Activity::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .limit(3)
+                .toList();
+
+        if (ranked.isEmpty()) {
+            return Set.of();
+        }
+
+        List<Activity> shuffled = new java.util.ArrayList<>(ranked);
+        java.util.Collections.shuffle(shuffled);
+        return Set.of(shuffled.getFirst().getId());
     }
 
     private Set<Long> likedActivityIds(Long userId, List<Activity> activities) {

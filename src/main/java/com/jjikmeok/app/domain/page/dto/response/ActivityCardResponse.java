@@ -21,6 +21,7 @@ public record ActivityCardResponse(
         ActivityCategory category,
         String categoryLabel,
         List<String> hashtags,
+        Boolean isAd,
         Integer price,
         String priceLabel,
         Integer viewCount,

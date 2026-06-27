@@ -15,7 +15,6 @@ import com.jjikmeok.app.domain.page.dto.response.ActivityFilterOptionResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomePageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityImageItemResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivitySectionResponse;
-import com.jjikmeok.app.domain.page.dto.response.ActivityShortcutResponse;
 import com.jjikmeok.app.domain.page.service.PageService;
 import com.jjikmeok.app.global.common.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,11 +63,13 @@ class PageControllerTest {
 
         mockMvc.perform(get("/api/v1/pages/home").param("limit", "5"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("홈 화면 활동 조회 성공"))
-                .andExpect(jsonPath("$.data.hero.title").value("확신이 없어도 괜찮아요\n일단 찍먹 해보세요"))
-                .andExpect(jsonPath("$.data.shortcuts[0].type").value("PROGRAM"))
-                .andExpect(jsonPath("$.data.recommended.activities[0].hashtags.length()").value(2))
-                .andExpect(jsonPath("$.data.recommended.activities[0].dDay").value("D-3"));
+                .andExpect(jsonPath("$.message").value("홈 페이지 조회 성공"))
+                .andExpect(jsonPath("$.data.user.nickname").value("tester"))
+                .andExpect(jsonPath("$.data.user.profileImageUrl").value("https://example.com/profile.png"))
+                .andExpect(jsonPath("$.data.recommendedActivities[0].hashtags.length()").value(2))
+                .andExpect(jsonPath("$.data.recommendedActivities[0].isAd").value(true))
+                .andExpect(jsonPath("$.data.recommendedActivities[0].deadline").value(3))
+                .andExpect(jsonPath("$.data.closingSoonActivities[0].deadline").value(3));
 
         verify(pageService).getHomePage(null, 5);
     }
@@ -84,9 +85,12 @@ class PageControllerTest {
                         .param("sort", "deadline")
                         .param("limit", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("카테고리 화면 활동 조회 성공"))
+                .andExpect(jsonPath("$.message").value("카테고리 페이지 조회 성공"))
                 .andExpect(jsonPath("$.data.selectedType").value("PROGRAM"))
-                .andExpect(jsonPath("$.data.activities[0].categoryLabel").value("공예 / 만들기"))
+                .andExpect(jsonPath("$.data.typeOptions[0].label").value("전체"))
+                .andExpect(jsonPath("$.data.categoryOptions[1].label").value("운동 / 액티비티"))
+                .andExpect(jsonPath("$.data.activities[0].category").value("CRAFT"))
+                .andExpect(jsonPath("$.data.activities[0].isAd").value(true))
                 .andExpect(jsonPath("$.data.activities[0].hashtags.length()").value(2));
 
         verify(pageService).getCategoryPage(null, ActivityType.PROGRAM, ActivityCategory.CRAFT, "deadline", 10);
@@ -98,7 +102,7 @@ class PageControllerTest {
 
         mockMvc.perform(get("/api/v1/pages/custom"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("맞춤 화면 활동 조회 성공"))
+                .andExpect(jsonPath("$.message").value("맞춤 페이지 조회 성공"))
                 .andExpect(jsonPath("$.data.tasteProfile.title").value("추천 활동"));
 
         verify(pageService).getCustomPage(null, null);
@@ -110,27 +114,20 @@ class PageControllerTest {
 
         mockMvc.perform(get("/api/v1/pages/detail/{activityId}", 1L))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("상세 화면 활동 조회 성공"))
+                .andExpect(jsonPath("$.message").value("상세 페이지 조회 성공"))
                 .andExpect(jsonPath("$.data.organizer").value("운영기관"))
                 .andExpect(jsonPath("$.data.images[0].imageUrl").value("https://example.com/image.png"))
                 .andExpect(jsonPath("$.data.hashtags.length()").value(3))
-                .andExpect(jsonPath("$.data.priceLabel").value("무료"));
+                .andExpect(jsonPath("$.data.deadline").value(3));
 
         verify(pageService).getDetailPage(null, 1L);
     }
 
     private ActivityHomePageResponse homePageResponse() {
         return new ActivityHomePageResponse(
-                "tester",
-                new ActivityHomePageResponse.Hero(
-                        "확신이 없어도 괜찮아요\n일단 찍먹 해보세요",
-                        "처음이어도 부담 없이 시작할 수 있는 경험을 골라봤어요.",
-                        "나만의 경험 탐색하기",
-                        "/api/v1/pages/custom"
-                ),
-                List.of(new ActivityShortcutResponse(ActivityType.PROGRAM, "프로그램", "palette", "/api/v1/pages/category?type=PROGRAM")),
-                new ActivitySectionResponse("recommended", "tester 님에게 추천해요!", null, List.of(card())),
-                new ActivitySectionResponse("closingSoon", "인기 마감 임박", null, List.of(card()))
+                new ActivityHomePageResponse.UserResponse("tester", "https://example.com/profile.png"),
+                List.of(card()),
+                List.of(card())
         );
     }
 
@@ -141,9 +138,31 @@ class PageControllerTest {
                 ActivityCategory.CRAFT,
                 "deadline",
                 1L,
-                List.of(new ActivityFilterOptionResponse("PROGRAM", "프로그램", true)),
-                List.of(new ActivityFilterOptionResponse("CRAFT", "공예 / 만들기", true)),
-                List.of(new ActivityFilterOptionResponse("deadline", "마감순", true)),
+                List.of(
+                        new ActivityFilterOptionResponse("", "전체", false),
+                        new ActivityFilterOptionResponse("PROGRAM", "프로그램", true),
+                        new ActivityFilterOptionResponse("ONE_DAY", "원데이", false),
+                        new ActivityFilterOptionResponse("EVENT", "행사·강연", false),
+                        new ActivityFilterOptionResponse("CLUB", "동아리", false)
+                ),
+                List.of(
+                        new ActivityFilterOptionResponse("", "전체", false),
+                        new ActivityFilterOptionResponse("SPORTS", "운동 / 액티비티", false),
+                        new ActivityFilterOptionResponse("CULTURE", "문화 / 예술", false),
+                        new ActivityFilterOptionResponse("CRAFT", "공예 / 만들기", true),
+                        new ActivityFilterOptionResponse("COOKING", "요리 / 베이킹", false),
+                        new ActivityFilterOptionResponse("PHOTO_VIDEO", "사진 / 영상", false),
+                        new ActivityFilterOptionResponse("HUMANITIES", "책 / 글", false),
+                        new ActivityFilterOptionResponse("TRAVEL", "여행 / 탐방", false),
+                        new ActivityFilterOptionResponse("LANGUAGE", "언어 / 해외", false),
+                        new ActivityFilterOptionResponse("VOLUNTEER", "봉사활동", false),
+                        new ActivityFilterOptionResponse("CAREER", "성장 / 커리어", false)
+                ),
+                List.of(
+                        new ActivityFilterOptionResponse("recommended", "추천순", false),
+                        new ActivityFilterOptionResponse("popular", "인기순", false),
+                        new ActivityFilterOptionResponse("deadline", "마감순", true)
+                ),
                 List.of(card())
         );
     }
@@ -174,17 +193,10 @@ class PageControllerTest {
                 BASE_TIME.plusDays(4),
                 BASE_TIME,
                 BASE_TIME.plusDays(3),
-                "2026.06.01",
-                "2026.05.28 ~ 2026.05.31",
-                "D-3",
-                3L,
-                "3일 남음",
+                3,
                 0,
-                "무료",
                 ActivityType.PROGRAM,
-                "프로그램",
                 ActivityCategory.CRAFT,
-                "공예 / 만들기",
                 List.of("#공예 / 만들기", "#프로그램", "#무료"),
                 SourceType.URL_MANUAL,
                 null,
@@ -204,25 +216,22 @@ class PageControllerTest {
                 1L,
                 "테스트 활동",
                 "https://example.com/thumb.png",
-                "D-3",
-                3L,
-                "3일 남음",
+                3,
                 10L,
                 "서울",
                 "서울",
                 ActivityType.PROGRAM,
-                "프로그램",
                 ActivityCategory.CRAFT,
-                "공예 / 만들기",
                 List.of("#공예 / 만들기", "#프로그램"),
+                true,
                 0,
-                "무료",
                 1,
                 2,
                 3,
                 false,
                 BASE_TIME.plusDays(4),
                 BASE_TIME.plusDays(4),
+                BASE_TIME,
                 BASE_TIME.plusDays(3)
         );
     }

@@ -13,6 +13,20 @@ public interface ActivityFavoriteRepository extends JpaRepository<ActivityFavori
 
     List<ActivityFavorite> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
+    @Query("""
+        SELECT f
+        FROM ActivityFavorite f
+        JOIN FETCH f.activity a
+        JOIN FETCH f.user u
+        WHERE u.id = :userId
+          AND a.recruitEndAt IS NOT NULL
+        ORDER BY
+          a.recruitEndAt ASC,
+          f.createdAt DESC,
+          f.id DESC
+        """)
+    List<ActivityFavorite> findAllByUserIdOrderByRecruitEndAtAsc(@Param("userId") Long userId);
+
     Optional<ActivityFavorite> findByUserIdAndActivityId(Long userId, Long activityId);
 
     boolean existsByUserIdAndActivityId(Long userId, Long activityId);

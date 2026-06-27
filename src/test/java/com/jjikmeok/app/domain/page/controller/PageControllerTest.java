@@ -221,6 +221,7 @@ class PageControllerTest {
                 ActivityType.PROGRAM,
                 ActivityCategory.CRAFT,
                 List.of("#공예 / 만들기", "#프로그램"),
+                true,
                 0,
                 1,
                 2,

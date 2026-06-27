@@ -9,3 +9,4 @@ public record ActivitySectionResponse(
         List<ActivityCardResponse> activities
 ) {
 }
+

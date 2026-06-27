@@ -1,29 +1,26 @@
 package com.jjikmeok.app.domain.page.service;
 
-import com.jjikmeok.app.domain.page.converter.PageConverter;
-import com.jjikmeok.app.domain.page.dto.response.ActivityCardResponse;
-import com.jjikmeok.app.domain.page.dto.response.CategoryPageResponse;
-import com.jjikmeok.app.domain.page.dto.response.CustomPageResponse;
-import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
-import com.jjikmeok.app.domain.page.dto.response.ActivityFilterOptionResponse;
-import com.jjikmeok.app.domain.page.dto.response.HomePageResponse;
-import com.jjikmeok.app.domain.page.dto.response.ActivityListItemResponse;
-import com.jjikmeok.app.domain.page.dto.response.ActivitySectionResponse;
-import com.jjikmeok.app.domain.page.dto.response.ActivityShortcutResponse;
 import com.jjikmeok.app.domain.activity.entity.Activity;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
-import com.jjikmeok.app.domain.favorite.repository.FavoriteRepository;
+import com.jjikmeok.app.domain.activity.repository.ActivityFavoriteRepository;
+import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
 import com.jjikmeok.app.domain.image.entity.ActivityImage;
 import com.jjikmeok.app.domain.image.repository.ActivityImageRepository;
-import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
-import com.jjikmeok.app.domain.user.entity.User;
+import com.jjikmeok.app.domain.page.converter.PageConverter;
+import com.jjikmeok.app.domain.page.dto.response.ActivityCardResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityCategoryPageResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityCustomPageResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityFilterOptionResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityHomePageResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivitySectionResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityShortcutResponse;
 import com.jjikmeok.app.domain.user.entity.UserOnboardingTag;
 import com.jjikmeok.app.domain.user.repository.UserOnboardingRegionRepository;
 import com.jjikmeok.app.domain.user.repository.UserOnboardingTagRepository;
 import com.jjikmeok.app.domain.user.repository.UserProfileRepository;
-import com.jjikmeok.app.domain.user.repository.UserRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -47,55 +44,46 @@ public class PageServiceImpl implements PageService {
 
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
     private static final int DEFAULT_HOME_LIMIT = 10;
-    private static final int HOME_RECOMMENDED_LIMIT = 3;
-    private static final int HOME_CLOSING_SOON_LIMIT = 3;
     private static final int DEFAULT_LIST_LIMIT = 20;
     private static final int MAX_LIMIT = 50;
     private static final int SORT_FETCH_LIMIT = 100;
     private static final ApprovalStatus PUBLIC_STATUS = ApprovalStatus.APPROVED;
 
     private final ActivityRepository activityRepository;
-    private final FavoriteRepository activityFavoriteRepository;
+    private final ActivityFavoriteRepository activityFavoriteRepository;
     private final ActivityImageRepository activityImageRepository;
     private final UserProfileRepository userProfileRepository;
-    private final UserRepository userRepository;
     private final UserOnboardingTagRepository userOnboardingTagRepository;
     private final UserOnboardingRegionRepository userOnboardingRegionRepository;
 
     @Override
-    public HomePageResponse getHomePage(Long userId, Integer limit) {
+    public ActivityHomePageResponse getHomePage(Long userId, Integer limit) {
+        int size = limit(limit, DEFAULT_HOME_LIMIT);
         String nickname = nickname(userId);
 
-        // TODO: 추천 정책이 최종 확정되면, 현재의 임시(Placeholder) 추천 로직을 태그 겹침(Overlap) 점수 산정 방식으로 대체할 것.
-        List<HomePageResponse.RecommendedActivity> recommended = homeRecommendedActivities(
+        List<ActivityCardResponse> recommended = cards(userId, recommendedActivities(userId, size), size);
+        List<ActivityCardResponse> closingSoon = cards(
                 userId,
-                recommendedActivities(userId, HOME_RECOMMENDED_LIMIT),
-                HOME_RECOMMENDED_LIMIT
-        );
-        List<HomePageResponse.ClosingSoonActivity> closingSoon = homeClosingSoonActivities(
-                userId,
-                activityRepository.findApprovedClosingSoon(PUBLIC_STATUS, LocalDateTime.now(SEOUL), PageRequest.of(0, HOME_CLOSING_SOON_LIMIT)),
-                HOME_CLOSING_SOON_LIMIT
+                activityRepository.findApprovedClosingSoon(PUBLIC_STATUS, LocalDateTime.now(SEOUL), PageRequest.of(0, size)),
+                size
         );
 
-        return new HomePageResponse(
+        return new ActivityHomePageResponse(
                 nickname,
-                new HomePageResponse.Banner(
-                        "확신이 없어도 괜찮아요 일단 찍먹 해보세요!",
-                        "다양한 활동을 부담 없이 탐색해보세요",
+                new ActivityHomePageResponse.Hero(
+                        "확신이 없어도 괜찮아요\n일단 찍먹 해보세요",
+                        "처음이어도 부담 없이 시작할 수 있는 경험을 골라봤어요.",
                         "나만의 경험 탐색하기",
-                        "/pages/custom",
-                        1,
-                        2
+                        "/api/v1/pages/custom"
                 ),
                 shortcuts(),
-                new HomePageResponse.RecommendedSection(nickname + " 님에게 추천해요!", "/pages/custom", recommended),
-                new HomePageResponse.ClosingSoonSection("인기 마감 임박", "/pages/category?sort=deadline", "dark", closingSoon)
+                new ActivitySectionResponse("recommended", nickname + " 님에게 추천해요!", null, recommended),
+                new ActivitySectionResponse("closingSoon", "인기 마감 임박", null, closingSoon)
         );
     }
 
     @Override
-    public CategoryPageResponse getCategoryPage(
+    public ActivityCategoryPageResponse getCategoryPage(
             Long userId,
             ActivityType type,
             ActivityCategory category,
@@ -118,8 +106,8 @@ public class PageServiceImpl implements PageService {
                 .toList();
         long totalCount = activityRepository.countApprovedActivitiesByFilters(PUBLIC_STATUS, category, type, now);
 
-        return new CategoryPageResponse(
-                type == null ? "카테고리" : type.getLabel(),
+        return new ActivityCategoryPageResponse(
+                type == null ? "프로그램" : type.getLabel(),
                 type,
                 category,
                 selectedSort,
@@ -127,12 +115,12 @@ public class PageServiceImpl implements PageService {
                 typeTabs(type),
                 categoryChips(category),
                 sortOptions(selectedSort),
-                listItems(userId, sorted, size)
+                cards(userId, sorted, size)
         );
     }
 
     @Override
-    public CustomPageResponse getCustomPage(Long userId, Integer limit) {
+    public ActivityCustomPageResponse getCustomPage(Long userId, Integer limit) {
         int size = limit(limit, DEFAULT_HOME_LIMIT);
         String nickname = nickname(userId);
         List<UserOnboardingTag> preferenceTags = preferenceTags(userId);
@@ -140,14 +128,13 @@ public class PageServiceImpl implements PageService {
                 .map(userOnboardingTag -> "#" + userOnboardingTag.getTag().getName())
                 .toList();
 
-        // TODO: 현재의 임시 맞춤형 피드를 최종 확정된 유사/확장/빠른 탐색(Quick-Explore) 전략으로 대체할 것.
         List<ActivityCardResponse> recommended = cards(userId, recommendedActivities(userId, size), size);
 
-        return new CustomPageResponse(
+        return new ActivityCustomPageResponse(
                 nickname,
-                new CustomPageResponse.TasteProfile(
+                new ActivityCustomPageResponse.TasteProfile(
                         tasteTitle(hashtags),
-                        nickname + "님과 취향 적합도가 높은 활동을 모아봤어요!",
+                        nickname + "님의 취향에 맞는 활동을 모아봤어요.",
                         hashtags
                 ),
                 new ActivitySectionResponse("customRecommended", "맞춤 추천 활동", null, recommended)
@@ -172,7 +159,7 @@ public class PageServiceImpl implements PageService {
     }
 
     private List<Activity> recommendedActivities(Long userId, int size) {
-        // TODO: 현재의 폴백(Fallback, 예외 처리용 고정 순서) 방식을 사용하는 대신, 사용자의 선호 태그, 토픽 태그, 활동 유형이 얼마나 겹치는지 계산하여 점수를 매길 것.
+        LocalDateTime now = LocalDate.now(SEOUL).atStartOfDay();
         List<Long> tagIds = preferenceTags(userId).stream()
                 .map(userOnboardingTag -> userOnboardingTag.getTag().getId())
                 .toList();
@@ -181,7 +168,7 @@ public class PageServiceImpl implements PageService {
             List<Activity> byTags = activityRepository.findRecommendedByPreferenceTagIds(
                     PUBLIC_STATUS,
                     tagIds,
-                    LocalDate.now(SEOUL).atStartOfDay(),
+                    now,
                     PageRequest.of(0, size)
             );
             if (!byTags.isEmpty()) {
@@ -194,7 +181,7 @@ public class PageServiceImpl implements PageService {
             List<Activity> byRegions = activityRepository.findRecommendedByRegionIds(
                     PUBLIC_STATUS,
                     regionIds,
-                    LocalDate.now(SEOUL).atStartOfDay(),
+                    now,
                     PageRequest.of(0, size)
             );
             if (!byRegions.isEmpty()) {
@@ -202,7 +189,7 @@ public class PageServiceImpl implements PageService {
             }
         }
 
-        return activityRepository.findApprovedLatest(PUBLIC_STATUS, LocalDate.now(SEOUL).atStartOfDay(), PageRequest.of(0, size));
+        return activityRepository.findApprovedLatest(PUBLIC_STATUS, now, PageRequest.of(0, size));
     }
 
     private List<ActivityCardResponse> cards(Long userId, List<Activity> activities, int limit) {
@@ -215,90 +202,6 @@ public class PageServiceImpl implements PageService {
         return distinctActivities.stream()
                 .map(activity -> PageConverter.toCard(activity, likedActivityIds.contains(activity.getId()), today))
                 .toList();
-    }
-
-    private List<ActivityListItemResponse> listItems(Long userId, List<Activity> activities, int limit) {
-        List<Activity> distinctActivities = distinct(activities).stream()
-                .limit(limit)
-                .toList();
-        Set<Long> likedActivityIds = likedActivityIds(userId, distinctActivities);
-        LocalDate today = LocalDate.now(SEOUL);
-
-        return distinctActivities.stream()
-                .map(activity -> {
-                    ActivityCardResponse card = PageConverter.toCard(activity, likedActivityIds.contains(activity.getId()), today);
-                    return new ActivityListItemResponse(
-                            card.id(),
-                            card.title(),
-                            card.thumbnailUrl(),
-                            card.dDay(),
-                            card.viewCount(),
-                            card.likeCount(),
-                            card.hashtags(),
-                            card.liked()
-                    );
-                })
-                .toList();
-    }
-
-    private List<HomePageResponse.RecommendedActivity> homeRecommendedActivities(Long userId, List<Activity> activities, int limit) {
-        List<Activity> distinctActivities = distinct(activities).stream()
-                .limit(limit)
-                .toList();
-        Set<Long> likedActivityIds = likedActivityIds(userId, distinctActivities);
-        LocalDate today = LocalDate.now(SEOUL);
-
-        return distinctActivities.stream()
-                .map(activity -> {
-                    ActivityCardResponse card = PageConverter.toCard(activity, likedActivityIds.contains(activity.getId()), today);
-                    return new HomePageResponse.RecommendedActivity(
-                            card.id(),
-                            card.title(),
-                            card.thumbnailUrl(),
-                            card.categoryLabel(),
-                            card.dDay(),
-                            card.hashtags(),
-                            card.liked()
-                    );
-                })
-                .toList();
-    }
-
-    private List<HomePageResponse.ClosingSoonActivity> homeClosingSoonActivities(Long userId, List<Activity> activities, int limit) {
-        List<Activity> distinctActivities = distinct(activities).stream()
-                .limit(limit)
-                .toList();
-        Set<Long> likedActivityIds = likedActivityIds(userId, distinctActivities);
-        LocalDate today = LocalDate.now(SEOUL);
-
-        return distinctActivities.stream()
-                .map(activity -> {
-                    ActivityCardResponse card = PageConverter.toCard(activity, likedActivityIds.contains(activity.getId()), today);
-                    return new HomePageResponse.ClosingSoonActivity(
-                            card.id(),
-                            card.title(),
-                            summary(activity),
-                            card.thumbnailUrl(),
-                            card.dDay(),
-                            card.activityTypeLabel(),
-                            card.categoryLabel(),
-                            card.liked()
-                    );
-                })
-                .toList();
-    }
-
-    private String summary(Activity activity) {
-        String description = activity.getDescription();
-        if (description == null || description.isBlank()) {
-            return activity.getActivityType().getLabel() + " 관련 활동";
-        }
-
-        String compact = description.replaceAll("\\s+", " ").trim();
-        if (compact.length() <= 32) {
-            return compact;
-        }
-        return compact.substring(0, 32) + "...";
     }
 
     private Set<Long> likedActivityIds(Long userId, List<Activity> activities) {
@@ -358,23 +261,11 @@ public class PageServiceImpl implements PageService {
 
     private String nickname(Long userId) {
         if (userId == null) {
-            return "닉네임";
+            return "게스트";
         }
         return userProfileRepository.findByUserId(userId)
                 .map(userProfile -> userProfile.getNickname())
-                .filter(nickname -> !nickname.isBlank())
-                .or(() -> userRepository.findById(userId)
-                        .map(User::getEmail)
-                        .map(this::displayNameFromEmail))
-                .orElse("사용자");
-    }
-
-    private String displayNameFromEmail(String email) {
-        if (email == null || email.isBlank()) {
-            return "사용자";
-        }
-        int at = email.indexOf('@');
-        return at > 0 ? email.substring(0, at) : email;
+                .orElse("게스트");
     }
 
     private List<UserOnboardingTag> preferenceTags(Long userId) {
@@ -386,26 +277,26 @@ public class PageServiceImpl implements PageService {
 
     private String tasteTitle(List<String> hashtags) {
         if (hashtags.isEmpty()) {
-            return "우선 한 입만 먹어보는 형";
+            return "아직 선호 정보가 부족해요";
         }
-        if (hashtags.contains("#도전") || hashtags.contains("#몰입")) {
-            return "꽂히면 깊게 파보는 형";
+        if (hashtags.stream().anyMatch(tag -> tag.contains("운동") || tag.contains("액티비티") || tag.contains("등산"))) {
+            return "활동적인 취향이네요";
         }
-        if (hashtags.contains("#사교")) {
-            return "같이 하면 더 즐거운 형";
+        if (hashtags.stream().anyMatch(tag -> tag.contains("모임") || tag.contains("스터디") || tag.contains("클럽"))) {
+            return "함께하는 활동을 좋아하시네요";
         }
-        if (hashtags.contains("#힐링") || hashtags.contains("#휴식")) {
-            return "천천히 충전하는 형";
+        if (hashtags.stream().anyMatch(tag -> tag.contains("클래스") || tag.contains("교육") || tag.contains("강연"))) {
+            return "배움이 있는 활동을 선호하시네요";
         }
-        return "우선 한 입만 먹어보는 형";
+        return "아직 선호 정보가 부족해요";
     }
 
     private List<ActivityShortcutResponse> shortcuts() {
         return List.of(
-                new ActivityShortcutResponse(ActivityType.PROGRAM, ActivityType.PROGRAM.getLabel(), "/images/icons/activity-program.png", "/pages/category?type=PROGRAM"),
-                new ActivityShortcutResponse(ActivityType.ONE_DAY, ActivityType.ONE_DAY.getLabel(), "/images/icons/activity-one-day.png", "/pages/category?type=ONE_DAY"),
-                new ActivityShortcutResponse(ActivityType.EVENT, ActivityType.EVENT.getLabel(), "/images/icons/activity-event.png", "/pages/category?type=EVENT"),
-                new ActivityShortcutResponse(ActivityType.CLUB, ActivityType.CLUB.getLabel(), "/images/icons/activity-club.png", "/pages/category?type=CLUB")
+                new ActivityShortcutResponse(ActivityType.PROGRAM, ActivityType.PROGRAM.getLabel(), "palette", "/api/v1/pages/category?type=PROGRAM"),
+                new ActivityShortcutResponse(ActivityType.ONE_DAY, ActivityType.ONE_DAY.getLabel(), "clock", "/api/v1/pages/category?type=ONE_DAY"),
+                new ActivityShortcutResponse(ActivityType.EVENT, ActivityType.EVENT.getLabel(), "megaphone", "/api/v1/pages/category?type=EVENT"),
+                new ActivityShortcutResponse(ActivityType.CLUB, ActivityType.CLUB.getLabel(), "users", "/api/v1/pages/category?type=CLUB")
         );
     }
 
@@ -430,8 +321,8 @@ public class PageServiceImpl implements PageService {
     private List<ActivityFilterOptionResponse> sortOptions(String selectedSort) {
         return List.of(
                 new ActivityFilterOptionResponse("recommended", "추천순", "recommended".equals(selectedSort)),
-                new ActivityFilterOptionResponse("deadline", "마감임박순", "deadline".equals(selectedSort)),
-                new ActivityFilterOptionResponse("popular", "인기순", "popular".equals(selectedSort))
+                new ActivityFilterOptionResponse("popular", "인기순", "popular".equals(selectedSort)),
+                new ActivityFilterOptionResponse("deadline", "마감순", "deadline".equals(selectedSort))
         );
     }
 }

@@ -27,7 +27,6 @@ public class ExternalActivityGateway {
 
     private final RestClient restClient = RestClient.create();
     private static final int DEFAULT_PAGE_SIZE = 100;
-    private static final int YOUTH_CONTENT_PAGE_SIZE = 10;
     private static final int MAX_REQUEST_ATTEMPTS = 3;
 
     public FetchedPayload fetch(SourceType sourceType, String baseUrl, String serviceKey) {
@@ -115,7 +114,6 @@ public class ExternalActivityGateway {
 
     String buildUrl(SourceType sourceType, String baseUrl, String serviceKey, LocalDate today, LocalDate endDate, int page, String prfstate) {
         if (sourceType == SourceType.SEOUL_CULTURE || sourceType == SourceType.SEOUL_RESERVATION) baseUrl = baseUrl.replaceFirst("/\\d+/\\d+/?$", "");
-        if (sourceType == SourceType.VOLUNTEER_1365) baseUrl = baseUrl.replaceFirst("/getVltr(AreaList|PartcptnItem)$", "").replaceFirst("/$", "") + "/getVltrAreaList";
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUrl);
         String keyName = keyName(sourceType, baseUrl);
@@ -125,17 +123,8 @@ public class ExternalActivityGateway {
         String endYmd = (sourceType == SourceType.KOPIS && today.plusDays(31).isBefore(endDate) ? today.plusDays(31) : endDate).format(DateTimeFormatter.BASIC_ISO_DATE);
 
         switch (sourceType) {
-            case TOUR_API -> builder.replaceQueryParam("numOfRows", 100).replaceQueryParam("MobileOS", "ETC").replaceQueryParam("MobileApp", "JJickmeok").replaceQueryParam("_type", "json").replaceQueryParam("eventStartDate", ymd).replaceQueryParam("eventEndDate", endYmd).replaceQueryParam("pageNo", page);
             case KOPIS -> builder.replaceQueryParam("rows", 100).replaceQueryParam("stdate", ymd).replaceQueryParam("eddate", endYmd).replaceQueryParam("cpage", page).replaceQueryParam("prfstate", prfstate == null ? "02" : prfstate);
             case EXHIBITION -> builder.replaceQueryParam("numOfRows", DEFAULT_PAGE_SIZE).replaceQueryParam("pageNo", page);
-            case VOLUNTEER_1365 -> builder.replaceQueryParam("numOfRows", DEFAULT_PAGE_SIZE).replaceQueryParam("pageNo", page).replaceQueryParam("progrmBgnde", ymd).replaceQueryParam("progrmEndde", endYmd);
-            case YOUTH_CONTENT -> {
-                if ("openApiVlak".equals(keyName)) {
-                    builder.replaceQueryParam("pageIndex", page).replaceQueryParam("display", YOUTH_CONTENT_PAGE_SIZE);
-                } else {
-                    builder.replaceQueryParam("pageNum", page).replaceQueryParam("pageSize", YOUTH_CONTENT_PAGE_SIZE).replaceQueryParam("rtnType", "json");
-                }
-            }
             case SEOUL_CULTURE -> builder.pathSegment(String.valueOf((page - 1) * 100 + 1), String.valueOf(page * 100));
             case SEOUL_RESERVATION -> builder.pathSegment(String.valueOf((page - 1) * 100 + 1), String.valueOf(page * 100)).replaceQueryParam("sortStdr", 1);
         }
@@ -154,7 +143,6 @@ public class ExternalActivityGateway {
 
     private String keyName(SourceType sourceType, String baseUrl) {
         if (sourceType == SourceType.KOPIS) return "service";
-        if (sourceType == SourceType.YOUTH_CONTENT) return baseUrl.contains("/opi/") ? "openApiVlak" : "apiKeyNm";
         return "serviceKey";
     }
 

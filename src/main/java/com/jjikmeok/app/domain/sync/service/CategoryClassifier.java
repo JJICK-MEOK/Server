@@ -4,6 +4,7 @@ import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.enums.SourceType;
 import org.springframework.stereotype.Component;
+
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
@@ -15,46 +16,44 @@ public class CategoryClassifier {
     public ActivityCategory classifyCategory(SourceType sourceType, String text) {
         String value = text == null ? "" : text;
 
-        if (sourceType == SourceType.VOLUNTEER_1365 || contains(value, "봉사", "자원봉사")) return ActivityCategory.VOLUNTEER;
-
         if (sourceType == SourceType.KOPIS) {
-            if (contains(value, "음악", "콘서트", "국악")) return ActivityCategory.MUSIC;
-            if (contains(value, "무용", "댄스")) return ActivityCategory.DANCE;
             return ActivityCategory.CULTURE;
         }
 
         if (sourceType == SourceType.EXHIBITION) {
-            if (contains(value, "사진", "영상")) return ActivityCategory.PHOTO_VIDEO;
-            if (contains(value, "공예", "도예")) return ActivityCategory.CRAFT;
+            if (contains(value, "사진", "영상", "촬영", "필름", "미디어")) return ActivityCategory.PHOTO_VIDEO;
+            if (contains(value, "공예", "만들기", "도예", "목공", "뜨개", "캔들")) return ActivityCategory.CRAFT;
             return ActivityCategory.CULTURE;
         }
 
-        if (sourceType == SourceType.TOUR_API || sourceType == SourceType.SEOUL_RESERVATION) {
-            if (contains(value, "스포츠", "레포츠", "축구", "야구", "농구", "테니스")) return ActivityCategory.SPORTS;
-            if (contains(value, "요리", "푸드", "쿠킹", "베이킹")) return ActivityCategory.COOKING;
-            if (contains(value, "공예", "도자", "만들기")) return ActivityCategory.CRAFT;
-            if (contains(value, "전시", "관람", "공연", "문화", "박물관", "미술관", "역사", "해설", "투어", "스타디움")) return ActivityCategory.CULTURE;
-            if (contains(value, "여행", "캠핑", "관광지", "숙박")) return ActivityCategory.TRAVEL;
-            return ActivityCategory.ETC;
+        if (sourceType == SourceType.SEOUL_RESERVATION) {
+            if (contains(value, "스포츠", "운동", "액티비티", "축구", "야구", "테니스", "러닝", "등산", "요가")) return ActivityCategory.SPORTS;
+            if (contains(value, "요리", "베이킹", "쿠킹", "제과", "브런치")) return ActivityCategory.COOKING;
+            if (contains(value, "공예", "만들기", "도예", "뜨개", "목공")) return ActivityCategory.CRAFT;
+            if (contains(value, "여행", "탐방", "투어", "캠핑", "트레킹")) return ActivityCategory.TRAVEL;
+            if (contains(value, "독서", "북토크", "문학", "철학", "글쓰기")) return ActivityCategory.HUMANITIES;
+            if (contains(value, "봉사", "자원봉사", "플로깅", "기부")) return ActivityCategory.VOLUNTEER;
+            if (contains(value, "영어", "일본어", "중국어", "회화", "유학")) return ActivityCategory.LANGUAGE;
+            if (contains(value, "취업", "채용", "커리어", "멘토링", "세미나", "교육", "클래스", "워크숍")) return ActivityCategory.CAREER;
+            return ActivityCategory.CULTURE;
         }
 
-        if (sourceType == SourceType.SEOUL_CULTURE && contains(value, "북토크", "독서", "인문학")) return ActivityCategory.HUMANITIES;
-
-        if (sourceType == SourceType.YOUTH_CONTENT) {
-            if (contains(value, "취업", "직업훈련", "채용", "면접", "자격증", "실무", "커리어", "일경험")) return ActivityCategory.CAREER;
-            if (contains(value, "교육", "강의", "클래스", "과정", "멘토링", "훈련", "아카데미")) return ActivityCategory.SELF_DEVELOPMENT;
+        if (contains(value, "요리", "베이킹", "쿠킹", "제과", "디저트")) return ActivityCategory.COOKING;
+        if (contains(value, "공예", "만들기", "도예", "뜨개", "목공", "캔들")) return ActivityCategory.CRAFT;
+        if (contains(value, "운동", "스포츠", "액티비티", "축구", "야구", "테니스", "러닝", "등산")) return ActivityCategory.SPORTS;
+        if (contains(value, "사진", "영상", "촬영", "카메라", "편집", "브이로그")) return ActivityCategory.PHOTO_VIDEO;
+        if (contains(value, "독서", "북토크", "문학", "철학", "글쓰기", "에세이")) return ActivityCategory.HUMANITIES;
+        if (contains(value, "여행", "탐방", "투어", "캠핑", "트레킹", "답사")) return ActivityCategory.TRAVEL;
+        if (contains(value, "영어", "일본어", "중국어", "회화", "어학", "유학")) return ActivityCategory.LANGUAGE;
+        if (contains(value, "봉사", "자원봉사", "플로깅", "환경", "기부")) return ActivityCategory.VOLUNTEER;
+        if (contains(value, "취업", "채용", "커리어", "직무", "멘토링", "교육", "클래스", "워크숍", "세미나", "스터디")) {
+            return ActivityCategory.CAREER;
+        }
+        if (contains(value, "전시", "축제", "행사", "강연", "문화", "예술", "공연", "콘서트", "오페라", "뮤지컬", "연극", "무용", "댄스", "발레")) {
+            return ActivityCategory.CULTURE;
         }
 
-        if (contains(value, "요리", "베이킹", "쿠킹")) return ActivityCategory.COOKING;
-        if (contains(value, "공예", "도자", "만들기")) return ActivityCategory.CRAFT;
-        if (contains(value, "운동", "스포츠", "체육", "러닝", "등산")) return ActivityCategory.SPORTS;
-        if (contains(value, "공연", "축제", "전시", "문화", "강연", "투어", "해설", "스타디움")) return ActivityCategory.CULTURE;
-        if (contains(value, "음악", "콘서트", "국악")) return ActivityCategory.MUSIC;
-        if (contains(value, "무용", "댄스")) return ActivityCategory.DANCE;
-        if (contains(value, "북토크", "독서", "인문학")) return ActivityCategory.HUMANITIES;
-        if (contains(value, "여행", "캠핑", "관광지", "숙박")) return ActivityCategory.TRAVEL;
-
-        return ActivityCategory.ETC;
+        return ActivityCategory.CULTURE;
     }
 
     public ActivityType classifyType(SourceType sourceType, String text) {
@@ -67,17 +66,21 @@ public class CategoryClassifier {
         if (validDate(startAt) && validDate(endAt)) {
             long days = ChronoUnit.DAYS.between(startAt.toLocalDate(), endAt.toLocalDate()) + 1;
             if (days > 1) {
-                return contains(value, "공연", "전시", "축제", "콘서트", "뮤지컬", "페스티벌", "팝업", "행사", "이벤트") ? ActivityType.EVENT : ActivityType.PROGRAM;
+                return contains(value, "공연", "전시", "축제", "강연", "워크숍", "세미나", "교육", "프로그램", "행사")
+                        ? ActivityType.EVENT
+                        : ActivityType.PROGRAM;
             }
-            if (days == 1 && (sourceType == SourceType.SEOUL_RESERVATION || contains(value, "원데이", "하루", "1회", "일일", "당일", "체험"))) return ActivityType.ONE_DAY;
+            if (days == 1 && contains(value, "원데이", "1일", "하루", "체험", "클래스")) {
+                return ActivityType.ONE_DAY;
+            }
         }
 
-        if (contains(value, "클럽", "크루", "모임", "동아리", "소모임")) return ActivityType.CLUB;
-        if (contains(value, "강좌", "교육", "과정", "클래스", "멘토링", "훈련", "아카데미", "수업", "프로그램")) return ActivityType.PROGRAM;
-        if (contains(value, "행사", "공연", "전시", "축제", "강연", "콘서트", "뮤지컬", "페스티벌", "팝업", "이벤트")) return ActivityType.EVENT;
-        if (contains(value, "원데이", "체험", "하루", "1회", "원데이클래스", "일일", "당일")) return ActivityType.ONE_DAY;
+        if (contains(value, "동아리", "소모임", "모임", "스터디", "클럽")) return ActivityType.CLUB;
+        if (contains(value, "교육", "강의", "클래스", "과정", "워크숍", "멘토링", "아카데미")) return ActivityType.PROGRAM;
+        if (contains(value, "공연", "전시", "축제", "행사", "강연", "콘서트")) return ActivityType.EVENT;
+        if (contains(value, "원데이", "체험", "1일", "하루")) return ActivityType.ONE_DAY;
 
-        return (sourceType == SourceType.VOLUNTEER_1365 || sourceType == SourceType.YOUTH_CONTENT) ? ActivityType.PROGRAM : ActivityType.EVENT;
+        return ActivityType.EVENT;
     }
 
     private boolean validDate(LocalDateTime value) {
@@ -85,8 +88,10 @@ public class CategoryClassifier {
     }
 
     private boolean contains(String value, String... keywords) {
-        for (String k : keywords) {
-            if (value.contains(k)) return true;
+        for (String keyword : keywords) {
+            if (value.contains(keyword)) {
+                return true;
+            }
         }
         return false;
     }

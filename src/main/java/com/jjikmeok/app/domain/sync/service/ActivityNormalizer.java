@@ -85,26 +85,17 @@ public class ActivityNormalizer {
                 "pstWholCn", "ETC_DESC", "PROGRAM", "SUB_DESCRIPTION", "sty"
         );
 
-        String description = sourceType == SourceType.YOUTH_CONTENT
-                ? cleanDescriptionOnly(rawDescription)
-                : utils.cleanDescriptionBody(cleanDescription(rawDescription));
+        String description = utils.cleanDescriptionBody(cleanDescription(rawDescription));
 
         String sourceUrl = text(item,
                 "sourceUrl", "URL", "HMPG_ADDR", "ORG_LINK", "홈페이지주소",
                 "SVCURL", "homepage", "eventUrl", "detailUrl", "href", "link", "url", "pstUrlAddr"
         );
 
-        if (sourceUrl == null && sourceType == SourceType.YOUTH_CONTENT) {
-            sourceUrl = utils.first(extractHref(rawDescription), youthContentDetailUrl(item));
-        }
         if (sourceUrl == null && sourceType == SourceType.KOPIS) sourceUrl = kopisDetailUrl(item);
-        if (sourceUrl == null && sourceType == SourceType.VOLUNTEER_1365) sourceUrl = volunteerDetailUrl(item);
         sourceUrl = utils.normalizeUrl(sourceUrl);
 
         String externalId = text(item, "externalId", "contentid", "mt20id", "LOCAL_ID", "progrmRegistNo", "SVCID", "id", "seq", "eventId", "crseId", "pstSn");
-        if (sourceType == SourceType.YOUTH_CONTENT) {
-            externalId = utils.first(youthContentId(item), externalId);
-        }
 
         String rawAddress = text(item,
                 "address", "addr1", "addr2", "fcltynm", "EVENT_SITE",
@@ -121,19 +112,6 @@ public class ActivityNormalizer {
 
         String address = utils.cleanAddressStrict(rawAddress);
 
-        if (sourceType == SourceType.VOLUNTEER_1365) {
-            address = utils.firstText(
-                    utils.extractAddressByLabel(mixedText, "봉사장소", "장소", "주소"),
-                    address
-            );
-        }
-
-        if (sourceType == SourceType.YOUTH_CONTENT) {
-            address = utils.firstText(
-                    utils.extractAddressByLabel(mixedText, "장소", "진행 장소", "교육장소", "교육장 상세주소", "지역"),
-                    address
-            );
-        }
 
         if (sourceType == SourceType.KOPIS) {
             address = utils.firstText(
@@ -191,14 +169,6 @@ public class ActivityNormalizer {
 
         String categoryHint = text(item, "category", "genrenm", "GENRE", "분류", "realmName", "CODENAME", "codename", "pstSeNm", "MAXCLASSNM", "MINCLASSNM");
 
-        if (sourceType == SourceType.YOUTH_CONTENT && title != null && title.contains(" - ")) {
-            String[] titleParts = title.split(" - ", 2);
-            if (!titleParts[1].trim().isBlank()) {
-                title = titleParts[1].trim();
-                if (utils.isBlank(organizer)) organizer = cleanOrganizer(titleParts[0].trim());
-            }
-        }
-
         ActivitySyncUtils.DateRange mixedRange = utils.extractDateRangeFromMixedText(mixedText);
 
         Period period = period(String.join(" ",
@@ -220,36 +190,6 @@ public class ActivityNormalizer {
         LocalDateTime recruitStartAt = firstDateTime(item, "recruitStartAt", "RCPTBGNDT", "noticeBgnde", "reqstBeginDe", "recruitStartDate", "rceptStartDate");
         LocalDateTime recruitEndAt = firstDateTime(item, "recruitEndAt", "RCPTENDDT", "noticeEndde", "reqstEndDe", "recruitEndDate", "rceptEndDate");
 
-        if (sourceType == SourceType.VOLUNTEER_1365) {
-            ActivitySyncUtils.DateRange volunteerPeriod = utils.extractDateRangeFromMixedText(utils.firstText(
-                    text(item, "봉사기간", "progrmBgnde", "progrmEndde"),
-                    mixedText
-            ));
-            ActivitySyncUtils.DateRange recruitPeriod = utils.extractDateRangeFromMixedText(utils.firstText(
-                    text(item, "모집기간", "noticeBgnde", "noticeEndde"),
-                    mixedText
-            ));
-
-            startAt = utils.firstDateTime(startAt, volunteerPeriod.start(), mixedRange.start());
-            endAt = utils.firstDateTime(endAt, volunteerPeriod.end(), mixedRange.end());
-            recruitStartAt = utils.firstDateTime(recruitStartAt, recruitPeriod.start());
-            recruitEndAt = utils.firstDateTime(recruitEndAt, recruitPeriod.end());
-        }
-
-        if (sourceType == SourceType.YOUTH_CONTENT) {
-            if (recruitStartAt == null || recruitEndAt == null) {
-                recruitStartAt = utils.firstDateTime(recruitStartAt, mixedRange.start());
-                recruitEndAt = utils.firstDateTime(recruitEndAt, mixedRange.end());
-            }
-
-            ActivitySyncUtils.DateRange activityRange = utils.extractDateRangeFromMixedText(utils.firstText(
-                    text(item, "일경험 기간", "활동기간", "교육기간", "사업일정"),
-                    mixedText
-            ));
-
-            startAt = utils.firstDateTime(startAt, activityRange.start());
-            endAt = utils.firstDateTime(endAt, activityRange.end());
-        }
 
         if (sourceType == SourceType.EXHIBITION) {
             startAt = utils.firstDateTime(startAt, period.startAt(), mixedRange.start());

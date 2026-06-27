@@ -1,18 +1,15 @@
 package com.jjikmeok.app.domain.sync.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jjikmeok.app.domain.activity.entity.Activity;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.SourceType;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
 import com.jjikmeok.app.domain.ai.dto.ExtractedActivityDto;
 import com.jjikmeok.app.domain.ai.service.AiActivityParser;
+import com.jjikmeok.app.domain.activity.service.ActivityTagAutoAttachService;
+import com.jjikmeok.app.domain.discovery.sheets.GoogleSheetsService;
 import com.jjikmeok.app.domain.sync.dto.ActivitySyncResponse;
 import com.jjikmeok.app.domain.sync.dto.NormalizedActivity;
-import com.jjikmeok.app.domain.sync.entity.RawActivity;
-import com.jjikmeok.app.domain.sync.repository.RawActivityRepository;
 import com.jjikmeok.app.domain.region.entity.Region;
 import com.jjikmeok.app.domain.region.repository.RegionRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
@@ -40,7 +37,6 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
 
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
     private static final int DEFAULT_PAGE_SIZE = 100;
-    private static final int YOUTH_CONTENT_PAGE_SIZE = 10;
     private static final int HARD_MAX_PAGES = 30;
     private static final int HARD_MAX_MONTHS_AHEAD = 12;
     private static final LocalDateTime ALWAYS_OPEN_AT = LocalDateTime.of(2999, 12, 31, 23, 59, 59);
@@ -48,12 +44,13 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
     private final ActivityRegionResolver activityRegionResolver;
     private final ExternalActivityGateway externalActivityGateway;
     private final ActivityNormalizer activityNormalizer;
-    private final RawActivityRepository rawActivityRepository;
+    private final RawActivityArchiveService rawActivityArchiveService;
     private final ActivityRepository activityRepository;
     private final RegionRepository regionRepository;
-    private final ObjectMapper objectMapper;
+    private final GoogleSheetsService googleSheetsService;
     private final ActivityAttachmentStorageService activityAttachmentStorageService;
     private final ActivityDetailEnricher activityDetailEnricher;
+    private final ActivityTagAutoAttachService activityTagAutoAttachService;
     private final ActivitySyncUtils utils;
     private final AiActivityParser aiActivityParser;
     private final VectorStore vectorStore;
@@ -61,22 +58,12 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
     @Value("${app.activity-sync.default-region-id:1}") private Long defaultRegionId;
     @Value("${app.activity-sync.default-max-pages:1}") private Integer defaultMaxPages;
     @Value("${app.activity-sync.months-ahead:1}") private Integer monthsAhead;
-    @Value("${app.activity-sync.tour-api.base-url:}") private String tourApiBaseUrl;
-    @Value("${app.activity-sync.tour-api.service-key:}") private String tourApiServiceKey;
-    @Value("${app.activity-sync.tour-api.max-pages:1}") private Integer tourApiMaxPages;
     @Value("${app.activity-sync.kopis.base-url:}") private String kopisBaseUrl;
     @Value("${app.activity-sync.kopis.service-key:}") private String kopisServiceKey;
     @Value("${app.activity-sync.kopis.max-pages:1}") private Integer kopisMaxPages;
     @Value("${app.activity-sync.exhibition.base-url:}") private String exhibitionBaseUrl;
     @Value("${app.activity-sync.exhibition.service-key:}") private String exhibitionServiceKey;
     @Value("${app.activity-sync.exhibition.max-pages:1}") private Integer exhibitionMaxPages;
-    @Value("${app.activity-sync.volunteer-1365.base-url:}") private String volunteer1365BaseUrl;
-    @Value("${app.activity-sync.volunteer-1365.service-key:}") private String volunteer1365ServiceKey;
-    @Value("${app.activity-sync.volunteer-1365.max-pages:1}") private Integer volunteer1365MaxPages;
-    @Value("${app.activity-sync.volunteer-1365.default-thumbnail-url:/images/defaults/volunteer-1365.png}") private String volunteer1365DefaultThumbnailUrl;
-    @Value("${app.activity-sync.youth-content.base-url:}") private String youthContentBaseUrl;
-    @Value("${app.activity-sync.youth-content.service-key:}") private String youthContentServiceKey;
-    @Value("${app.activity-sync.youth-content.max-pages:1}") private Integer youthContentMaxPages;
     @Value("${app.activity-sync.seoul-culture.base-url:}") private String seoulCultureBaseUrl;
     @Value("${app.activity-sync.seoul-culture.max-pages:1}") private Integer seoulCultureMaxPages;
     @Value("${app.activity-sync.seoul-reservation.base-url:}") private String seoulReservationBaseUrl;
@@ -87,10 +74,10 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
     @Transactional
     public void syncAllSources() {
         log.info("[ActivitySync] 7개 소스 일괄 동기화 시작");
-        for (SourceType source : List.of(
-                SourceType.TOUR_API, SourceType.KOPIS, SourceType.EXHIBITION,
-                SourceType.VOLUNTEER_1365, SourceType.YOUTH_CONTENT,
-                SourceType.SEOUL_CULTURE, SourceType.SEOUL_RESERVATION)) {
+        for (SourceType source : SourceType.values()) {
+            if (!source.isPublicApiSource()) {
+                continue;
+            }
             try {
                 sync(source, null, null);
             } catch (Exception e) {
@@ -137,13 +124,10 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
                         return new ActivitySyncResponse(sourceType, rawSaved, saved, duplicated);
                     }
 
-                    rawActivityRepository.save(RawActivity.create(
-                            sourceType, null,
-                            fetchedPayload.requestUrl(), fetchedPayload.contentType(),
-                            rawPayload(sourceType, fetchedPayload.contentType(), fetchedPayload.payload())));
+                    rawActivityArchiveService.archiveFetchedPayload(fetchedPayload);
                     rawSaved++;
 
-                    int pageSize = sourceType == SourceType.YOUTH_CONTENT ? YOUTH_CONTENT_PAGE_SIZE : DEFAULT_PAGE_SIZE;
+                    int pageSize = DEFAULT_PAGE_SIZE;
                     List<NormalizedActivity> normalizedActivities = activityNormalizer.normalize(
                             sourceType, fetchedPayload.requestUrl(), fetchedPayload.contentType(), fetchedPayload.payload());
 
@@ -162,6 +146,8 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
                             ExtractedActivityDto aiResult = aiActivityParser.parseFallback(aiContext(sourceType, na), sourceType);
                             if (aiResult != null) {
                                 na = na.copyWithFallbackFields(
+                                        safeAiText(aiResult.title(), na.title()),
+                                        safeAiText(aiResult.address(), na.address()),
                                         safeDate(aiResult.recruitStartAt()),
                                         safeDate(aiResult.recruitEndAt()),
                                         safeDate(aiResult.startAt()),
@@ -177,6 +163,7 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
 
                         na = withDefaults(na);
                         if (!validForPersist(na)) continue;
+                        googleSheetsService.upsertPublicActivity(na);
 
                         Activity existing = activityRepository.findDuplicate(
                                 na.sourceType(), na.externalId(), na.sourceUrl(),
@@ -192,6 +179,7 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
 
                         Region resolvedRegion = activityRegionResolver.resolve(na.title(), na.address(), defaultRegionId);
                         Activity savedActivity = activityRepository.save(toActivity(resolvedRegion, na, categoryOverride));
+                        activityTagAutoAttachService.refresh(savedActivity);
                         saved++;
 
                         try {
@@ -205,7 +193,7 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
                         }
                     }
 
-                    if (pageSize < (sourceType == SourceType.YOUTH_CONTENT ? YOUTH_CONTENT_PAGE_SIZE : DEFAULT_PAGE_SIZE)) break;
+                    if (pageSize < DEFAULT_PAGE_SIZE) break;
                 }
             }
         }
@@ -222,7 +210,6 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
 
     /**
      * AI 보완이 필요한 항목인지 판별합니다.
-     * 핵심 필드 또는 부가 필드가 누락되었거나, YOUTH_CONTENT 특이 케이스인 경우 true를 반환합니다.
      */
     private boolean requiresAiFallback(SourceType source, NormalizedActivity activity) {
         boolean missingCore = activity.title() == null || activity.title().isBlank()
@@ -235,15 +222,10 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
         boolean missingExtra = isMissingText(activity.organizer())
                 || isMissingText(activity.description())
                 || isMissingText(activity.target())
-                || isMissingText(activity.contactInfo());
+                || isMissingText(activity.contactInfo())
+                || isMissingText(activity.address());
 
         if (missingCore || missingExtra) return true;
-
-        if (source == SourceType.YOUTH_CONTENT && activity.title() != null) {
-            return activity.title().contains(",")
-                    || activity.title().contains("_")
-                    || activity.title().contains("참여 안내");
-        }
 
         return false;
     }
@@ -357,18 +339,7 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
     }
 
     private String defaultThumbnail(SourceType sourceType, NormalizedActivity activity) {
-        if (sourceType == SourceType.VOLUNTEER_1365) {
-            String title = activity.title() != null ? activity.title() : "";
-            String base = serverBaseUrl + "/images/defaults/volunteer-";
-            if (title.contains("환경") || title.contains("청소") || title.contains("줍깅") || title.contains("정화") || title.contains("플로깅")) return base + "environment.png";
-            if (title.contains("어르신") || title.contains("노인") || title.contains("요양") || title.contains("말벗"))              return base + "elderly.png";
-            if (title.contains("아동") || title.contains("어린이") || title.contains("학습") || title.contains("멘토링") || title.contains("교육")) return base + "education.png";
-            if (title.contains("동물") || title.contains("유기견") || title.contains("보호소"))                                       return base + "animal.png";
-            if (title.contains("헌혈") || title.contains("연탄") || title.contains("도시락") || title.contains("배달"))               return base + "delivery.png";
-            if (title.contains("안내") || title.contains("행사") || title.contains("축제") || title.contains("진행"))                 return base + "event.png";
-            return volunteer1365DefaultThumbnailUrl.startsWith("http") ? volunteer1365DefaultThumbnailUrl : serverBaseUrl + volunteer1365DefaultThumbnailUrl;
-        }
-        return sourceType == SourceType.YOUTH_CONTENT ? serverBaseUrl + "/images/defaults/youth-content.png" : null;
+        return null;
     }
 
     private NormalizedActivity withThumbnail(NormalizedActivity a, String url) {
@@ -405,10 +376,12 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
         ActivityCategory category = categoryOverride != null ? categoryOverride : merged.category();
         if (!changed(activity, merged, active) && Objects.equals(activity.getCategory(), category)) return;
         activity.update(region, merged.title(), merged.description(), merged.thumbnailUrl(), merged.sourceUrl(),
-                merged.address(), merged.startAt(), merged.endAt(), merged.recruitStartAt(), merged.recruitEndAt(),
+                merged.address(), merged.organizer(), merged.contactInfo(), merged.target(),
+                merged.startAt(), merged.endAt(), merged.recruitStartAt(), merged.recruitEndAt(),
                 merged.price(), merged.activityType(), category, merged.sourceType(), merged.externalId(),
                 merged.approvalStatus(), active);
         activity.updateExtra(merged.organizer(), merged.contactInfo(), merged.target());
+        activityTagAutoAttachService.refresh(activity);
     }
 
     private NormalizedActivity mergeForUpdate(Activity existing, NormalizedActivity incoming) {
@@ -515,46 +488,18 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
 
     private Integer configuredMaxPages(SourceType sourceType) {
         return switch (sourceType) {
-            case TOUR_API          -> tourApiMaxPages;
             case KOPIS             -> kopisMaxPages;
             case EXHIBITION        -> exhibitionMaxPages;
-            case VOLUNTEER_1365    -> volunteer1365MaxPages;
-            case YOUTH_CONTENT     -> youthContentMaxPages;
             case SEOUL_CULTURE     -> seoulCultureMaxPages;
             case SEOUL_RESERVATION -> seoulReservationMaxPages;
             default                -> defaultMaxPages;
         };
     }
 
-    private String rawPayload(SourceType sourceType, String contentType, String payload) {
-        if (sourceType != SourceType.YOUTH_CONTENT || !"JSON".equals(contentType) || utils.isBlank(payload)) return payload;
-        try {
-            JsonNode root = objectMapper.readTree(payload);
-            stripLargeAttachments(root);
-            return objectMapper.writeValueAsString(root);
-        } catch (Exception e) {
-            return payload.replaceAll("\"atchFile\"\\s*:\\s*\"data:image/[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\"", "\"atchFile\":null");
-        }
-    }
-
-    private void stripLargeAttachments(JsonNode node) {
-        if (node == null) return;
-        if (node.isObject()) {
-            ObjectNode objectNode = (ObjectNode) node;
-            if (objectNode.has("atchFile")) objectNode.putNull("atchFile");
-            objectNode.fields().forEachRemaining(entry -> stripLargeAttachments(entry.getValue()));
-        } else if (node.isArray()) {
-            node.forEach(this::stripLargeAttachments);
-        }
-    }
-
     private String baseUrl(SourceType src) {
         return switch (src) {
-            case TOUR_API          -> tourApiBaseUrl;
             case KOPIS             -> kopisBaseUrl;
             case EXHIBITION        -> exhibitionBaseUrl;
-            case VOLUNTEER_1365    -> volunteer1365BaseUrl;
-            case YOUTH_CONTENT     -> youthContentBaseUrl;
             case SEOUL_CULTURE     -> seoulCultureBaseUrl;
             case SEOUL_RESERVATION -> seoulReservationBaseUrl;
             default -> throw new CustomException(ErrorCode.ACTIVITY_SYNC_UNSUPPORTED_SOURCE);
@@ -563,11 +508,8 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
 
     private String serviceKey(SourceType src) {
         return switch (src) {
-            case TOUR_API       -> tourApiServiceKey;
             case KOPIS          -> kopisServiceKey;
             case EXHIBITION     -> exhibitionServiceKey;
-            case VOLUNTEER_1365 -> volunteer1365ServiceKey;
-            case YOUTH_CONTENT  -> youthContentServiceKey;
             default             -> "";
         };
     }

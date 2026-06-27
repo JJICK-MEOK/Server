@@ -49,11 +49,14 @@ class ActivityServiceImplTest {
     @Mock
     private RegionRepository regionRepository;
 
+    @Mock
+    private ActivityTagAutoAttachService activityTagAutoAttachService;
+
     private ActivityServiceImpl activityService;
 
     @BeforeEach
     void setUp() {
-        activityService = new ActivityServiceImpl(activityRepository, regionRepository);
+        activityService = new ActivityServiceImpl(activityRepository, regionRepository, activityTagAutoAttachService);
     }
 
     @Test
@@ -380,7 +383,7 @@ class ActivityServiceImplTest {
                 .startAt(BASE_TIME.plusDays(8))
                 .endAt(BASE_TIME.plusDays(9))
                 .activityType(ActivityType.PROGRAM)
-                .category(ActivityCategory.SELF_DEVELOPMENT)
+                .category(ActivityCategory.CAREER)
                 .sourceType(SourceType.URL_MANUAL)
                 .approvalStatus(ApprovalStatus.PENDING)
                 .price(1000)

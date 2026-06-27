@@ -3,17 +3,13 @@ package com.jjikmeok.app.domain.page.dto.response;
 import java.util.List;
 
 public record ActivityHomePageResponse(
-        String nickname,
-        Hero hero,
-        List<ActivityShortcutResponse> shortcuts,
-        ActivitySectionResponse recommended,
-        ActivitySectionResponse closingSoon
+        UserResponse user,
+        List<ActivityCardResponse> recommendedActivities,
+        List<ActivityCardResponse> closingSoonActivities
 ) {
-    public record Hero(
-            String title,
-            String subtitle,
-            String actionLabel,
-            String actionHref
+    public record UserResponse(
+            String nickname,
+            String profileImageUrl
     ) {
     }
 }

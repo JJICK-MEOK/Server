@@ -67,7 +67,6 @@ class PageControllerTest {
                 .andExpect(jsonPath("$.data.user.nickname").value("tester"))
                 .andExpect(jsonPath("$.data.user.profileImageUrl").value("https://example.com/profile.png"))
                 .andExpect(jsonPath("$.data.recommendedActivities[0].hashtags.length()").value(2))
-                .andExpect(jsonPath("$.data.recommendedActivities[0].isAd").value(true))
                 .andExpect(jsonPath("$.data.recommendedActivities[0].deadline").value(3))
                 .andExpect(jsonPath("$.data.closingSoonActivities[0].deadline").value(3));
 
@@ -90,7 +89,6 @@ class PageControllerTest {
                 .andExpect(jsonPath("$.data.typeOptions[0].label").value("전체"))
                 .andExpect(jsonPath("$.data.categoryOptions[1].label").value("운동 / 액티비티"))
                 .andExpect(jsonPath("$.data.activities[0].category").value("CRAFT"))
-                .andExpect(jsonPath("$.data.activities[0].isAd").value(true))
                 .andExpect(jsonPath("$.data.activities[0].hashtags.length()").value(2));
 
         verify(pageService).getCategoryPage(null, ActivityType.PROGRAM, ActivityCategory.CRAFT, "deadline", 10);
@@ -223,7 +221,6 @@ class PageControllerTest {
                 ActivityType.PROGRAM,
                 ActivityCategory.CRAFT,
                 List.of("#공예 / 만들기", "#프로그램"),
-                true,
                 0,
                 1,
                 2,

@@ -10,8 +10,8 @@ public record ActivityCategoryPageResponse(
         ActivityCategory selectedCategory,
         String selectedSort,
         Long totalCount,
-        List<ActivityFilterOptionResponse> typeTabs,
-        List<ActivityFilterOptionResponse> categoryChips,
+        List<ActivityFilterOptionResponse> typeOptions,
+        List<ActivityFilterOptionResponse> categoryOptions,
         List<ActivityFilterOptionResponse> sortOptions,
         List<ActivityCardResponse> activities
 ) {

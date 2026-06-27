@@ -11,7 +11,6 @@ import com.jjikmeok.app.domain.page.dto.response.ActivityImageItemResponse;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -22,7 +21,6 @@ import java.util.Map;
 
 public final class PageConverter {
 
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd");
     private static final int CARD_TAG_LIMIT = 2;
     private static final int DETAIL_TAG_LIMIT = 3;
 
@@ -36,26 +34,22 @@ public final class PageConverter {
                 activity.getId(),
                 activity.getTitle(),
                 activity.getThumbnailUrl(),
-                deadline.dDay(),
                 deadline.daysUntilRecruitEnd(),
-                deadline.text(),
                 activity.getRegion().getId(),
                 activity.getRegion().getName(),
                 activity.getAddress(),
                 activity.getActivityType(),
-                activity.getActivityType().getLabel(),
                 activity.getCategory(),
-                activity.getCategory().getLabel(),
                 randomHashtags(activity, CARD_TAG_LIMIT),
                 isAd,
                 activity.getPrice(),
-                priceLabel(activity.getPrice()),
                 activity.getViewCount(),
                 activity.getLikeCount(),
                 activity.getReviewCount(),
                 liked,
                 activity.getStartAt(),
                 activity.getEndAt(),
+                activity.getRecruitStartAt(),
                 activity.getRecruitEndAt()
         );
     }
@@ -85,17 +79,10 @@ public final class PageConverter {
                 activity.getEndAt(),
                 activity.getRecruitStartAt(),
                 activity.getRecruitEndAt(),
-                periodText(activity.getStartAt(), activity.getEndAt()),
-                periodText(activity.getRecruitStartAt(), activity.getRecruitEndAt()),
-                deadline.dDay(),
                 deadline.daysUntilRecruitEnd(),
-                deadline.text(),
                 activity.getPrice(),
-                priceLabel(activity.getPrice()),
                 activity.getActivityType(),
-                activity.getActivityType().getLabel(),
                 activity.getCategory(),
-                activity.getCategory().getLabel(),
                 randomHashtags(activity, DETAIL_TAG_LIMIT),
                 activity.getSourceType(),
                 activity.getExternalId(),
@@ -108,16 +95,6 @@ public final class PageConverter {
                 activity.getCreatedAt(),
                 activity.getUpdatedAt()
         );
-    }
-
-    public static String priceLabel(Integer price) {
-        if (price == null) {
-            return "금액 확인";
-        }
-        if (price == 0) {
-            return "무료";
-        }
-        return String.format("%,d원", price);
     }
 
     private static List<String> randomHashtags(Activity activity, int limit) {
@@ -199,54 +176,19 @@ public final class PageConverter {
         return items;
     }
 
-    private static String periodText(LocalDateTime startAt, LocalDateTime endAt) {
-        if (startAt == null && endAt == null) {
-            return "본문에서 확인";
-        }
-        if ((startAt != null && startAt.getYear() >= 2999) || (endAt != null && endAt.getYear() >= 2999)) {
-            return "상시";
-        }
-        if (startAt == null) {
-            return "~ " + date(endAt);
-        }
-        if (endAt == null) {
-            return date(startAt) + " ~";
-        }
-        if (startAt.toLocalDate().equals(endAt.toLocalDate())) {
-            return date(startAt);
-        }
-        return date(startAt) + " ~ " + date(endAt);
-    }
-
-    private static String date(LocalDateTime value) {
-        return value == null ? "" : value.format(DATE_FORMATTER);
-    }
-
-    private static String hashtag(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        return value.startsWith("#") ? value : "#" + value;
-    }
 
     private static Deadline deadline(LocalDateTime recruitEndAt, LocalDate today) {
         if (recruitEndAt == null) {
-            return new Deadline("상시", null, "상시 모집");
+            return new Deadline(null);
         }
         if (recruitEndAt.getYear() >= 2999) {
-            return new Deadline("상시", null, "상시 모집");
+            return new Deadline(null);
         }
 
         long days = ChronoUnit.DAYS.between(today, recruitEndAt.toLocalDate());
-        if (days < 0) {
-            return new Deadline("마감", days, "모집 마감");
-        }
-        if (days == 0) {
-            return new Deadline("D-DAY", 0L, "오늘 마감");
-        }
-        return new Deadline("D-" + days, days, days + "일 남음");
+        return new Deadline(Math.toIntExact(days));
     }
 
-    private record Deadline(String dDay, Long daysUntilRecruitEnd, String text) {
+    private record Deadline(Integer daysUntilRecruitEnd) {
     }
 }

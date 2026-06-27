@@ -49,3 +49,4 @@ public record ActivityDetailPageResponse(
         LocalDateTime updatedAt
 ) {
 }
+

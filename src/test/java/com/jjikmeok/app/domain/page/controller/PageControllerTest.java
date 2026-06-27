@@ -3,20 +3,20 @@ package com.jjikmeok.app.domain.page.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.jjikmeok.app.domain.page.dto.response.ActivityCategoryPageResponse;
-import com.jjikmeok.app.domain.page.dto.response.ActivityCustomPageResponse;
-import com.jjikmeok.app.domain.page.dto.response.ActivityHomePageResponse;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
 import com.jjikmeok.app.domain.activity.enums.SourceType;
-import com.jjikmeok.app.domain.page.service.PageService;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCardResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityCategoryPageResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityCustomPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityFilterOptionResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityHomePageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityImageItemResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivitySectionResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityShortcutResponse;
+import com.jjikmeok.app.domain.page.service.PageService;
 import com.jjikmeok.app.global.common.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,9 +64,10 @@ class PageControllerTest {
 
         mockMvc.perform(get("/api/v1/pages/home").param("limit", "5"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("???붾㈃ ?쒕룞 議고쉶 ?깃났"))
-                .andExpect(jsonPath("$.data.hero.title").value("?됰꽕?꾨떂, ?ㅻ뒛? 萸?李띾㉨?대낵源뚯슂?"))
+                .andExpect(jsonPath("$.message").value("홈 화면 활동 조회 성공"))
+                .andExpect(jsonPath("$.data.hero.title").value("확신이 없어도 괜찮아요\n일단 찍먹 해보세요"))
                 .andExpect(jsonPath("$.data.shortcuts[0].type").value("PROGRAM"))
+                .andExpect(jsonPath("$.data.recommended.activities[0].hashtags.length()").value(2))
                 .andExpect(jsonPath("$.data.recommended.activities[0].dDay").value("D-3"));
 
         verify(pageService).getHomePage(null, 5);
@@ -83,9 +84,10 @@ class PageControllerTest {
                         .param("sort", "deadline")
                         .param("limit", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("移댄뀒怨좊━ ?붾㈃ ?쒕룞 議고쉶 ?깃났"))
+                .andExpect(jsonPath("$.message").value("카테고리 화면 활동 조회 성공"))
                 .andExpect(jsonPath("$.data.selectedType").value("PROGRAM"))
-                .andExpect(jsonPath("$.data.activities[0].categoryLabel").value("공예/만들기"));
+                .andExpect(jsonPath("$.data.activities[0].categoryLabel").value("공예 / 만들기"))
+                .andExpect(jsonPath("$.data.activities[0].hashtags.length()").value(2));
 
         verify(pageService).getCategoryPage(null, ActivityType.PROGRAM, ActivityCategory.CRAFT, "deadline", 10);
     }
@@ -96,7 +98,7 @@ class PageControllerTest {
 
         mockMvc.perform(get("/api/v1/pages/custom"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("留욎땄 ?붾㈃ ?쒕룞 議고쉶 ?깃났"))
+                .andExpect(jsonPath("$.message").value("맞춤 화면 활동 조회 성공"))
                 .andExpect(jsonPath("$.data.tasteProfile.title").value("추천 활동"));
 
         verify(pageService).getCustomPage(null, null);
@@ -108,10 +110,11 @@ class PageControllerTest {
 
         mockMvc.perform(get("/api/v1/pages/detail/{activityId}", 1L))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("?곸꽭 ?붾㈃ ?쒕룞 議고쉶 ?깃났"))
-                .andExpect(jsonPath("$.data.organizer").value("?댁쁺湲곌?"))
+                .andExpect(jsonPath("$.message").value("상세 화면 활동 조회 성공"))
+                .andExpect(jsonPath("$.data.organizer").value("운영기관"))
                 .andExpect(jsonPath("$.data.images[0].imageUrl").value("https://example.com/image.png"))
-                .andExpect(jsonPath("$.data.priceLabel").value("臾대즺"));
+                .andExpect(jsonPath("$.data.hashtags.length()").value(3))
+                .andExpect(jsonPath("$.data.priceLabel").value("무료"));
 
         verify(pageService).getDetailPage(null, 1L);
     }
@@ -119,10 +122,15 @@ class PageControllerTest {
     private ActivityHomePageResponse homePageResponse() {
         return new ActivityHomePageResponse(
                 "tester",
-                new ActivityHomePageResponse.Hero("headline", "sub", "cta", "/api/v1/pages/custom"),
+                new ActivityHomePageResponse.Hero(
+                        "확신이 없어도 괜찮아요\n일단 찍먹 해보세요",
+                        "처음이어도 부담 없이 시작할 수 있는 경험을 골라봤어요.",
+                        "나만의 경험 탐색하기",
+                        "/api/v1/pages/custom"
+                ),
                 List.of(new ActivityShortcutResponse(ActivityType.PROGRAM, "프로그램", "palette", "/api/v1/pages/category?type=PROGRAM")),
-                new ActivitySectionResponse("recommended", "추천", null, List.of(card())),
-                new ActivitySectionResponse("closingSoon", "마감임박", null, List.of(card()))
+                new ActivitySectionResponse("recommended", "tester 님에게 추천해요!", null, List.of(card())),
+                new ActivitySectionResponse("closingSoon", "인기 마감 임박", null, List.of(card()))
         );
     }
 
@@ -134,8 +142,8 @@ class PageControllerTest {
                 "deadline",
                 1L,
                 List.of(new ActivityFilterOptionResponse("PROGRAM", "프로그램", true)),
-                List.of(new ActivityFilterOptionResponse("CRAFT", "공예/만들기", true)),
-                List.of(new ActivityFilterOptionResponse("deadline", "마감임박", true)),
+                List.of(new ActivityFilterOptionResponse("CRAFT", "공예 / 만들기", true)),
+                List.of(new ActivityFilterOptionResponse("deadline", "마감순", true)),
                 List.of(card())
         );
     }
@@ -143,7 +151,7 @@ class PageControllerTest {
     private ActivityCustomPageResponse customPageResponse() {
         return new ActivityCustomPageResponse(
                 "tester",
-                new ActivityCustomPageResponse.TasteProfile("추천 활동", "취향에 맞는 활동을 모아봤어요", List.of("#모임")),
+                new ActivityCustomPageResponse.TasteProfile("추천 활동", "취향에 맞는 활동을 모아봤어요.", List.of("#모임")),
                 new ActivitySectionResponse("customRecommended", "맞춤 추천 활동", null, List.of(card()))
         );
     }
@@ -176,8 +184,8 @@ class PageControllerTest {
                 ActivityType.PROGRAM,
                 "프로그램",
                 ActivityCategory.CRAFT,
-                "공예/만들기",
-                List.of("#공예/만들기"),
+                "공예 / 만들기",
+                List.of("#공예 / 만들기", "#프로그램", "#무료"),
                 SourceType.URL_MANUAL,
                 null,
                 ApprovalStatus.APPROVED,
@@ -205,8 +213,8 @@ class PageControllerTest {
                 ActivityType.PROGRAM,
                 "프로그램",
                 ActivityCategory.CRAFT,
-                "공예/만들기",
-                List.of("#공예/만들기", "#프로그램"),
+                "공예 / 만들기",
+                List.of("#공예 / 만들기", "#프로그램"),
                 0,
                 "무료",
                 1,
@@ -219,4 +227,3 @@ class PageControllerTest {
         );
     }
 }
-

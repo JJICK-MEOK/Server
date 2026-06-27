@@ -51,10 +51,17 @@ public class TagServiceImpl implements TagService {
 
         Arrays.stream(PreferenceTag.values())
                 .filter(tag -> tagsByName.containsKey(tag.getLabel()))
-                .forEach(tag -> grouped.computeIfAbsent(tag.getGroup(), key -> new ArrayList<>())
-                        .add(TagConverter.toResponse(tagsByName.get(tag.getLabel()))));
+                .forEach(tag -> {
+                    List<TagResponse> responses = grouped.computeIfAbsent(tag.getGroup(), key -> new ArrayList<>());
+                    TagResponse response = TagConverter.toResponse(tagsByName.get(tag.getLabel()));
+                    boolean exists = responses.stream().anyMatch(existing -> existing.name().equals(response.name()));
+                    if (!exists) {
+                        responses.add(response);
+                    }
+                });
 
         return Arrays.stream(PreferenceTagGroup.values())
+                .filter(group -> group != PreferenceTagGroup.PRICE)
                 .map(group -> new PreferenceTagGroupResponse(
                         group,
                         group.getLabel(),

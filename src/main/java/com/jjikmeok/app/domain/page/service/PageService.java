@@ -1,17 +1,17 @@
 package com.jjikmeok.app.domain.page.service;
 
-import com.jjikmeok.app.domain.page.dto.response.CategoryPageResponse;
-import com.jjikmeok.app.domain.page.dto.response.CustomPageResponse;
-import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
-import com.jjikmeok.app.domain.page.dto.response.HomePageResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityCategoryPageResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityCustomPageResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityHomePageResponse;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
+import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
 
 public interface PageService {
 
-    HomePageResponse getHomePage(Long userId, Integer limit);
+    ActivityHomePageResponse getHomePage(Long userId, Integer limit);
 
-    CategoryPageResponse getCategoryPage(
+    ActivityCategoryPageResponse getCategoryPage(
             Long userId,
             ActivityType type,
             ActivityCategory category,
@@ -19,7 +19,8 @@ public interface PageService {
             Integer limit
     );
 
-    CustomPageResponse getCustomPage(Long userId, Integer limit);
+    ActivityCustomPageResponse getCustomPage(Long userId, Integer limit);
 
     ActivityDetailPageResponse getDetailPage(Long userId, Long activityId);
 }
+

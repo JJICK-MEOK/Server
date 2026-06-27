@@ -1,24 +1,30 @@
 package com.jjikmeok.app.domain.page.converter;
 
+import com.jjikmeok.app.domain.activity.entity.Activity;
+import com.jjikmeok.app.domain.activity.entity.ActivityTag;
+import com.jjikmeok.app.domain.activity.enums.PreferenceTag;
+import com.jjikmeok.app.domain.activity.enums.PreferenceTagGroup;
+import com.jjikmeok.app.domain.image.entity.ActivityImage;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCardResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityImageItemResponse;
-import com.jjikmeok.app.domain.activity.entity.Activity;
-import com.jjikmeok.app.domain.activity.entity.ActivityTag;
-import com.jjikmeok.app.domain.image.entity.ActivityImage;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 public final class PageConverter {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd");
+    private static final int CARD_TAG_LIMIT = 2;
+    private static final int DETAIL_TAG_LIMIT = 3;
 
     private PageConverter() {
     }
@@ -40,7 +46,7 @@ public final class PageConverter {
                 activity.getActivityType().getLabel(),
                 activity.getCategory(),
                 activity.getCategory().getLabel(),
-                hashtags(activity),
+                randomHashtags(activity, CARD_TAG_LIMIT),
                 activity.getPrice(),
                 priceLabel(activity.getPrice()),
                 activity.getViewCount(),
@@ -89,7 +95,7 @@ public final class PageConverter {
                 activity.getActivityType().getLabel(),
                 activity.getCategory(),
                 activity.getCategory().getLabel(),
-                hashtags(activity),
+                randomHashtags(activity, DETAIL_TAG_LIMIT),
                 activity.getSourceType(),
                 activity.getExternalId(),
                 activity.getApprovalStatus(),
@@ -113,24 +119,64 @@ public final class PageConverter {
         return String.format("%,d원", price);
     }
 
-    public static List<String> hashtags(Activity activity) {
-        Set<String> values = new LinkedHashSet<>();
+    private static List<String> randomHashtags(Activity activity, int limit) {
+        List<String> candidates = new ArrayList<>(tagCandidates(activity));
+        Collections.shuffle(candidates);
+        return candidates.stream()
+                .limit(limit)
+                .toList();
+    }
 
-        activity.getTags().stream()
-                .map(ActivityTag::getTag)
-                .map(tag -> hashtag(tag.getName()))
-                .forEach(values::add);
+    private static List<String> tagCandidates(Activity activity) {
+        Map<PreferenceTagGroup, List<String>> tagsByGroup = new EnumMap<>(PreferenceTagGroup.class);
+        for (ActivityTag activityTag : activity.getTags()) {
+            if (activityTag.getTag() == null) {
+                continue;
+            }
 
-        if (values.isEmpty()) {
-            values.add(hashtag(activity.getCategory().getLabel()));
-            values.add(hashtag(activity.getActivityType().getLabel()));
-            values.add(hashtag(priceLabel(activity.getPrice())));
+            PreferenceTag preferenceTag = preferenceTag(activityTag.getTag().getName());
+            if (preferenceTag == null || preferenceTag.getGroup() == PreferenceTagGroup.PRICE) {
+                continue;
+            }
+
+            tagsByGroup.computeIfAbsent(preferenceTag.getGroup(), ignored -> new ArrayList<>())
+                    .add(preferenceTag.getHashtag());
         }
 
-        return values.stream()
+        List<String> candidates = new ArrayList<>();
+        addOne(candidates, tagsByGroup, PreferenceTagGroup.MOOD);
+        addOne(candidates, tagsByGroup, PreferenceTagGroup.INTENSITY);
+        addOne(candidates, tagsByGroup, PreferenceTagGroup.PURPOSE);
+        addOne(candidates, tagsByGroup, PreferenceTagGroup.DURATION);
+        addOne(candidates, tagsByGroup, PreferenceTagGroup.SIZE);
+        return candidates;
+    }
+
+    private static void addOne(List<String> candidates, Map<PreferenceTagGroup, List<String>> tagsByGroup, PreferenceTagGroup group) {
+        List<String> values = tagsByGroup.getOrDefault(group, List.of()).stream()
                 .filter(value -> value != null && !value.isBlank())
-                .limit(4)
+                .distinct()
                 .toList();
+        if (values.isEmpty()) {
+            return;
+        }
+
+        List<String> shuffled = new ArrayList<>(values);
+        Collections.shuffle(shuffled);
+        candidates.add(shuffled.getFirst());
+    }
+
+    private static PreferenceTag preferenceTag(String label) {
+        if (label == null || label.isBlank()) {
+            return null;
+        }
+        String normalized = label.startsWith("#") ? label.substring(1) : label;
+        for (PreferenceTag preferenceTag : PreferenceTag.values()) {
+            if (preferenceTag.getLabel().equals(normalized)) {
+                return preferenceTag;
+            }
+        }
+        return null;
     }
 
     private static List<ActivityImageItemResponse> imageItems(Activity activity, List<ActivityImage> images) {
@@ -154,7 +200,7 @@ public final class PageConverter {
 
     private static String periodText(LocalDateTime startAt, LocalDateTime endAt) {
         if (startAt == null && endAt == null) {
-            return "원문에서 확인";
+            return "본문에서 확인";
         }
         if ((startAt != null && startAt.getYear() >= 2999) || (endAt != null && endAt.getYear() >= 2999)) {
             return "상시";
@@ -184,15 +230,15 @@ public final class PageConverter {
 
     private static Deadline deadline(LocalDateTime recruitEndAt, LocalDate today) {
         if (recruitEndAt == null) {
-            return new Deadline("상시", null, "상시");
+            return new Deadline("상시", null, "상시 모집");
         }
         if (recruitEndAt.getYear() >= 2999) {
-            return new Deadline("상시", null, "상시");
+            return new Deadline("상시", null, "상시 모집");
         }
 
         long days = ChronoUnit.DAYS.between(today, recruitEndAt.toLocalDate());
         if (days < 0) {
-            return new Deadline("마감", days, "마감");
+            return new Deadline("마감", days, "모집 마감");
         }
         if (days == 0) {
             return new Deadline("D-DAY", 0L, "오늘 마감");

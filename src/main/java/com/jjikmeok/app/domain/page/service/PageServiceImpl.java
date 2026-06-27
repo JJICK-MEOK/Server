@@ -16,7 +16,6 @@ import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityFilterOptionResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomePageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivitySectionResponse;
-import com.jjikmeok.app.domain.page.dto.response.ActivityShortcutResponse;
 import com.jjikmeok.app.domain.user.entity.UserOnboardingTag;
 import com.jjikmeok.app.domain.user.repository.UserOnboardingRegionRepository;
 import com.jjikmeok.app.domain.user.repository.UserOnboardingTagRepository;
@@ -59,7 +58,7 @@ public class PageServiceImpl implements PageService {
     @Override
     public ActivityHomePageResponse getHomePage(Long userId, Integer limit) {
         int size = limit(limit, DEFAULT_HOME_LIMIT);
-        String nickname = nickname(userId);
+        ActivityHomePageResponse.UserResponse user = homeUser(userId);
 
         List<ActivityCardResponse> recommended = cards(userId, recommendedActivities(userId, size), size);
         List<ActivityCardResponse> closingSoon = cards(
@@ -68,18 +67,7 @@ public class PageServiceImpl implements PageService {
                 size
         );
 
-        return new ActivityHomePageResponse(
-                nickname,
-                new ActivityHomePageResponse.Hero(
-                        "확신이 없어도 괜찮아요\n일단 찍먹 해보세요",
-                        "처음이어도 부담 없이 시작할 수 있는 경험을 골라봤어요.",
-                        "나만의 경험 탐색하기",
-                        "/api/v1/pages/custom"
-                ),
-                shortcuts(),
-                new ActivitySectionResponse("recommended", nickname + " 님에게 추천해요!", null, recommended),
-                new ActivitySectionResponse("closingSoon", "인기 마감 임박", null, closingSoon)
-        );
+        return new ActivityHomePageResponse(user, recommended, closingSoon);
     }
 
     @Override
@@ -107,13 +95,13 @@ public class PageServiceImpl implements PageService {
         long totalCount = activityRepository.countApprovedActivitiesByFilters(PUBLIC_STATUS, category, type, now);
 
         return new ActivityCategoryPageResponse(
-                type == null ? "프로그램" : type.getLabel(),
+                type == null ? "전체" : type.getLabel(),
                 type,
                 category,
                 selectedSort,
                 totalCount,
-                typeTabs(type),
-                categoryChips(category),
+                typeOptions(type),
+                categoryOptions(category),
                 sortOptions(selectedSort),
                 cards(userId, sorted, size)
         );
@@ -268,6 +256,19 @@ public class PageServiceImpl implements PageService {
                 .orElse("게스트");
     }
 
+    private ActivityHomePageResponse.UserResponse homeUser(Long userId) {
+        if (userId == null) {
+            return new ActivityHomePageResponse.UserResponse("게스트", "");
+        }
+
+        return userProfileRepository.findByUserId(userId)
+                .map(userProfile -> new ActivityHomePageResponse.UserResponse(
+                        userProfile.getNickname(),
+                        userProfile.getProfileImageUrl()
+                ))
+                .orElseGet(() -> new ActivityHomePageResponse.UserResponse("게스트", ""));
+    }
+
     private List<UserOnboardingTag> preferenceTags(Long userId) {
         if (userId == null) {
             return List.of();
@@ -291,16 +292,7 @@ public class PageServiceImpl implements PageService {
         return "아직 선호 정보가 부족해요";
     }
 
-    private List<ActivityShortcutResponse> shortcuts() {
-        return List.of(
-                new ActivityShortcutResponse(ActivityType.PROGRAM, ActivityType.PROGRAM.getLabel(), "palette", "/api/v1/pages/category?type=PROGRAM"),
-                new ActivityShortcutResponse(ActivityType.ONE_DAY, ActivityType.ONE_DAY.getLabel(), "clock", "/api/v1/pages/category?type=ONE_DAY"),
-                new ActivityShortcutResponse(ActivityType.EVENT, ActivityType.EVENT.getLabel(), "megaphone", "/api/v1/pages/category?type=EVENT"),
-                new ActivityShortcutResponse(ActivityType.CLUB, ActivityType.CLUB.getLabel(), "users", "/api/v1/pages/category?type=CLUB")
-        );
-    }
-
-    private List<ActivityFilterOptionResponse> typeTabs(ActivityType selectedType) {
+    private List<ActivityFilterOptionResponse> typeOptions(ActivityType selectedType) {
         List<ActivityFilterOptionResponse> options = new java.util.ArrayList<>();
         options.add(new ActivityFilterOptionResponse("", "전체", selectedType == null));
         for (ActivityType type : ActivityType.values()) {
@@ -309,7 +301,7 @@ public class PageServiceImpl implements PageService {
         return options;
     }
 
-    private List<ActivityFilterOptionResponse> categoryChips(ActivityCategory selectedCategory) {
+    private List<ActivityFilterOptionResponse> categoryOptions(ActivityCategory selectedCategory) {
         List<ActivityFilterOptionResponse> options = new java.util.ArrayList<>();
         options.add(new ActivityFilterOptionResponse("", "전체", selectedCategory == null));
         for (ActivityCategory category : ActivityCategory.values()) {

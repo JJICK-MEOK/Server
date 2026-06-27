@@ -27,14 +27,14 @@ public class PageController {
 
     private final PageService pageService;
 
-    @Operation(summary = "홈 화면 활동 데이터 조회", description = "홈 화면의 바로가기, 추천 활동, 마감 임박 활동을 조회합니다.")
+    @Operation(summary = "홈 화면 활동 데이터 조회", description = "홈 화면의 사용자 정보, 추천 활동, 마감 임박 활동을 조회합니다.")
     @GetMapping("/home")
     public ApiResponse<ActivityHomePageResponse> getHomePage(
             @AuthenticationPrincipal Long userId,
             @Parameter(description = "섹션별 최대 활동 개수", example = "10")
             @RequestParam(value = "limit", required = false) Integer limit
     ) {
-        return ApiResponse.success("홈 화면 활동 조회 성공", pageService.getHomePage(userId, limit));
+        return ApiResponse.success("홈 페이지 조회 성공", pageService.getHomePage(userId, limit));
     }
 
     @Operation(summary = "카테고리 화면 활동 데이터 조회", description = "활동 유형과 활동 카테고리 필터에 맞는 목록 화면 데이터를 조회합니다.")
@@ -50,7 +50,7 @@ public class PageController {
             @Parameter(description = "최대 활동 개수", example = "20")
             @RequestParam(value = "limit", required = false) Integer limit
     ) {
-        return ApiResponse.success("카테고리 화면 활동 조회 성공",
+        return ApiResponse.success("카테고리 페이지 조회 성공",
                 pageService.getCategoryPage(userId, type, category, sort, limit));
     }
 
@@ -61,16 +61,16 @@ public class PageController {
             @Parameter(description = "최대 활동 개수", example = "10")
             @RequestParam(value = "limit", required = false) Integer limit
     ) {
-        return ApiResponse.success("맞춤 화면 활동 조회 성공", pageService.getCustomPage(userId, limit));
+        return ApiResponse.success("맞춤 페이지 조회 성공", pageService.getCustomPage(userId, limit));
     }
 
-    @Operation(summary = "상세 화면 활동 데이터 조회", description = "상세 화면에 표시할 활동 정보, 이미지, 기간, 가격, D-day, 찜 여부를 조회합니다.")
+    @Operation(summary = "상세 화면 활동 데이터 조회", description = "상세 화면에 표시할 활동 정보, 이미지, 찜 여부를 조회합니다.")
     @GetMapping("/detail/{activityId}")
     public ApiResponse<ActivityDetailPageResponse> getDetailPage(
             @AuthenticationPrincipal Long userId,
             @Parameter(description = "활동 ID", example = "1")
             @PathVariable Long activityId
     ) {
-        return ApiResponse.success("상세 화면 활동 조회 성공", pageService.getDetailPage(userId, activityId));
+        return ApiResponse.success("상세 페이지 조회 성공", pageService.getDetailPage(userId, activityId));
     }
 }

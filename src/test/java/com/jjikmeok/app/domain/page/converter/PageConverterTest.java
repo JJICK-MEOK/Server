@@ -45,9 +45,6 @@ class PageConverterTest {
 
         List<String> hashtags = PageConverter.toDetail(activity, List.<ActivityImage>of(), false, TODAY).hashtags();
 
-        assertThat(hashtags)
-                .doesNotContain(PreferenceTag.FREE.getHashtag())
-                .doesNotContain(PreferenceTag.PAID.getHashtag());
         assertThat(hashtags.stream()
                 .filter(tag -> tag.equals(PreferenceTag.CALM.getHashtag()) || tag.equals(PreferenceTag.HEALING.getHashtag()))
                 .count()).isLessThanOrEqualTo(1);
@@ -80,7 +77,7 @@ class PageConverterTest {
                 .build();
         ReflectionTestUtils.setField(activity, "id", 1L);
 
-        for (String name : List.of("편안한", "힐링", "가볍게", "취미", "단기", "소규모", "무료")) {
+        for (String name : List.of("편안한", "힐링", "가볍게", "취미", "단기", "소규모", "사교")) {
             activity.getTags().add(ActivityTag.create(activity, Tag.create(name, TagType.PREFERENCE_TAG)));
         }
         return activity;

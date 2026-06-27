@@ -26,14 +26,14 @@ public class AdminActivityIngestionController {
 
     private final AdminActivityIngestionService adminActivityIngestionService;
 
-    @Operation(summary = "Sync all public activity sources")
+    @Operation(summary = "공공 활동 소스 전체 동기화")
     @PostMapping("/public/sync")
     public ApiResponse<String> syncAllPublicSources() {
         adminActivityIngestionService.syncAllPublicSources();
         return ApiResponse.success("Public activity sync started", "Check server logs for details.");
     }
 
-    @Operation(summary = "Sync one public activity source")
+    @Operation(summary = "공공 활동 소스 단건 동기화")
     @PostMapping("/public/{sourceType}/sync")
     public ApiResponse<ActivitySyncResponse> syncPublicSource(
             @PathVariable("sourceType") SourceType sourceType,
@@ -45,7 +45,7 @@ public class AdminActivityIngestionController {
         );
     }
 
-    @Operation(summary = "Collect discovery activity candidates")
+    @Operation(summary = "디스커버리 활동 후보 수집")
     @PostMapping("/discovery/collect")
     public ApiResponse<List<DiscoverySheetRowDto>> collectDiscoveryActivities(
             @RequestParam(required = false) Integer keywordLimit,
@@ -57,7 +57,7 @@ public class AdminActivityIngestionController {
         );
     }
 
-    @Operation(summary = "Publish ready discovery activities")
+    @Operation(summary = "발행 가능한 디스커버리 활동 발행")
     @PostMapping("/discovery/publish")
     public ApiResponse<Integer> publishDiscoveryActivities() {
         return ApiResponse.success(

@@ -29,13 +29,13 @@ public class ActivityFavoriteController {
 
     private final ActivityFavoriteService activityFavoriteService;
 
-    @Operation(summary = "Get activity favorites")
+    @Operation(summary = "활동 찜 목록 조회")
     @GetMapping
     public ApiResponse<List<ActivityFavoriteResponse>> getFavorites(@AuthenticationPrincipal Long userId) {
         return ApiResponse.success("Activity favorites fetched", activityFavoriteService.getFavorites(userId));
     }
 
-    @Operation(summary = "Create activity favorite")
+    @Operation(summary = "활동 찜 추가")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ActivityFavoriteResponse> createFavorite(
@@ -45,7 +45,7 @@ public class ActivityFavoriteController {
         return ApiResponse.success("Activity favorite created", activityFavoriteService.createFavorite(userId, request));
     }
 
-    @Operation(summary = "Delete activity favorite")
+    @Operation(summary = "활동 찜 삭제")
     @DeleteMapping("/{activityId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteFavorite(

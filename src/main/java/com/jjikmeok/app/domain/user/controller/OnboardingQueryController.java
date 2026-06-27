@@ -22,7 +22,7 @@ public class OnboardingQueryController {
 
     private final OnboardingQueryService onboardingQueryService;
 
-    @Operation(summary = "Get user onboarding", description = "Returns the current user's saved onboarding selections.")
+    @Operation(summary = "사용자 온보딩 조회", description = "Returns the current user's saved onboarding selections.")
     @GetMapping
     public ApiResponse<OnboardingRes> getOnboarding(
             @AuthenticationPrincipal Long userId
@@ -31,7 +31,7 @@ public class OnboardingQueryController {
         return ApiResponse.success(response);
     }
 
-    @Operation(summary = "Get preference tags for edit", description = "Returns all preference tags with the current user's selected state.")
+    @Operation(summary = "취향 태그 수정 조회", description = "Returns all preference tags with the current user's selected state.")
     @GetMapping("/preference-tags")
     public ApiResponse<List<OnboardingPreferenceTagResponse>> getPreferenceTagsForEdit(
             @AuthenticationPrincipal Long userId

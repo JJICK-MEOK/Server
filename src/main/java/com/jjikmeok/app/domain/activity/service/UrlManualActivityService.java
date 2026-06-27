@@ -642,8 +642,6 @@ public class UrlManualActivityService {
 
     private List<PreferenceTag> suggestTags(String text, Integer price, LocalDateTime startAt, LocalDateTime endAt) {
         List<PreferenceTag> tags = new ArrayList<>();
-        if ((price != null && price == 0) || contains(text, "무료")) add(tags, PreferenceTag.FREE);
-        if ((price != null && price > 0) || contains(text, "유료")) add(tags, PreferenceTag.PAID);
         if (contains(text, "차분", "독서", "명상")) add(tags, PreferenceTag.CALM);
         if (contains(text, "활기", "러닝", "운동", "댄스")) add(tags, PreferenceTag.LIVELY);
         if (contains(text, "힐링", "휴식")) add(tags, PreferenceTag.HEALING);

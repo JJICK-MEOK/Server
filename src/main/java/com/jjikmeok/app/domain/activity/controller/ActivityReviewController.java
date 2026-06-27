@@ -32,7 +32,7 @@ public class ActivityReviewController {
 
     private final ActivityReviewService activityReviewService;
 
-    @Operation(summary = "Get activity reviews")
+    @Operation(summary = "활동 리뷰 목록 조회")
     @GetMapping
     public ApiResponse<Page<ActivityReviewResponse>> getReviews(
             @PathVariable("activityId") Long activityId,
@@ -41,7 +41,7 @@ public class ActivityReviewController {
         return ApiResponse.success("Activity reviews fetched", activityReviewService.getReviews(activityId, pageable));
     }
 
-    @Operation(summary = "Create activity review")
+    @Operation(summary = "활동 리뷰 생성")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ActivityReviewResponse> createReview(
@@ -52,7 +52,7 @@ public class ActivityReviewController {
         return ApiResponse.success("Activity review created", activityReviewService.createReview(userId, activityId, request));
     }
 
-    @Operation(summary = "Update activity review")
+    @Operation(summary = "활동 리뷰 수정")
     @PutMapping("/{reviewId}")
     public ApiResponse<ActivityReviewResponse> updateReview(
             @AuthenticationPrincipal Long userId,
@@ -66,7 +66,7 @@ public class ActivityReviewController {
         );
     }
 
-    @Operation(summary = "Delete activity review")
+    @Operation(summary = "활동 리뷰 삭제")
     @DeleteMapping("/{reviewId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteReview(

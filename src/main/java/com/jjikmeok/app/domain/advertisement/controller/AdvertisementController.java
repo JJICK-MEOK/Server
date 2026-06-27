@@ -32,7 +32,7 @@ public class AdvertisementController {
 
     private final AdvertisementService advertisementService;
 
-    @Operation(summary = "노출 광고 목록 조회")
+    @Operation(summary = "광고 목록 조회")
     @GetMapping
     public ApiResponse<List<AdvertisementResponse>> getVisibleAdvertisements(
             @RequestParam(value = "position", required = false) AdvertisementPosition position) {

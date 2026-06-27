@@ -40,10 +40,7 @@ public enum PreferenceTag {
     LARGE("대규모", PreferenceTagGroup.SIZE),
 
     SOCIAL("사교", PreferenceTagGroup.PURPOSE),
-    EXPERIENCE("경험", PreferenceTagGroup.PURPOSE),
-
-    FREE("무료", PreferenceTagGroup.PRICE),
-    PAID("유료", PreferenceTagGroup.PRICE);
+    EXPERIENCE("경험", PreferenceTagGroup.PURPOSE);
 
     private final String label;
     private final PreferenceTagGroup group;

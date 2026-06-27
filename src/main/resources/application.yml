@@ -31,14 +31,11 @@ spring:
           starttls:
             enable: true
 
-  # 파일 업로드 용량 설정 (테스트 영상 업로드용 50MB)
-  # 실제 운영 환경에선 500MB로 늘릴 예정
   servlet:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
 
-  #AWS S3 설정
   cloud:
     aws:
       s3:
@@ -49,10 +46,9 @@ spring:
         access-key: ${AWS_ACCESS_KEY}
         secret-key: ${AWS_SECRET_KEY}
 
-
 oauth2:
   kakao:
-    client-id: ${KAKAO_CLIENT_ID}          # REST API 키
+    client-id: ${KAKAO_CLIENT_ID}
     redirect-uri: "{baseUrl}/api/v2/oauth2/code/kakao"
   google:
     client-id: ${GOOGLE_CLIENT_ID}
@@ -79,3 +75,19 @@ app:
       - "*"
     allow-credentials: true
 
+  discovery:
+    search:
+      provider: serper
+      serper:
+        base-url: https://google.serper.dev/search
+        api-key: ${SERPER_API_KEY:}
+        gl: kr
+        hl: ko
+    publish:
+      fixed-delay-ms: 300000
+    sheets:
+      enabled: false
+      spreadsheet-id: ${GOOGLE_SHEETS_SPREADSHEET_ID:}
+      sheet-name: Discovery
+      credentials-path: ${GOOGLE_SHEETS_CREDENTIALS_PATH:}
+      credentials-json: ${GOOGLE_SHEETS_CREDENTIALS_JSON:}

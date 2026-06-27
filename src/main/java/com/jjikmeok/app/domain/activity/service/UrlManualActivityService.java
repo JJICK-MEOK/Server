@@ -58,6 +58,8 @@ public class UrlManualActivityService {
     private final RegionRepository regionRepository;
     private final CategoryClassifier classifier;
     private final ObjectMapper objectMapper;
+    private final ActivityTagSuggestionService activityTagSuggestionService;
+    private final ActivityTagAutoAttachService activityTagAutoAttachService;
     private final RestClient restClient = RestClient.create();
 
     @Value("${app.activity-sync.default-region-id:1}")
@@ -112,7 +114,13 @@ public class UrlManualActivityService {
                 price,
                 classifier.classifyCategory(SourceType.URL_MANUAL, text),
                 classifier.classifyType(SourceType.URL_MANUAL, text, startAt, endAt),
-                suggestTags(text, price, startAt, endAt)
+                activityTagSuggestionService.suggest(
+                        text,
+                        classifier.classifyCategory(SourceType.URL_MANUAL, text),
+                        price,
+                        startAt,
+                        endAt
+                )
         );
     }
 
@@ -154,11 +162,13 @@ public class UrlManualActivityService {
                     .build());
         } else {
             existing.update(region, title, description, command.thumbnailUrl(), sourceUrl, command.address(),
+                    command.organizer(), command.contactInfo(), command.target(),
                     command.startAt(), command.endAt(), command.recruitStartAt(),
                     recruitEndAt != null ? recruitEndAt : LocalDateTime.now().plusMonths(1), command.price(), activityType,
                     category, SourceType.URL_MANUAL, externalId, ApprovalStatus.PENDING, false);
             existing.updateExtra(command.organizer(), command.contactInfo(), command.target());
         }
+        activityTagAutoAttachService.refresh(existing);
         return ActivityConverter.toDetailResponse(existing);
     }
 

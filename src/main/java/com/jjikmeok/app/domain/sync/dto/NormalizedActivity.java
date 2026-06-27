@@ -4,6 +4,7 @@ import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
 import com.jjikmeok.app.domain.activity.enums.SourceType;
+
 import java.time.LocalDateTime;
 
 public record NormalizedActivity(
@@ -27,8 +28,9 @@ public record NormalizedActivity(
         ApprovalStatus approvalStatus,
         Boolean active
 ) {
-    // 🌟 1순위 데이터 병합 및 2순위 누락 데이터 선택적 복원 메서드
     public NormalizedActivity copyWithFallbackFields(
+            String aiTitle,
+            String aiAddress,
             LocalDateTime aiRecruitStartAt,
             LocalDateTime aiRecruitEndAt,
             LocalDateTime aiStartAt,
@@ -40,11 +42,11 @@ public record NormalizedActivity(
             String aiOrganizer
     ) {
         return new NormalizedActivity(
-                this.title,
+                isMissing(this.title) && aiTitle != null ? aiTitle : this.title,
                 isMissing(this.description) && aiDescription != null ? aiDescription : this.description,
                 this.thumbnailUrl,
                 this.sourceUrl,
-                this.address,
+                isMissing(this.address) && aiAddress != null ? aiAddress : this.address,
                 isMissing(this.organizer) && aiOrganizer != null ? aiOrganizer : this.organizer,
                 isMissing(this.contactInfo) && aiContactInfo != null ? aiContactInfo : this.contactInfo,
                 isMissing(this.target) && aiTarget != null ? aiTarget : this.target,
@@ -63,6 +65,6 @@ public record NormalizedActivity(
     }
 
     private boolean isMissing(String value) {
-        return value == null || value.isBlank() || value.contains("원문 링크") || value.contains("확인하세요");
+        return value == null || value.isBlank() || value.contains("?먮Ц 留곹겕") || value.contains("?뺤씤?섏꽭??");
     }
 }

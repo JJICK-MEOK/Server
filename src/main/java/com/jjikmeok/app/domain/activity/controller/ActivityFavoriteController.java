@@ -21,35 +21,37 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Tag(name = "Activity Favorite", description = "활동 찜 API")
+@Tag(name = "Activity Favorite", description = "Activity favorite API")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/activities/favorites")
+@RequestMapping("/api/v1/activity-favorites")
 public class ActivityFavoriteController {
 
-    private final ActivityFavoriteService favoriteService;
+    private final ActivityFavoriteService activityFavoriteService;
 
-    @Operation(summary = "내 활동 찜 목록 조회")
+    @Operation(summary = "Get activity favorites")
     @GetMapping
     public ApiResponse<List<ActivityFavoriteResponse>> getFavorites(@AuthenticationPrincipal Long userId) {
-        return ApiResponse.success("활동 찜 목록 조회 성공", favoriteService.getFavorites(userId));
+        return ApiResponse.success("Activity favorites fetched", activityFavoriteService.getFavorites(userId));
     }
 
-    @Operation(summary = "활동 찜 생성")
+    @Operation(summary = "Create activity favorite")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ActivityFavoriteResponse> createFavorite(
             @AuthenticationPrincipal Long userId,
-            @RequestBody @Valid ActivityFavoriteRequest request) {
-        return ApiResponse.success("활동 찜 생성 성공", favoriteService.createFavorite(userId, request));
+            @RequestBody @Valid ActivityFavoriteRequest request
+    ) {
+        return ApiResponse.success("Activity favorite created", activityFavoriteService.createFavorite(userId, request));
     }
 
-    @Operation(summary = "활동 찜 삭제")
+    @Operation(summary = "Delete activity favorite")
     @DeleteMapping("/{activityId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteFavorite(
             @AuthenticationPrincipal Long userId,
-            @PathVariable("activityId") Long activityId) {
-        favoriteService.deleteFavorite(userId, activityId);
+            @PathVariable("activityId") Long activityId
+    ) {
+        activityFavoriteService.deleteFavorite(userId, activityId);
     }
 }

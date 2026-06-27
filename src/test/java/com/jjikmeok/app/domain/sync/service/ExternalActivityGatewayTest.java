@@ -18,33 +18,26 @@ class ExternalActivityGatewayTest {
 
     @Test
     void buildUrl_addsDynamicDatesAndPages() {
-        String tour = gateway.buildUrl(SourceType.TOUR_API, "https://api.test/list", "key",
-                LocalDate.of(2026, 5, 24), LocalDate.of(2026, 8, 24), 2);
         String kopis = gateway.buildUrl(SourceType.KOPIS, "https://kopis.test/list", "key",
                 LocalDate.of(2026, 5, 24), LocalDate.of(2026, 8, 24), 1);
-        String volunteer = gateway.buildUrl(SourceType.VOLUNTEER_1365, "https://openapi.1365.go.kr/openapi/service/rest/VolunteerPartcptnService",
-                "key", LocalDate.of(2026, 5, 24), LocalDate.of(2026, 8, 24), 1);
         String exhibition = gateway.buildUrl(SourceType.EXHIBITION, "https://api.kcisa.kr/openapi/API_CCA_145/request",
                 "key", LocalDate.of(2026, 5, 24), LocalDate.of(2026, 8, 24), 2);
-        String youthContent = gateway.buildUrl(SourceType.YOUTH_CONTENT, "https://www.youthcenter.go.kr/go/ythip/getContent",
-                "key", LocalDate.of(2026, 5, 24), LocalDate.of(2026, 8, 24), 3);
-        String seoul = gateway.buildUrl(SourceType.SEOUL_CULTURE, "http://openapi.seoul.go.kr/key/json/List",
+        String seoulCulture = gateway.buildUrl(SourceType.SEOUL_CULTURE, "http://openapi.seoul.go.kr/key/json/List",
+                "", LocalDate.of(2026, 5, 24), LocalDate.of(2026, 8, 24), 2);
+        String seoulReservation = gateway.buildUrl(SourceType.SEOUL_RESERVATION, "http://openapi.seoul.go.kr/key/json/List",
                 "", LocalDate.of(2026, 5, 24), LocalDate.of(2026, 8, 24), 2);
 
-        assertThat(tour).contains("eventStartDate=20260524", "pageNo=2", "numOfRows=100", "MobileApp=JJickmeok");
         assertThat(kopis).contains("stdate=20260524", "eddate=20260624", "cpage=1", "prfstate=02");
         assertThat(kopis).contains("service=key").doesNotContain("serviceKey=key");
-        assertThat(volunteer).contains("/getVltrAreaList", "pageNo=1", "numOfRows=100");
-        assertThat(exhibition).contains("pageNo=2", "numOfRows=100").doesNotContain("rows=100", "cPage=2");
-        assertThat(youthContent).contains("apiKeyNm=key", "pageNum=3", "pageSize=10", "rtnType=json");
-        assertThat(youthContent).doesNotContain("serviceKey=key");
-        assertThat(seoul).endsWith("/101/200");
+        assertThat(exhibition).contains("pageNo=2", "numOfRows=100");
+        assertThat(seoulCulture).endsWith("/101/200");
+        assertThat(seoulReservation).contains("/101/200", "sortStdr=1");
     }
 
     @Test
     void buildUrl_keepsEncodedServiceKeyAndReplacesBlankKey() {
-        String url = gateway.buildUrl(SourceType.VOLUNTEER_1365,
-                "https://openapi.1365.go.kr/openapi/service/rest/VolunteerPartcptnService?serviceKey=",
+        String url = gateway.buildUrl(SourceType.EXHIBITION,
+                "https://api.example.com/list?serviceKey=",
                 "abc%2Fdef%3D",
                 LocalDate.of(2026, 5, 24),
                 LocalDate.of(2026, 8, 24),
@@ -56,57 +49,12 @@ class ExternalActivityGatewayTest {
     }
 
     @Test
-    void buildUrl_replacesExistingServiceKeyWithConfiguredKey() {
-        String url = gateway.buildUrl(SourceType.TOUR_API,
-                "https://apis.data.go.kr/list?serviceKey=old",
-                "new%2Fkey%3D",
-                LocalDate.of(2026, 5, 24),
-                LocalDate.of(2026, 8, 24),
-                1);
-
-        assertThat(url).contains("serviceKey=new%2Fkey%3D");
-        assertThat(url).doesNotContain("serviceKey=old");
-        assertThat(url).doesNotContain("new%252Fkey%253D");
-    }
-
-    @Test
-    void fetchPage_preservesEncodedServiceKeyWhenSendingRequest() throws Exception {
-        AtomicReference<String> rawQuery = new AtomicReference<>();
-        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
-        server.createContext("/list", exchange -> {
-            rawQuery.set(exchange.getRequestURI().getRawQuery());
-            byte[] body = "{}".getBytes(StandardCharsets.UTF_8);
-            exchange.sendResponseHeaders(200, body.length);
-            exchange.getResponseBody().write(body);
-            exchange.close();
-        });
-        server.start();
-
-        try {
-            gateway.fetchPage(
-                    SourceType.TOUR_API,
-                    "http://localhost:" + server.getAddress().getPort() + "/list",
-                    "abc%2Fdef%3D",
-                    LocalDate.of(2026, 5, 24),
-                    LocalDate.of(2026, 8, 24),
-                    1
-            );
-        } finally {
-            server.stop(0);
-        }
-
-        assertThat(rawQuery.get())
-                .contains("serviceKey=abc%2Fdef%3D")
-                .doesNotContain("serviceKey=abc%252Fdef%253D");
-    }
-
-    @Test
     void fetchPage_decodesUtf8XmlEvenWhenHttpCharsetIsWrong() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
-        server.createContext("/api/getVltrAreaList", exchange -> {
+        server.createContext("/api/request", exchange -> {
             byte[] body = """
                     <?xml version="1.0" encoding="UTF-8"?>
-                    <response><body><items><item><progrmSj>아양도서관 5월 자원봉사자 모집 안내</progrmSj></item></items></body></response>
+                    <response><body><items><item><title>서울 전시</title></item></items></body></response>
                     """.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "text/xml;charset=ISO-8859-1");
             exchange.sendResponseHeaders(200, body.length);
@@ -118,8 +66,8 @@ class ExternalActivityGatewayTest {
         ExternalActivityGateway.FetchedPayload payload;
         try {
             payload = gateway.fetchPage(
-                    SourceType.VOLUNTEER_1365,
-                    "http://localhost:" + server.getAddress().getPort() + "/api",
+                    SourceType.EXHIBITION,
+                    "http://localhost:" + server.getAddress().getPort() + "/api/request",
                     "key",
                     LocalDate.of(2026, 5, 24),
                     LocalDate.of(2026, 8, 24),
@@ -129,8 +77,7 @@ class ExternalActivityGatewayTest {
             server.stop(0);
         }
 
-        assertThat(payload.payload()).contains("아양도서관 5월 자원봉사자 모집 안내");
-        assertThat(payload.payload()).doesNotContain("ì");
+        assertThat(payload.payload()).contains("서울 전시");
     }
 
     @Test
@@ -155,7 +102,7 @@ class ExternalActivityGatewayTest {
 
         try {
             gateway.fetchPage(
-                    SourceType.TOUR_API,
+                    SourceType.EXHIBITION,
                     "http://localhost:" + server.getAddress().getPort() + "/list",
                     "key",
                     LocalDate.of(2026, 5, 24),

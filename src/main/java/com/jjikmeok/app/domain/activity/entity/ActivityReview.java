@@ -6,7 +6,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -33,7 +32,7 @@ public class ActivityReview extends BaseEntity {
     @Column(nullable = false)
     private Integer rating;
 
-    @Lob
+    @Column(columnDefinition = "TEXT")
     private String reason;
 
     @Column(name = "like_count", nullable = false)

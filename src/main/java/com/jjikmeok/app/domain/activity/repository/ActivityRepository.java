@@ -1,12 +1,13 @@
 package com.jjikmeok.app.domain.activity.repository;
 
-import com.jjikmeok.app.domain.activity.dto.response.ActivityRecommendationCandidateResponse;
-import com.jjikmeok.app.domain.activity.dto.response.ActivityRecommendationResponse;
 import com.jjikmeok.app.domain.activity.entity.Activity;
+import com.jjikmeok.app.domain.activity.entity.ActivityFavorite;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
 import com.jjikmeok.app.domain.activity.enums.SourceType;
+import com.jjikmeok.app.domain.activity.dto.response.ActivityRecommendationCandidateResponse;
+import com.jjikmeok.app.domain.activity.dto.response.ActivityRecommendationResponse;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -251,7 +252,7 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             FROM ActivityTag at
             JOIN at.activity a
             JOIN UserOnboardingTag uot ON uot.tag = at.tag
-            LEFT JOIN Favorite f ON f.activity = a AND f.user.id = :userId
+            LEFT JOIN ActivityFavorite f ON f.activity = a AND f.user.id = :userId
             WHERE uot.userOnboarding.user.id = :userId
               AND a.isActive = true
               AND a.approvalStatus = :approvalStatus
@@ -343,6 +344,12 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     Optional<Activity> findFirstBySourceUrl(String sourceUrl);
 
     Optional<Activity> findFirstByTitleAndStartAtAndAddress(String title, LocalDateTime startAt, String address);
+
+    Optional<Activity> findFirstByTitleIgnoreCaseAndOrganizerIgnoreCase(String title, String organizer);
+
+    List<Activity> findTop50ByTitleContainingIgnoreCaseOrOrganizerContainingIgnoreCaseOrderByCreatedAtDesc(
+            String title,
+            String organizer);
 
     default Optional<Activity> findDuplicate(SourceType sourceType, String externalId, String sourceUrl,
                                              String title, LocalDateTime startAt, String address) {

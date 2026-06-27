@@ -170,7 +170,7 @@ public class GoogleSheetsService {
         int rowNumber = memorySequence.incrementAndGet();
         DiscoverySheetRowDto row = DiscoverySheetRowDto.fromPublicActivity(activity, rowNumber, LocalDateTime.now(SEOUL));
         memoryRows.add(row);
-        log.info("[Sheets] Public activity cached in memory. rowNumber={}, title={}", row.rowNumber(), row.title());
+        log.info("[시트] 공공 활동을 메모리에 캐시했습니다. 행 번호={}, 제목={}", row.rowNumber(), row.title());
         return row;
     }
 
@@ -179,7 +179,7 @@ public class GoogleSheetsService {
         DiscoverySheetRowDto row = DiscoverySheetRowDto.fromPublicActivity(activity, rowNumber, LocalDateTime.now(SEOUL));
         putRowValues(rowRange(rowNumber), row.toSheetRow());
         replaceMemoryRow(row);
-        log.info("[Sheets] Public activity appended to sheet. rowNumber={}, title={}", row.rowNumber(), row.title());
+        log.info("[시트] 공공 활동을 시트에 추가했습니다. 행 번호={}, 제목={}", row.rowNumber(), row.title());
         return row;
     }
 
@@ -278,7 +278,7 @@ public class GoogleSheetsService {
             }
             putRowValues("A1:AC1", new ArrayList<>(Arrays.asList(DiscoverySheetRowDto.sheetHeaders())));
         } catch (Exception e) {
-            log.warn("[Sheets] Failed to ensure headers. reason={}", e.getMessage());
+            log.warn("[시트] 헤더 검증에 실패했습니다. reason={}", e.getMessage());
         }
     }
 

@@ -61,7 +61,7 @@ public class DiscoveryPublishService {
         try {
             googleSheetsService.updateRow(reviewing);
         } catch (Exception e) {
-            log.warn("[Publish] ?곹깭 蹂寃??ㅽ뙣 row={}, reason={}", row.rowNumber(), e.getMessage(), e);
+            log.warn("[발행] 시트 상태를 검토 중으로 변경하지 못했습니다. row={}, reason={}", row.rowNumber(), e.getMessage(), e);
             return false;
         }
 
@@ -74,7 +74,7 @@ public class DiscoveryPublishService {
 
             if (duplicateReason != null) {
                 googleSheetsService.updateRow(reviewing.withStatus(DiscoverySheetStatus.DUPLICATE, null));
-                log.info("[Publish] 以묐났 ?곗씠???쒖쇅 row={}, reason={}", row.rowNumber(), duplicateReason);
+                log.info("[발행] 중복으로 판단되어 발행하지 않았습니다. row={}, reason={}", row.rowNumber(), duplicateReason);
                 return false;
             }
 
@@ -82,29 +82,29 @@ public class DiscoveryPublishService {
             ActivityRequest request = toActivityRequest(reviewing, region.getId());
             ActivityDetailResponse response = activityService.createActivity(request);
             if (response == null) {
-                throw new IllegalStateException("Activity ?앹꽦 寃곌낵媛 鍮꾩뼱 ?덉뒿?덈떎.");
+                throw new IllegalStateException("활동 생성 응답이 비어 있습니다.");
             }
 
             googleSheetsService.updateRow(reviewing.withStatus(
                     DiscoverySheetStatus.PUBLISHED,
                     LocalDateTime.now(SEOUL)
             ));
-            log.info("[Publish] Activity ?앹꽦 ?꾨즺 row={}, activityId={}", row.rowNumber(), response.id());
+            log.info("[발행] 활동 발행을 완료했습니다. row={}, activityId={}", row.rowNumber(), response.id());
             return true;
         } catch (Exception e) {
             try {
                 googleSheetsService.updateRow(reviewing.withStatus(DiscoverySheetStatus.ERROR, null));
             } catch (Exception updateError) {
-                log.error("[Publish] ?ㅻ쪟 ?곹깭 諛섏쁺 ?ㅽ뙣 row={}, reason={}", row.rowNumber(), updateError.getMessage(), updateError);
+                log.error("[발행] 오류 상태 갱신에 실패했습니다. row={}, reason={}", row.rowNumber(), updateError.getMessage(), updateError);
             }
-            log.warn("[Publish] 諛쒗뻾 ?ㅽ뙣 row={}, reason={}", row.rowNumber(), e.getMessage(), e);
+            log.warn("[발행] 활동 발행에 실패했습니다. row={}, reason={}", row.rowNumber(), e.getMessage(), e);
             return false;
         }
     }
 
     private ActivityRequest toActivityRequest(DiscoverySheetRowDto row, Long regionId) {
         String title = firstText(row.title(), row.keyword(), row.searchSnippet(), row.sourceUrl());
-        String description = firstText(row.description(), title, "?곸꽭 ?ㅻ챸???놁뒿?덈떎.");
+        String description = firstText(row.description(), title, "활동 설명은 원문에서 확인하세요.");
         String sourceUrl = firstText(row.sourceUrl());
         String organizer = row.organizer();
         String contactInfo = row.contactInfo();

@@ -575,7 +575,25 @@ public class UrlManualActivityService {
     }
 
     private boolean looksMojibake(String value) {
-        return value.matches(".*[ÃÂìíëê][\\u0080-\\u00ff]?.*");
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+
+        for (int i = 0; i < value.length() - 1; i++) {
+            char current = value.charAt(i);
+            char next = value.charAt(i + 1);
+            boolean marker =
+                    current == '\u00C3'
+                            || current == '\u00C2'
+                            || current == '\u00EC'
+                            || current == '\u00ED'
+                            || current == '\u00EB'
+                            || current == '\u00EA';
+            if (marker && next >= '\u0080' && next <= '\u00FF') {
+                return true;
+            }
+        }
+        return false;
     }
 
     private int hangulCount(String value) {

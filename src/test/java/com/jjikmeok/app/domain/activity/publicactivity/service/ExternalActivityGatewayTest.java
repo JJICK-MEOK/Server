@@ -53,7 +53,7 @@ class ExternalActivityGatewayTest {
         server.createContext("/api/request", exchange -> {
             byte[] body = """
                     <?xml version="1.0" encoding="UTF-8"?>
-                    <response><body><items><item><title>?쒖슱 ?꾩떆</title></item></items></body></response>
+                    <response><body><items><item><title>서울시</title></item></items></body></response>
                     """.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "text/xml;charset=ISO-8859-1");
             exchange.sendResponseHeaders(200, body.length);
@@ -76,7 +76,7 @@ class ExternalActivityGatewayTest {
             server.stop(0);
         }
 
-        assertThat(payload.payload()).contains("?쒖슱 ?꾩떆");
+        assertThat(payload.payload()).contains("서울시");
     }
 
     @Test

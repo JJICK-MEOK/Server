@@ -65,6 +65,19 @@ public record NormalizedActivity(
     }
 
     private boolean isMissing(String value) {
-        return value == null || value.isBlank() || value.contains("?먮Ц 留곹겕") || value.contains("?뺤씤?섏꽭??");
+        if (value == null || value.isBlank()) {
+            return true;
+        }
+
+        String compact = value.replaceAll("\\s+", "");
+        return compact.contains("원문링크")
+                || compact.contains("문의안내")
+                || compact.contains("장소정보")
+                || compact.contains("참여대상")
+                || compact.contains("고객센터")
+                || compact.contains("운영기관")
+                || compact.contains("확인하세요")
+                || compact.contains("원문참조")
+                || compact.contains("상세설명은");
     }
 }

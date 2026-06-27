@@ -3,6 +3,7 @@ package com.jjikmeok.app.domain.activity.privateactivity.search;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.jjikmeok.app.domain.activity.privateactivity.dto.SearchResultDto;
 import com.jjikmeok.app.domain.activity.privateactivity.support.DiscoveryUrlNormalizer;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -52,11 +53,11 @@ public class SerperSearchServiceImpl implements SearchService {
             return List.of();
         }
         if (baseUrl == null || baseUrl.isBlank()) {
-            log.warn("[Discovery] Serper 기본 URL이 없습니다. 검색어={}", keyword);
+            log.warn("[디스커버리] Serper 기본 URL이 없습니다. 검색어={}", keyword);
             return List.of();
         }
         if (apiKey == null || apiKey.isBlank()) {
-            log.warn("[Discovery] Serper API 키가 없습니다. 검색어={}", keyword);
+            log.warn("[디스커버리] Serper API 키가 없습니다. 검색어={}", keyword);
             return List.of();
         }
 
@@ -98,7 +99,7 @@ public class SerperSearchServiceImpl implements SearchService {
             }
             return results;
         } catch (Exception e) {
-            log.warn("[Discovery] Serper 검색에 실패했습니다. 검색어={}, 사유={}", keyword, e.getMessage());
+            log.warn("[디스커버리] Serper 검색에 실패했습니다. 검색어={}, 사유={}", keyword, e.getMessage());
             return List.of();
         }
     }

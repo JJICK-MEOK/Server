@@ -24,13 +24,13 @@ public class DiscoveryScheduler {
 
     @Scheduled(cron = "${app.discovery.scheduler.cron:0 0 3 ? * MON,FRI}", zone = "Asia/Seoul")
     public void runDiscoveryPipeline() {
-        log.info("[Discovery] 수집 스케줄 실행을 시작합니다. keywordLimit={}, resultLimit={}", keywordLimit, resultLimit);
+        log.info("[디스커버리] 수집 스케줄 실행을 시작합니다. keywordLimit={}, resultLimit={}", keywordLimit, resultLimit);
         int rows = discoveryCollectorService.runAll(keywordLimit, resultLimit).size();
         if (rows < keywordLimit && keywordLimit < 20) {
             int expandedKeywordLimit = 20;
-            log.info("[Discovery] 후보 수가 부족하여 키워드 범위를 확장합니다. keywordLimit={}, nextKeywordLimit={}", rows, expandedKeywordLimit);
+            log.info("[디스커버리] 후보 수가 부족하여 키워드 범위를 확장합니다. keywordLimit={}, nextKeywordLimit={}", rows, expandedKeywordLimit);
             rows += discoveryCollectorService.runAll(expandedKeywordLimit, resultLimit).size();
         }
-        log.info("[Discovery] 수집 스케줄 실행을 완료했습니다. 저장된 후보 수={}", rows);
+        log.info("[디스커버리] 수집 스케줄 실행을 완료했습니다. 저장된 후보 수={}", rows);
     }
 }

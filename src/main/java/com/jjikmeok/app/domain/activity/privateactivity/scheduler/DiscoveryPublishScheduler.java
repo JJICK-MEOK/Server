@@ -17,8 +17,8 @@ public class DiscoveryPublishScheduler {
 
     @Scheduled(fixedDelay = 300000)
     public void runDiscoveryPublish() {
-        log.info("[Publish] 발행 스케줄 실행을 시작합니다.");
+        log.info("[발행] 발행 스케줄 실행을 시작합니다.");
         int processed = discoveryPublishService.publishReadyRows();
-        log.info("[Publish] 발행 스케줄 실행을 완료했습니다. 처리된 행 수={}", processed);
+        log.info("[발행] 발행 스케줄 실행을 완료했습니다. 처리된 행 수={}", processed);
     }
 }

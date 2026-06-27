@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -28,9 +29,9 @@ public class ActivityFavoriteServiceImpl implements ActivityFavoriteService {
     private final UserRepository userRepository;
 
     @Override
-    public List<ActivityFavoriteResponse> getFavorites(Long userId) {
+    public List<ActivityFavoriteResponse> getFavorites(Long userId, String sort) {
         findUserOrThrow(userId);
-        return favoriteRepository.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
+        return findFavorites(userId, sort).stream()
                 .map(ActivityFavoriteConverter::toResponse)
                 .toList();
     }
@@ -62,6 +63,24 @@ public class ActivityFavoriteServiceImpl implements ActivityFavoriteService {
                 .orElseThrow(() -> new CustomException(ErrorCode.ACTIVITY_FAVORITE_NOT_FOUND));
         favoriteRepository.delete(favorite);
         activity.decreaseLikeCount();
+    }
+
+    private List<ActivityFavorite> findFavorites(Long userId, String sort) {
+        if ("deadline".equals(normalizeSort(sort))) { //만약 정렬 조건이 데드라인 인 경우, 데드라인이 빠른 순서로 정렬
+            return favoriteRepository.findAllByUserIdOrderByRecruitEndAtAsc(userId);
+        } //아니라면 많이 찜한 순서로 정렬
+        return favoriteRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    /**
+     * 직렬화 메서드
+     * null 방어적 코드, 소문자 직렬화
+     */
+    private String normalizeSort(String sort) {
+        if (sort == null || sort.isBlank()) {
+            return "saved";
+        }
+        return sort.trim().toLowerCase(Locale.ROOT);
     }
 
     private User findUserOrThrow(Long userId) {

@@ -5,14 +5,15 @@ import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
 import com.jjikmeok.app.domain.activity.enums.SourceType;
 import com.jjikmeok.app.domain.region.entity.Region;
+import com.jjikmeok.app.domain.tag.entity.Tag;
 import com.jjikmeok.app.global.common.BaseEntity;
 import jakarta.persistence.Column;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
@@ -82,7 +83,7 @@ public class Activity extends BaseEntity {
     @Column(nullable = false, length = 50)
     private ActivityCategory category;
 
-    @OneToMany(mappedBy = "activity")
+    @OneToMany(mappedBy = "activity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ActivityTag> tags = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
@@ -146,7 +147,7 @@ public class Activity extends BaseEntity {
         this.recruitEndAt = recruitEndAt;
         this.price = price != null ? price : 0;
         this.activityType = activityType != null ? activityType : ActivityType.EVENT;
-        this.category = category != null ? category : ActivityCategory.ETC;
+        this.category = category != null ? category : ActivityCategory.CULTURE;
         this.sourceType = sourceType != null ? sourceType : SourceType.URL_MANUAL;
         this.externalId = externalId;
         this.approvalStatus = approvalStatus != null ? approvalStatus : ApprovalStatus.PENDING;
@@ -163,6 +164,9 @@ public class Activity extends BaseEntity {
             String thumbnailUrl,
             String sourceUrl,
             String address,
+            String organizer,
+            String contactInfo,
+            String target,
             LocalDateTime startAt,
             LocalDateTime endAt,
             LocalDateTime recruitStartAt,
@@ -181,13 +185,16 @@ public class Activity extends BaseEntity {
         this.thumbnailUrl = thumbnailUrl;
         this.sourceUrl = sourceUrl;
         this.address = address;
+        this.organizer = organizer;
+        this.contactInfo = contactInfo;
+        this.target = target;
         this.startAt = startAt;
         this.endAt = endAt;
         this.recruitStartAt = recruitStartAt;
         this.recruitEndAt = recruitEndAt;
         this.price = price != null ? price : 0;
         this.activityType = activityType != null ? activityType : ActivityType.EVENT;
-        this.category = category != null ? category : ActivityCategory.ETC;
+        this.category = category != null ? category : ActivityCategory.CULTURE;
         this.sourceType = sourceType != null ? sourceType : SourceType.URL_MANUAL;
         this.externalId = externalId;
         this.approvalStatus = approvalStatus != null ? approvalStatus : ApprovalStatus.PENDING;
@@ -208,6 +215,24 @@ public class Activity extends BaseEntity {
         this.organizer = organizer;
         this.contactInfo = contactInfo;
         this.target = target;
+    }
+
+    public void replaceTags(List<Tag> tags) {
+        this.tags.clear();
+        if (tags == null) {
+            return;
+        }
+
+        for (Tag tag : tags) {
+            addTag(tag);
+        }
+    }
+
+    public void addTag(Tag tag) {
+        if (tag == null) {
+            return;
+        }
+        this.tags.add(ActivityTag.create(this, tag));
     }
 
     public void approve() {

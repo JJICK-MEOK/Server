@@ -17,6 +17,9 @@ public record ActivityRequest(
         String thumbnailUrl,
         @NotBlank(message = "sourceUrl은 필수입니다.") String sourceUrl,
         String address,
+        String organizer,
+        String contactInfo,
+        String target,
         LocalDateTime startAt,
         LocalDateTime endAt,
         LocalDateTime recruitStartAt,
@@ -28,4 +31,47 @@ public record ActivityRequest(
         String externalId,
         ApprovalStatus approvalStatus,
         Boolean isActive
-) {}
+) {
+    public ActivityRequest(
+            Long regionId,
+            String title,
+            String description,
+            String thumbnailUrl,
+            String sourceUrl,
+            String address,
+            LocalDateTime startAt,
+            LocalDateTime endAt,
+            LocalDateTime recruitStartAt,
+            LocalDateTime recruitEndAt,
+            Integer price,
+            ActivityType activityType,
+            ActivityCategory category,
+            SourceType sourceType,
+            String externalId,
+            ApprovalStatus approvalStatus,
+            Boolean isActive
+    ) {
+        this(
+                regionId,
+                title,
+                description,
+                thumbnailUrl,
+                sourceUrl,
+                address,
+                null,
+                null,
+                null,
+                startAt,
+                endAt,
+                recruitStartAt,
+                recruitEndAt,
+                price,
+                activityType,
+                category,
+                sourceType,
+                externalId,
+                approvalStatus,
+                isActive
+        );
+    }
+}

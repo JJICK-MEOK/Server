@@ -33,6 +33,14 @@ public class ApiResponse<T> {
         return new ApiResponse<>("200", message, data);
     }
 
+    public static <T> ApiResponse<T> created(T data) {
+        return new ApiResponse<>("201", "생성 성공", data);
+    }
+
+    public static <T> ApiResponse<T> created(String message, T data) {
+        return new ApiResponse<>("201", message, data);
+    }
+
     /**
      * 성공 응답 (데이터 없음 - 수정/삭제 등)
      */

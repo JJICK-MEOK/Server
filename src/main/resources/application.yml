@@ -42,7 +42,6 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB
 
-  #AWS S3 설정
   cloud:
     aws:
       s3:
@@ -52,7 +51,6 @@ spring:
       credentials:
         access-key: ${AWS_ACCESS_KEY}
         secret-key: ${AWS_SECRET_KEY}
-
 
 oauth2:
   kakao:
@@ -90,3 +88,20 @@ app:
     allowed-headers:
       - "*"
     allow-credentials: true
+
+  discovery:
+    search:
+      provider: serper
+      serper:
+        base-url: https://google.serper.dev/search
+        api-key: ${SERPER_API_KEY:}
+        gl: kr
+        hl: ko
+    publish:
+      fixed-delay-ms: 300000
+    sheets:
+      enabled: false
+      spreadsheet-id: ${GOOGLE_SHEETS_SPREADSHEET_ID:}
+      sheet-name: Discovery
+      credentials-path: ${GOOGLE_SHEETS_CREDENTIALS_PATH:}
+      credentials-json: ${GOOGLE_SHEETS_CREDENTIALS_JSON:}

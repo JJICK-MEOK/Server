@@ -10,7 +10,7 @@ import java.util.Arrays;
 public enum ActivityType {
     PROGRAM("프로그램"),
     ONE_DAY("원데이"),
-    EVENT("행사·강연"),
+    EVENT("행사/강연"),
     CLUB("동아리");
 
     private final String label;

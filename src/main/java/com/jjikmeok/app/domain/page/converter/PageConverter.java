@@ -113,7 +113,7 @@ public final class PageConverter {
             }
 
             PreferenceTag preferenceTag = preferenceTag(activityTag.getTag().getName());
-            if (preferenceTag == null || preferenceTag.getGroup() == PreferenceTagGroup.PRICE) {
+            if (preferenceTag == null) {
                 continue;
             }
 

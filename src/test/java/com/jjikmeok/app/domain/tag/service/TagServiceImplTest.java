@@ -72,7 +72,7 @@ class TagServiceImplTest {
         when(tagRepository.findAllByTypeOrderByNameAsc(TagType.PREFERENCE_TAG)).thenReturn(List.of(
                 tag(1L, "편안한", TagType.PREFERENCE_TAG),
                 tag(2L, "활기찬", TagType.PREFERENCE_TAG),
-                tag(3L, "무료", TagType.PREFERENCE_TAG),
+                tag(3L, "사교", TagType.PREFERENCE_TAG),
                 tag(4L, "단기", TagType.PREFERENCE_TAG),
                 tag(5L, "입문", TagType.PREFERENCE_TAG),
                 tag(6L, "소규모", TagType.PREFERENCE_TAG)
@@ -87,11 +87,11 @@ class TagServiceImplTest {
                         PreferenceTagGroup.PURPOSE,
                         PreferenceTagGroup.DURATION,
                         PreferenceTagGroup.SIZE
-                );
+        );
         assertThat(responses.getFirst().label()).isEqualTo("분위기 태그");
         assertThat(responses.getFirst().tags()).extracting(TagResponse::name).containsExactly("편안한", "활기찬");
         assertThat(responses.get(1).tags()).extracting(TagResponse::name).containsExactly("입문");
-        assertThat(responses.get(2).tags()).extracting(TagResponse::name).isEmpty();
+        assertThat(responses.get(2).tags()).extracting(TagResponse::name).containsExactly("사교");
         assertThat(responses.get(3).tags()).extracting(TagResponse::name).containsExactly("단기");
         assertThat(responses.get(4).tags()).extracting(TagResponse::name).containsExactly("소규모");
     }

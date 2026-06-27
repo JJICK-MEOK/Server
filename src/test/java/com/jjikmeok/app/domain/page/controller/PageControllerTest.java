@@ -195,7 +195,7 @@ class PageControllerTest {
                 0,
                 ActivityType.PROGRAM,
                 ActivityCategory.CRAFT,
-                List.of("#공예 / 만들기", "#프로그램", "#무료"),
+                List.of("#공예 / 만들기", "#프로그램", "#사교"),
                 SourceType.URL_MANUAL,
                 null,
                 ApprovalStatus.APPROVED,

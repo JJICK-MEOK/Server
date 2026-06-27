@@ -61,7 +61,6 @@ public class TagServiceImpl implements TagService {
                 });
 
         return Arrays.stream(PreferenceTagGroup.values())
-                .filter(group -> group != PreferenceTagGroup.PRICE)
                 .map(group -> new PreferenceTagGroupResponse(
                         group,
                         group.getLabel(),

@@ -27,7 +27,7 @@ public final class PageConverter {
     private PageConverter() {
     }
 
-    public static ActivityCardResponse toCard(Activity activity, boolean liked, LocalDate today) {
+    public static ActivityCardResponse toCard(Activity activity, boolean liked, boolean isAd, LocalDate today) {
         Deadline deadline = deadline(activity.getRecruitEndAt(), today);
 
         return new ActivityCardResponse(
@@ -41,6 +41,7 @@ public final class PageConverter {
                 activity.getActivityType(),
                 activity.getCategory(),
                 randomHashtags(activity, CARD_TAG_LIMIT),
+                isAd,
                 activity.getPrice(),
                 activity.getViewCount(),
                 activity.getLikeCount(),

@@ -29,7 +29,7 @@ class PageConverterTest {
     void toCard_returnsTwoRandomHashtagsFromFiveCandidates() {
         Activity activity = activityWithTags();
 
-        assertThat(PageConverter.toCard(activity, false, TODAY).hashtags()).hasSize(2);
+        assertThat(PageConverter.toCard(activity, false, false, TODAY).hashtags()).hasSize(2);
     }
 
     @Test

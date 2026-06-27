@@ -17,6 +17,7 @@ public record ActivityCardResponse(
         ActivityType activityType,
         ActivityCategory category,
         List<String> hashtags,
+        Boolean isAd,
         Integer price,
         Integer viewCount,
         Integer likeCount,

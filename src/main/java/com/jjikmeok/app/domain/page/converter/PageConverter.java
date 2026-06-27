@@ -101,6 +101,7 @@ public final class PageConverter {
         List<String> candidates = new ArrayList<>(tagCandidates(activity));
         Collections.shuffle(candidates);
         return candidates.stream()
+                .distinct()
                 .limit(limit)
                 .toList();
     }

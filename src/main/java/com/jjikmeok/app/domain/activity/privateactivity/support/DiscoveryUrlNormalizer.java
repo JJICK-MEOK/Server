@@ -29,7 +29,7 @@ public class DiscoveryUrlNormalizer {
 
             String scheme = uri.getScheme() == null ? "https" : uri.getScheme().toLowerCase(Locale.ROOT);
             String host = uri.getHost().toLowerCase(Locale.ROOT);
-            int port = uri.getPort();
+            int port = normalizePort(scheme, uri.getPort());
             String path = uri.getRawPath();
             String query = normalizeQuery(uri.getRawQuery());
 
@@ -46,6 +46,19 @@ public class DiscoveryUrlNormalizer {
         } catch (Exception e) {
             return value.trim();
         }
+    }
+
+    private int normalizePort(String scheme, int port) {
+        if (port < 0) {
+            return -1;
+        }
+        if ("http".equals(scheme) && port == 80) {
+            return -1;
+        }
+        if ("https".equals(scheme) && port == 443) {
+            return -1;
+        }
+        return port;
     }
 
     private String normalizeQuery(String query) {

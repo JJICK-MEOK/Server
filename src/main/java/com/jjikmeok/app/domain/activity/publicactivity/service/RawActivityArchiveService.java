@@ -48,7 +48,7 @@ public class RawActivityArchiveService {
 
         rawActivityRepository.save(RawActivity.create(
                 SourceType.DISCOVERY,
-                discoveryExternalId(searchResult, candidate),
+                createDiscoveryArchiveExternalId(searchResult, candidate),
                 firstText(
                         candidate == null ? null : candidate.sourceUrl(),
                         searchResult == null ? null : searchResult.url()
@@ -69,8 +69,8 @@ public class RawActivityArchiveService {
         }
     }
 
-    private String discoveryExternalId(SearchResultDto searchResult, DiscoveryCandidateDto candidate) {
-        return hash(firstText(
+    private String createDiscoveryArchiveExternalId(SearchResultDto searchResult, DiscoveryCandidateDto candidate) {
+        return hashExternalIdSeed(firstText(
                 candidate == null ? null : candidate.sourceUrl(),
                 searchResult == null ? null : searchResult.url(),
                 candidate == null ? null : candidate.title(),
@@ -78,7 +78,7 @@ public class RawActivityArchiveService {
         ));
     }
 
-    private String hash(String value) {
+    private String hashExternalIdSeed(String value) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest((value == null ? "" : value).getBytes(StandardCharsets.UTF_8));

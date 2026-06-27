@@ -432,7 +432,7 @@ public class DiscoveryMetadataExtractorService {
     }
 
     private String iconHref(String html, String relValue) {
-        Matcher matcher = Pattern.compile("<link\b[^>]*>", Pattern.CASE_INSENSITIVE).matcher(html);
+        Matcher matcher = Pattern.compile("<link\\b[^>]*>", Pattern.CASE_INSENSITIVE).matcher(html);
         while (matcher.find()) {
             String tag = matcher.group();
             String rel = attr(tag, "rel");

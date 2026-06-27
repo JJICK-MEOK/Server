@@ -40,6 +40,18 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
     private static final int HARD_MAX_PAGES = 30;
     private static final int HARD_MAX_MONTHS_AHEAD = 12;
     private static final LocalDateTime ALWAYS_OPEN_AT = LocalDateTime.of(2999, 12, 31, 23, 59, 59);
+    private static final String DEFAULT_DESCRIPTION = "\uC0C1\uC138 \uC124\uBA85\uC740 \uC6D0\uBB38\uC5D0\uC11C \uD655\uC778\uD558\uC138\uC694.";
+    private static final String DEFAULT_ORGANIZER = "\uC8FC\uCD5C\uAE30\uAD00 \uC815\uBCF4\uB294 \uC6D0\uBB38 \uB9C1\uD06C\uB97C \uD655\uC778\uD558\uC138\uC694.";
+    private static final String DEFAULT_CONTACT_INFO = "\uBB38\uC758 \uC548\uB0B4\uB294 \uC6D0\uBB38 \uB9C1\uD06C\uB97C \uD655\uC778\uD558\uC138\uC694.";
+    private static final String DEFAULT_TARGET = "\uCC38\uC5EC \uB300\uC0C1\uC740 \uC6D0\uBB38 \uB9C1\uD06C\uB97C \uD655\uC778\uD558\uC138\uC694.";
+    private static final List<String> MISSING_TEXT_MARKERS = List.of(
+            DEFAULT_DESCRIPTION,
+            DEFAULT_ORGANIZER,
+            DEFAULT_CONTACT_INFO,
+            DEFAULT_TARGET,
+            "\uC6D0\uBB38\uC5D0\uC11C \uD655\uC778\uD558\uC138\uC694.",
+            "\uC6D0\uBB38 \uB9C1\uD06C\uB97C \uD655\uC778\uD558\uC138\uC694."
+    );
 
     private final ActivityRegionResolver activityRegionResolver;
     private final ExternalActivityGateway externalActivityGateway;
@@ -127,9 +139,9 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
                     rawActivityArchiveService.archiveFetchedPayload(fetchedPayload);
                     rawSaved++;
 
-                    int pageSize = DEFAULT_PAGE_SIZE;
                     List<NormalizedActivity> normalizedActivities = activityNormalizer.normalize(
                             sourceType, fetchedPayload.requestUrl(), fetchedPayload.contentType(), fetchedPayload.payload());
+                    int pageSize = normalizedActivities.size();
 
                     for (NormalizedActivity na : normalizedActivities) {
                         totalCount++;
@@ -163,7 +175,6 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
 
                         na = withDefaults(na);
                         if (!validForPersist(na)) continue;
-                        googleSheetsService.upsertPublicActivity(na);
 
                         Activity existing = activityRepository.findDuplicate(
                                 na.sourceType(), na.externalId(), na.sourceUrl(),
@@ -173,6 +184,7 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
                         if (existing != null) {
                             Region region = activityRegionResolver.resolve(na.title(), na.address(), defaultRegionId);
                             updateIfChanged(existing, region, na, categoryOverride);
+                            googleSheetsService.upsertPublicActivity(na);
                             duplicated++;
                             continue;
                         }
@@ -180,6 +192,7 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
                         Region resolvedRegion = activityRegionResolver.resolve(na.title(), na.address(), defaultRegionId);
                         Activity savedActivity = activityRepository.save(toActivity(resolvedRegion, na, categoryOverride));
                         activityTagAutoAttachService.refresh(savedActivity);
+                        googleSheetsService.upsertPublicActivity(na);
                         saved++;
 
                         try {
@@ -219,11 +232,11 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
                 || activity.recruitEndAt().getYear() >= 2099
                 || activity.price() == null;
 
-        boolean missingExtra = isMissingText(activity.organizer())
-                || isMissingText(activity.description())
-                || isMissingText(activity.target())
-                || isMissingText(activity.contactInfo())
-                || isMissingText(activity.address());
+        boolean missingExtra = isBlankOrFallbackText(activity.organizer())
+                || isBlankOrFallbackText(activity.description())
+                || isBlankOrFallbackText(activity.target())
+                || isBlankOrFallbackText(activity.contactInfo())
+                || isBlankOrFallbackText(activity.address());
 
         if (missingCore || missingExtra) return true;
 
@@ -237,10 +250,10 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
     private NormalizedActivity withDefaults(NormalizedActivity activity) {
         if (activity == null) return null;
 
-        String description = isMissingText(activity.description()) ? "상세 설명은 원문에서 확인하세요." : activity.description();
-        String organizer   = isMissingText(activity.organizer())    ? "주최기관 정보는 원문 링크를 확인하세요." : activity.organizer();
-        String contactInfo = utils.firstText(utils.contactOnly(activity.contactInfo()), "문의 안내는 원문 링크를 확인하세요.");
-        String target      = isMissingText(activity.target())       ? "참여 대상은 원문 링크를 확인하세요." : activity.target();
+        String description = isBlankOrFallbackText(activity.description()) ? DEFAULT_DESCRIPTION : activity.description();
+        String organizer   = isBlankOrFallbackText(activity.organizer())    ? DEFAULT_ORGANIZER : activity.organizer();
+        String contactInfo = utils.firstText(utils.contactOnly(activity.contactInfo()), DEFAULT_CONTACT_INFO);
+        String target      = isBlankOrFallbackText(activity.target())       ? DEFAULT_TARGET : activity.target();
         String thumbnail   = utils.isBlank(activity.thumbnailUrl()) ? serverBaseUrl + "/images/defaults/default-activity.png" : activity.thumbnailUrl();
         int    price       = activity.price() == null ? 0 : Math.max(0, activity.price());
 
@@ -281,6 +294,8 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
         return activity != null
                 && !utils.isBlank(activity.title())
                 && !utils.isBlank(activity.sourceUrl())
+                && activity.activityType() != null
+                && activity.category() != null
                 && activity.startAt() != null
                 && activity.endAt() != null
                 && activity.recruitStartAt() != null
@@ -293,6 +308,21 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
         return value == null || value.isBlank()
                 || value.contains("원문 링크") || value.contains("확인하세요")
                 || value.contains("원문 참조") || value.contains("상세 설명은");
+    }
+
+    private boolean isBlankOrFallbackText(String value) {
+        if (value == null || value.isBlank()) {
+            return true;
+        }
+
+        String normalized = value.replaceAll("\\s+", " ").trim();
+        if (MISSING_TEXT_MARKERS.contains(normalized)) {
+            return true;
+        }
+
+        return normalized.contains("\uC6D0\uBB38\uC5D0\uC11C \uD655\uC778\uD558\uC138\uC694")
+                || normalized.contains("\uC6D0\uBB38 \uB9C1\uD06C\uB97C \uD655\uC778\uD558\uC138\uC694")
+                || isMissingText(normalized);
     }
 
     private String aiContext(SourceType sourceType, NormalizedActivity activity) {
@@ -409,7 +439,7 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
     }
 
     private String betterText(String existing, String incoming) {
-        return !isMissingText(incoming) ? incoming : existing;
+        return !isBlankOrFallbackText(incoming) ? incoming : existing;
     }
 
     private String betterContact(String existing, String incoming) {

@@ -48,7 +48,7 @@ public class FavoriteController {
             @AuthenticationPrincipal Long userId,
             @RequestBody @Valid FavoriteRequest request
     ) {
-        return ApiResponse.success("찜 추가 성공", favoriteService.createFavorite(userId, request));
+        return ApiResponse.created("찜 추가 성공", favoriteService.createFavorite(userId, request));
     }
 
     @Operation(summary = "찜 삭제")

@@ -65,7 +65,7 @@ public class DiscoveryDeduplicationService {
             }
         }
 
-        String externalId = hash(normalizedUrl != null ? normalizedUrl : (sourceUrl == null ? "" : sourceUrl) + "|" + title);
+        String externalId = createDiscoveryExternalId(normalizedUrl, sourceUrl, title);
         return activityRepository.findDuplicate(
                 SourceType.DISCOVERY,
                 externalId,
@@ -130,7 +130,12 @@ public class DiscoveryDeduplicationService {
         return prev[right.length()];
     }
 
-    private String hash(String value) {
+    private String createDiscoveryExternalId(String normalizedUrl, String sourceUrl, String title) {
+        String sourceKey = normalizedUrl != null ? normalizedUrl : (sourceUrl == null ? "" : sourceUrl);
+        return hashExternalIdSeed(sourceKey + "|" + title);
+    }
+
+    private String hashExternalIdSeed(String value) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest((value == null ? "" : value).getBytes(StandardCharsets.UTF_8));

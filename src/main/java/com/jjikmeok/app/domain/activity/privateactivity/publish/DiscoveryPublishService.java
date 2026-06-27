@@ -6,14 +6,14 @@ import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
 import com.jjikmeok.app.domain.activity.enums.SourceType;
-import com.jjikmeok.app.domain.activity.service.ActivityService;
 import com.jjikmeok.app.domain.activity.privateactivity.deduplication.DiscoveryDeduplicationService;
 import com.jjikmeok.app.domain.activity.privateactivity.dto.response.DiscoverySheetRowDto;
 import com.jjikmeok.app.domain.activity.privateactivity.enums.DiscoverySheetStatus;
 import com.jjikmeok.app.domain.activity.privateactivity.sheets.GoogleSheetsService;
-import com.jjikmeok.app.domain.region.entity.Region;
 import com.jjikmeok.app.domain.activity.publicactivity.service.ActivityRegionResolver;
 import com.jjikmeok.app.domain.activity.publicactivity.service.ActivitySyncUtils;
+import com.jjikmeok.app.domain.activity.service.ActivityService;
+import com.jjikmeok.app.domain.region.entity.Region;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,7 +61,7 @@ public class DiscoveryPublishService {
         try {
             googleSheetsService.updateRow(reviewing);
         } catch (Exception e) {
-            log.warn("[Publish] 상태 변경 실패 row={}, reason={}", row.rowNumber(), e.getMessage(), e);
+            log.warn("[Publish] ?곹깭 蹂寃??ㅽ뙣 row={}, reason={}", row.rowNumber(), e.getMessage(), e);
             return false;
         }
 
@@ -74,37 +74,37 @@ public class DiscoveryPublishService {
 
             if (duplicateReason != null) {
                 googleSheetsService.updateRow(reviewing.withStatus(DiscoverySheetStatus.DUPLICATE, null));
-                log.info("[Publish] 중복 데이터 제외 row={}, reason={}", row.rowNumber(), duplicateReason);
-                return true;
+                log.info("[Publish] 以묐났 ?곗씠???쒖쇅 row={}, reason={}", row.rowNumber(), duplicateReason);
+                return false;
             }
 
             Region region = activityRegionResolver.resolve(reviewing.title(), reviewing.address(), defaultRegionId);
             ActivityRequest request = toActivityRequest(reviewing, region.getId());
             ActivityDetailResponse response = activityService.createActivity(request);
             if (response == null) {
-                throw new IllegalStateException("Activity 생성 결과가 비어 있습니다.");
+                throw new IllegalStateException("Activity ?앹꽦 寃곌낵媛 鍮꾩뼱 ?덉뒿?덈떎.");
             }
 
             googleSheetsService.updateRow(reviewing.withStatus(
                     DiscoverySheetStatus.PUBLISHED,
                     LocalDateTime.now(SEOUL)
             ));
-            log.info("[Publish] Activity 생성 완료 row={}, activityId={}", row.rowNumber(), response.id());
+            log.info("[Publish] Activity ?앹꽦 ?꾨즺 row={}, activityId={}", row.rowNumber(), response.id());
             return true;
         } catch (Exception e) {
             try {
                 googleSheetsService.updateRow(reviewing.withStatus(DiscoverySheetStatus.ERROR, null));
             } catch (Exception updateError) {
-                log.error("[Publish] 오류 상태 반영 실패 row={}, reason={}", row.rowNumber(), updateError.getMessage(), updateError);
+                log.error("[Publish] ?ㅻ쪟 ?곹깭 諛섏쁺 ?ㅽ뙣 row={}, reason={}", row.rowNumber(), updateError.getMessage(), updateError);
             }
-            log.warn("[Publish] 발행 실패 row={}, reason={}", row.rowNumber(), e.getMessage(), e);
+            log.warn("[Publish] 諛쒗뻾 ?ㅽ뙣 row={}, reason={}", row.rowNumber(), e.getMessage(), e);
             return false;
         }
     }
 
     private ActivityRequest toActivityRequest(DiscoverySheetRowDto row, Long regionId) {
         String title = firstText(row.title(), row.keyword(), row.searchSnippet(), row.sourceUrl());
-        String description = firstText(row.description(), title, "상세 설명이 없습니다.");
+        String description = firstText(row.description(), title, "?곸꽭 ?ㅻ챸???놁뒿?덈떎.");
         String sourceUrl = firstText(row.sourceUrl());
         String organizer = row.organizer();
         String contactInfo = row.contactInfo();
@@ -134,7 +134,7 @@ public class DiscoveryPublishService {
                 activityType,
                 category,
                 SourceType.DISCOVERY,
-                hash(sourceUrl),
+                createDiscoveryExternalId(sourceUrl),
                 ApprovalStatus.APPROVED,
                 true
         );
@@ -149,7 +149,11 @@ public class DiscoveryPublishService {
         return null;
     }
 
-    private String hash(String value) {
+    private String createDiscoveryExternalId(String sourceUrl) {
+        return hashExternalIdSeed(sourceUrl);
+    }
+
+    private String hashExternalIdSeed(String value) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest((value == null ? "" : value).getBytes(StandardCharsets.UTF_8));

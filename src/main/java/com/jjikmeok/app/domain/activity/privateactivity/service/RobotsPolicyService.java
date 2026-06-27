@@ -20,7 +20,7 @@ public class RobotsPolicyService {
             return RobotsPolicy.UNKNOWN;
         }
 
-        URI robotsUri = URI.create(sourceUri.getScheme() + "://" + sourceUri.getHost() + "/robots.txt");
+        URI robotsUri = buildRobotsUri(sourceUri);
         try {
             String robotsText = restClient.get().uri(robotsUri).retrieve().body(String.class);
             if (robotsText == null || robotsText.isBlank()) {
@@ -40,7 +40,7 @@ public class RobotsPolicyService {
         List<String> rules = new ArrayList<>();
 
         for (String line : robotsText.split("\\R")) {
-            String trimmed = line.trim();
+            String trimmed = stripInlineComment(line);
             if (trimmed.isBlank()) {
                 active = false;
                 wildcard = false;
@@ -74,5 +74,20 @@ public class RobotsPolicyService {
             }
         }
         return RobotsPolicy.ALLOWED;
+    }
+
+    private String stripInlineComment(String line) {
+        if (line == null) {
+            return "";
+        }
+        return line.split("#", 2)[0].trim();
+    }
+
+    private URI buildRobotsUri(URI sourceUri) {
+        return URI.create("%s://%s%s/robots.txt".formatted(
+                sourceUri.getScheme(),
+                sourceUri.getHost(),
+                sourceUri.getPort() >= 0 ? ":" + sourceUri.getPort() : ""
+        ));
     }
 }

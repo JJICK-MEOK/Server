@@ -44,7 +44,7 @@ public class ImageController {
     public ApiResponse<ImageResponse> createImage(
             @PathVariable("activityId") Long activityId,
             @RequestBody @Valid ImageRequest request) {
-        return ApiResponse.success("이미지 생성 성공", imageService.createImage(activityId, request));
+        return ApiResponse.created("이미지 생성 성공", imageService.createImage(activityId, request));
     }
 
     @Operation(summary = "이미지 수정")

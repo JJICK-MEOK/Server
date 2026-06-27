@@ -29,14 +29,20 @@ class PageConverterTest {
     void toCard_returnsTwoRandomHashtagsFromFiveCandidates() {
         Activity activity = activityWithTags();
 
-        assertThat(PageConverter.toCard(activity, false, false, TODAY).hashtags()).hasSize(2);
+        assertThat(PageConverter.toCard(activity, false, false, TODAY).hashtags())
+                .hasSize(2)
+                .doesNotHaveDuplicates()
+                .allMatch(tag -> tag.startsWith("#"));
     }
 
     @Test
     void toDetail_returnsThreeRandomHashtagsFromFiveCandidates() {
         Activity activity = activityWithTags();
 
-        assertThat(PageConverter.toDetail(activity, List.<Image>of(), false, TODAY).hashtags()).hasSize(3);
+        assertThat(PageConverter.toDetail(activity, List.<Image>of(), false, TODAY).hashtags())
+                .hasSize(3)
+                .doesNotHaveDuplicates()
+                .allMatch(tag -> tag.startsWith("#"));
     }
 
     @Test

@@ -134,7 +134,7 @@ public class UrlManualActivityService {
         String text = title + " " + description + " " + safe(command.address());
         ActivityCategory category = command.category() != null ? command.category() : classifier.classifyCategory(SourceType.URL_MANUAL, text);
         ActivityType activityType = command.activityType() != null ? command.activityType() : classifier.classifyType(SourceType.URL_MANUAL, text, command.startAt(), command.endAt());
-        String externalId = hash(sourceUrl);
+        String externalId = createManualExternalId(sourceUrl);
         LocalDateTime recruitEndAt = command.recruitEndAt() != null ? command.recruitEndAt() : command.endAt();
         Activity existing = activityRepository.findDuplicate(SourceType.URL_MANUAL, externalId, sourceUrl, title, command.startAt(), command.address()).orElse(null);
         if (existing == null) {
@@ -614,7 +614,11 @@ public class UrlManualActivityService {
         return cleaned;
     }
 
-    private String hash(String value) {
+    private String createManualExternalId(String normalizedSourceUrl) {
+        return hashExternalIdSeed(normalizedSourceUrl);
+    }
+
+    private String hashExternalIdSeed(String value) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));

@@ -215,7 +215,9 @@ public class ActivityNormalizer {
         if (sourceUrl == null) sourceUrl = requestUrl;
         if (title == null) title = sourceType.name() + " activity";
         if (description == null) description = DEFAULT_DESCRIPTION;
-        if (externalId == null) externalId = hash(sourceType.name() + sourceUrl + title);
+        if (externalId == null) {
+            externalId = createFallbackExternalId(sourceType, sourceUrl, title);
+        }
 
         String status = text(item,
                 "status",
@@ -483,7 +485,11 @@ public class ActivityNormalizer {
         return false;
     }
 
-    private String hash(String value) {
+    private String createFallbackExternalId(SourceType sourceType, String sourceUrl, String title) {
+        return hashExternalIdSeed(sourceType.name() + "|" + sourceUrl + "|" + title);
+    }
+
+    private String hashExternalIdSeed(String value) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] h = digest.digest(value.getBytes(StandardCharsets.UTF_8));

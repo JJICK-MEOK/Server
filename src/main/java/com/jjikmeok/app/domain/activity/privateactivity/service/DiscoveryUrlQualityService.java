@@ -14,20 +14,21 @@ import java.util.Locale;
 @Slf4j
 public class DiscoveryUrlQualityService {
 
-    private static final List<String> ADS = List.of("공동구매", "쇼핑몰", "쿠폰", "할인", "체험단");
-    private static final List<String> NEWS = List.of("뉴스 기사", "블로그 기사", "보도자료");
-    private static final List<String> COMMUNITY = List.of("자유게시판", "후기", "익명게시판", "커뮤니티");
-    private static final List<String> SEARCH = List.of("검색 결과", "태그 목록", "카테고리 목록");
-    private static final List<String> ENDED = List.of("모집 마감", "신청 종료", "종료된 행사", "지난 행사");
-    private static final List<String> LOGIN = List.of("로그인", "회원가입", "sign in", "login required", "unauthorized", "private");
-    private static final List<String> SIGNALS = List.of("모집중", "참가 신청", "신청하기", "지원하기", "멤버 모집", "신규 회원 모집", "상시 모집");
-    private static final List<String> ACTIVITY = List.of("클래스", "원데이 클래스", "워크숍", "세미나", "강연", "특강", "교육 프로그램", "체험 프로그램", "스터디", "동아리", "독서모임", "소모임", "커뮤니티", "봉사활동");
-    private static final List<String> OPERATING = List.of("정기 운영", "매주 진행", "수시 모집", "상시 모집");
-    private static final List<String> TARGET = List.of("대학생", "청년", "직장인", "취준생", "사회초년생");
+    private static final List<String> ADS = List.of("怨듬룞援щℓ", "?쇳븨紐?", "荑좏룿", "?좎씤", "泥댄뿕??");
+    private static final List<String> NEWS = List.of("?댁뒪 湲곗궗", "釉붾줈洹?湲곗궗", "蹂대룄?먮즺");
+    private static final List<String> COMMUNITY = List.of("?먯쑀寃뚯떆??", "?꾧린", "?듬챸寃뚯떆??", "而ㅻ??덊떚");
+    private static final List<String> SEARCH = List.of("寃??寃곌낵", "?쒓렇 紐⑸줉", "移댄뀒怨좊━ 紐⑸줉");
+    private static final List<String> ENDED = List.of("紐⑥쭛 留덇컧", "?좎껌 醫낅즺", "醫낅즺???됱궗", "吏???됱궗");
+    private static final List<String> LOGIN = List.of("濡쒓렇??", "?뚯썝媛??", "sign in", "login required", "unauthorized", "private");
+    private static final List<String> SIGNALS = List.of("紐⑥쭛以?", "李멸? ?좎껌", "?좎껌?섍린", "吏?먰븯湲?", "硫ㅻ쾭 紐⑥쭛", "?좉퇋 ?뚯썝 紐⑥쭛", "?곸떆 紐⑥쭛");
+    private static final List<String> ACTIVITY = List.of("?대옒??", "?먮뜲???대옒??", "?뚰겕??", "?몃???", "媛뺤뿰", "?밴컯", "援먯쑁 ?꾨줈洹몃옩", "泥댄뿕 ?꾨줈洹몃옩", "?ㅽ꽣??", "?숈븘由?", "?낆꽌紐⑥엫", "?뚮え??", "而ㅻ??덊떚", "遊됱궗?쒕룞");
+    private static final List<String> OPERATING = List.of("?뺢린 ?댁쁺", "留ㅼ＜ 吏꾪뻾", "?섏떆 紐⑥쭛", "?곸떆 紐⑥쭛");
+    private static final List<String> TARGET = List.of("??숈깮", "泥?뀈", "吏곸옣??", "痍⑥???", "?ы쉶珥덈뀈??");
     private static final List<String> UNSUPPORTED_HOSTS = List.of("facebook.com", "x.com", "twitter.com", "onoffmix.com", "event-us.kr", "frip.co.kr", "munto.kr");
     private static final List<String> URL_ONLY_HOSTS = List.of("instagram.com", "band.us", "cafe.naver.com");
     private static final List<String> METADATA_HOSTS = List.of("blog.naver.com", "brunch.co.kr", "tistory.com", "notion.site");
-    private static final List<String> FULL_CONTENT_HINTS = List.of("go.kr", "or.kr", "ac.kr", "re.kr", "청년센터", "문화재단", "구청", "시청");
+    private static final List<String> FULL_CONTENT_HOST_SUFFIXES = List.of("go.kr", "or.kr", "ac.kr", "re.kr");
+    private static final List<String> FULL_CONTENT_TEXT_HINTS = List.of("泥?뀈?쇳꽣", "臾명솕?щ떒", "援ъ껌", "?쒖껌");
 
     public Assessment evaluate(SearchResultDto searchResult) {
         String url = searchResult == null ? null : searchResult.url();
@@ -36,7 +37,7 @@ public class DiscoveryUrlQualityService {
         String host = host(url);
         String text = join(title, snippet, lower(url));
 
-        if (containsAny(host, UNSUPPORTED_HOSTS)) {
+        if (matchesAnyHost(host, UNSUPPORTED_HOSTS)) {
             return new Assessment(ExtractionMode.URL_ONLY, 0, true, host, DiscoverySourceChannel.WEBSITE);
         }
 
@@ -67,13 +68,13 @@ public class DiscoveryUrlQualityService {
         if (containsAny(text, LOGIN)) {
             return ExtractionMode.URL_ONLY;
         }
-        if (containsAny(host, URL_ONLY_HOSTS)) {
+        if (matchesAnyHost(host, URL_ONLY_HOSTS)) {
             return ExtractionMode.URL_ONLY;
         }
-        if (containsAny(host, METADATA_HOSTS)) {
+        if (matchesAnyHost(host, METADATA_HOSTS)) {
             return ExtractionMode.METADATA_ONLY;
         }
-        if (containsAny(host, FULL_CONTENT_HINTS) || containsAny(text, FULL_CONTENT_HINTS)) {
+        if (matchesAnyHost(host, FULL_CONTENT_HOST_SUFFIXES) || containsAny(text, FULL_CONTENT_TEXT_HINTS)) {
             return ExtractionMode.FULL_CONTENT;
         }
         return ExtractionMode.METADATA_ONLY;
@@ -89,6 +90,27 @@ public class DiscoveryUrlQualityService {
             }
         }
         return false;
+    }
+
+    private boolean matchesAnyHost(String host, List<String> domains) {
+        if (host == null || host.isBlank()) {
+            return false;
+        }
+        for (String domain : domains) {
+            if (matchesHost(host, domain)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean matchesHost(String host, String domain) {
+        if (host == null || host.isBlank() || domain == null || domain.isBlank()) {
+            return false;
+        }
+        String normalizedHost = lower(host);
+        String normalizedDomain = lower(domain);
+        return normalizedHost.equals(normalizedDomain) || normalizedHost.endsWith("." + normalizedDomain);
     }
 
     private String join(String... values) {
@@ -125,13 +147,13 @@ public class DiscoveryUrlQualityService {
         if (host == null || host.isBlank()) {
             return DiscoverySourceChannel.WEBSITE;
         }
-        if (host.contains("instagram.com")) return DiscoverySourceChannel.INSTAGRAM;
-        if (host.contains("blog.naver.com")) return DiscoverySourceChannel.NAVER_BLOG;
-        if (host.contains("cafe.naver.com")) return DiscoverySourceChannel.NAVER_CAFE;
-        if (host.contains("band.us")) return DiscoverySourceChannel.BAND;
-        if (host.contains("brunch.co.kr")) return DiscoverySourceChannel.BRUNCH;
-        if (host.contains("tistory.com")) return DiscoverySourceChannel.TISTORY;
-        if (host.contains("notion.site") || host.contains("notion.so")) return DiscoverySourceChannel.NOTION;
+        if (matchesHost(host, "instagram.com")) return DiscoverySourceChannel.INSTAGRAM;
+        if (matchesHost(host, "blog.naver.com")) return DiscoverySourceChannel.NAVER_BLOG;
+        if (matchesHost(host, "cafe.naver.com")) return DiscoverySourceChannel.NAVER_CAFE;
+        if (matchesHost(host, "band.us")) return DiscoverySourceChannel.BAND;
+        if (matchesHost(host, "brunch.co.kr")) return DiscoverySourceChannel.BRUNCH;
+        if (matchesHost(host, "tistory.com")) return DiscoverySourceChannel.TISTORY;
+        if (matchesHost(host, "notion.site") || matchesHost(host, "notion.so")) return DiscoverySourceChannel.NOTION;
         return DiscoverySourceChannel.WEBSITE;
     }
 

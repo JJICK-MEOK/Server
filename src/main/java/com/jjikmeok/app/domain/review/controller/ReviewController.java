@@ -49,7 +49,7 @@ public class ReviewController {
             @PathVariable("activityId") Long activityId,
             @RequestBody @Valid ReviewRequest request
     ) {
-        return ApiResponse.success("리뷰 생성 성공", reviewService.createReview(userId, activityId, request));
+        return ApiResponse.created("리뷰 생성 성공", reviewService.createReview(userId, activityId, request));
     }
 
     @Operation(summary = "리뷰 수정")

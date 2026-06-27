@@ -1,11 +1,11 @@
 package com.jjikmeok.app.domain.activity.service;
 
 import com.jjikmeok.app.domain.activity.enums.SourceType;
-import com.jjikmeok.app.domain.discovery.collector.DiscoveryCollectorService;
-import com.jjikmeok.app.domain.discovery.dto.response.DiscoverySheetRowDto;
-import com.jjikmeok.app.domain.discovery.publish.DiscoveryPublishService;
-import com.jjikmeok.app.domain.sync.dto.ActivitySyncResponse;
-import com.jjikmeok.app.domain.sync.service.ActivitySyncService;
+import com.jjikmeok.app.domain.activity.privateactivity.collector.DiscoveryCollectorService;
+import com.jjikmeok.app.domain.activity.privateactivity.dto.response.DiscoverySheetRowDto;
+import com.jjikmeok.app.domain.activity.privateactivity.publish.DiscoveryPublishService;
+import com.jjikmeok.app.domain.activity.publicactivity.dto.ActivitySyncResponse;
+import com.jjikmeok.app.domain.activity.publicactivity.service.ActivitySyncService;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;

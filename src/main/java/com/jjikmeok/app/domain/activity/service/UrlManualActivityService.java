@@ -11,7 +11,7 @@ import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
 import com.jjikmeok.app.domain.activity.enums.PreferenceTag;
 import com.jjikmeok.app.domain.activity.enums.SourceType;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
-import com.jjikmeok.app.domain.sync.service.CategoryClassifier;
+import com.jjikmeok.app.domain.activity.publicactivity.service.CategoryClassifier;
 import com.jjikmeok.app.domain.region.entity.Region;
 import com.jjikmeok.app.domain.region.repository.RegionRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;

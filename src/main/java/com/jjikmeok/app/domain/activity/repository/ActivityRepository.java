@@ -1,13 +1,13 @@
 package com.jjikmeok.app.domain.activity.repository;
 
 import com.jjikmeok.app.domain.activity.entity.Activity;
-import com.jjikmeok.app.domain.activity.entity.Favorite;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
 import com.jjikmeok.app.domain.activity.enums.SourceType;
 import com.jjikmeok.app.domain.activity.dto.response.ActivityRecommendationCandidateResponse;
 import com.jjikmeok.app.domain.activity.dto.response.ActivityRecommendationResponse;
+import com.jjikmeok.app.domain.favorite.entity.Favorite;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

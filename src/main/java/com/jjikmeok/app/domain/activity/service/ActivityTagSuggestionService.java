@@ -4,7 +4,7 @@ import com.jjikmeok.app.domain.activity.entity.Activity;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.PreferenceTag;
 import com.jjikmeok.app.domain.activity.enums.PreferenceTagGroup;
-import com.jjikmeok.app.domain.sync.service.ActivitySyncUtils;
+import com.jjikmeok.app.domain.activity.publicactivity.service.ActivitySyncUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor

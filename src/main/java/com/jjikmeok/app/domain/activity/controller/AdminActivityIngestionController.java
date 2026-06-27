@@ -2,8 +2,8 @@ package com.jjikmeok.app.domain.activity.controller;
 
 import com.jjikmeok.app.domain.activity.enums.SourceType;
 import com.jjikmeok.app.domain.activity.service.AdminActivityIngestionService;
-import com.jjikmeok.app.domain.discovery.dto.response.DiscoverySheetRowDto;
-import com.jjikmeok.app.domain.sync.dto.ActivitySyncResponse;
+import com.jjikmeok.app.domain.activity.privateactivity.dto.response.DiscoverySheetRowDto;
+import com.jjikmeok.app.domain.activity.publicactivity.dto.ActivitySyncResponse;
 import com.jjikmeok.app.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

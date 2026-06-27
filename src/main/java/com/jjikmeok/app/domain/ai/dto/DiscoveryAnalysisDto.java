@@ -2,12 +2,12 @@ package com.jjikmeok.app.domain.ai.dto;
 
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
-import com.jjikmeok.app.domain.discovery.enums.DiscoveryDuration;
-import com.jjikmeok.app.domain.discovery.enums.DiscoveryGroupSize;
-import com.jjikmeok.app.domain.discovery.enums.DiscoveryIntensity;
-import com.jjikmeok.app.domain.discovery.enums.DiscoveryMood;
-import com.jjikmeok.app.domain.discovery.enums.DiscoveryPurpose;
-import com.jjikmeok.app.domain.discovery.enums.ExtractionMode;
+import com.jjikmeok.app.domain.activity.privateactivity.enums.DiscoveryDuration;
+import com.jjikmeok.app.domain.activity.privateactivity.enums.DiscoveryGroupSize;
+import com.jjikmeok.app.domain.activity.privateactivity.enums.DiscoveryIntensity;
+import com.jjikmeok.app.domain.activity.privateactivity.enums.DiscoveryMood;
+import com.jjikmeok.app.domain.activity.privateactivity.enums.DiscoveryPurpose;
+import com.jjikmeok.app.domain.activity.privateactivity.enums.ExtractionMode;
 
 import java.time.LocalDateTime;
 

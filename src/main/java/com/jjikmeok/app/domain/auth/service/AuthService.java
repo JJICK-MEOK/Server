@@ -6,7 +6,9 @@ import com.jjikmeok.app.domain.auth.dto.request.SignupReq;
 import com.jjikmeok.app.domain.auth.dto.response.LoginRes;
 import com.jjikmeok.app.domain.auth.dto.response.ReissueRes;
 import com.jjikmeok.app.domain.auth.dto.response.SignupRes;
+import com.jjikmeok.app.domain.auth.store.HandoffTokenStore;
 import com.jjikmeok.app.domain.auth.store.RefreshTokenStore;
+import com.jjikmeok.app.domain.auth.token.HandoffTokenEntry;
 import com.jjikmeok.app.domain.user.entity.AuthProvider;
 import com.jjikmeok.app.domain.user.entity.User;
 import com.jjikmeok.app.domain.user.repository.UserRepository;
@@ -34,7 +36,11 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtProperties jwtProperties;
     private final RefreshTokenStore refreshTokenStore;
+    private final HandoffTokenStore handoffTokenStore;
 
+    /**
+     * 이메일 회원가입
+     */
     @Transactional
     public SignupRes signup(final SignupReq request) {
         final String email = AuthUtils.normalizeEmail(request.email());
@@ -44,10 +50,13 @@ public class AuthService {
         final User user = User.createForSignup(email, encodedPassword);
         final User saved = saveUserOrThrowDuplicateEmail(user, email);
 
-        log.info("회원가입 완료 - email: {}, userId: {}", saved.getEmail(), saved.getId());
+        log.info("Signup completed. email={}, userId={}", saved.getEmail(), saved.getId());
         return new SignupRes(saved.getId(), saved.getEmail());
     }
 
+    /**
+     * 이메일 로그인
+     */
     @Transactional
     public LoginRes login(final LoginReq request) {
         final String email = AuthUtils.normalizeEmail(request.email());
@@ -56,17 +65,12 @@ public class AuthService {
         validateLocalLogin(user);
         validatePasswordMatches(request.password(), user.getPasswordHash());
 
-        final Long userId = user.getId();
-        final String role = AuthUtils.resolveRole(user.getRole());
-        final String accessToken = jwtTokenProvider.createAccessToken(userId, role);
-        final String refreshToken = jwtTokenProvider.createRefreshToken(userId);
-        final int expiresIn = AuthUtils.accessTokenExpiresInSeconds(jwtProperties);
-
-        refreshTokenStore.saveToken(userId, refreshToken, AuthUtils.refreshTokenTtl(jwtProperties));
-
-        return new LoginRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn, user.getRegistrationStatus());
+        return issueLoginTokens(user);
     }
 
+    /**
+     * accessToken 만료시, refreshToken 으로 accessToken 재발행
+     */
     @Transactional
     public ReissueRes reissue(final ReissueReq request) {
         final String refreshToken = request.refreshToken();
@@ -80,6 +84,19 @@ public class AuthService {
                 .orElseThrow(() -> new CustomException(ErrorCode.AUTH_UNAUTHORIZED));
 
         return rotateAndIssueTokens(user);
+    }
+
+    /**
+     * 소셜 로그인시, 클라이언트가 서버로 부터 받은 handoffToken 을 통해서 accessToken, refreshToken 을 발급
+     */
+    @Transactional
+    public LoginRes exchangeHandoffToken(final String handoffToken) {
+        final HandoffTokenEntry entry = handoffTokenStore.consume(handoffToken)
+                .orElseThrow(() -> new CustomException(ErrorCode.AUTH_HANDOFF_TOKEN_INVALID));
+        final User user = userRepository.findById(entry.memberId())
+                .orElseThrow(() -> new CustomException(ErrorCode.AUTH_UNAUTHORIZED));
+
+        return issueLoginTokens(user);
     }
 
     private void validateEmailNotExists(final String email) {
@@ -97,7 +114,7 @@ public class AuthService {
         try {
             return userRepository.save(user);
         } catch (final DataIntegrityViolationException e) {
-            log.debug("회원가입 저장 중 이메일 중복으로 실패했습니다. email={}", email);
+            log.debug("Signup failed because email already exists. email={}", email);
             throw new CustomException(ErrorCode.SIGNUP_FAILED);
         }
     }
@@ -112,6 +129,18 @@ public class AuthService {
         if (!passwordEncoder.matches(rawPassword, encodedPassword)) {
             throw new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS);
         }
+    }
+
+    private LoginRes issueLoginTokens(final User user) {
+        final Long userId = user.getId();
+        final String role = AuthUtils.resolveRole(user.getRole());
+        final String accessToken = jwtTokenProvider.createAccessToken(userId, role);
+        final String refreshToken = jwtTokenProvider.createRefreshToken(userId);
+        final int expiresIn = AuthUtils.accessTokenExpiresInSeconds(jwtProperties);
+
+        refreshTokenStore.saveToken(userId, refreshToken, AuthUtils.refreshTokenTtl(jwtProperties));
+
+        return new LoginRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn, user.getRegistrationStatus());
     }
 
     private ReissueRes rotateAndIssueTokens(final User user) {

@@ -5,8 +5,8 @@ import com.jjikmeok.app.domain.activity.dto.request.FavoriteRequest;
 import com.jjikmeok.app.domain.activity.dto.response.FavoriteResponse;
 import com.jjikmeok.app.domain.activity.entity.Activity;
 import com.jjikmeok.app.domain.activity.entity.Favorite;
-import com.jjikmeok.app.domain.activity.repository.FavoriteRepository;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
+import com.jjikmeok.app.domain.activity.repository.FavoriteRepository;
 import com.jjikmeok.app.domain.user.entity.User;
 import com.jjikmeok.app.domain.user.repository.UserRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -28,9 +29,9 @@ public class FavoriteServiceImpl implements FavoriteService {
     private final UserRepository userRepository;
 
     @Override
-    public List<FavoriteResponse> getFavorites(Long userId) {
+    public List<FavoriteResponse> getFavorites(Long userId, String sort) {
         findUserOrThrow(userId);
-        return favoriteRepository.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
+        return findFavorites(userId, sort).stream()
                 .map(FavoriteConverter::toResponse)
                 .toList();
     }
@@ -62,6 +63,20 @@ public class FavoriteServiceImpl implements FavoriteService {
                 .orElseThrow(() -> new CustomException(ErrorCode.ACTIVITY_FAVORITE_NOT_FOUND));
         favoriteRepository.delete(favorite);
         activity.decreaseLikeCount();
+    }
+
+    private List<Favorite> findFavorites(Long userId, String sort) {
+        if ("deadline".equals(normalizeSort(sort))) {
+            return favoriteRepository.findAllByUserIdOrderByRecruitEndAtAsc(userId);
+        }
+        return favoriteRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    private String normalizeSort(String sort) {
+        if (sort == null || sort.isBlank()) {
+            return "saved";
+        }
+        return sort.trim().toLowerCase(Locale.ROOT);
     }
 
     private User findUserOrThrow(Long userId) {

@@ -5,6 +5,7 @@ import com.jjikmeok.app.domain.activity.dto.response.FavoriteResponse;
 import com.jjikmeok.app.domain.activity.service.FavoriteService;
 import com.jjikmeok.app.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -29,10 +31,14 @@ public class FavoriteController {
 
     private final FavoriteService favoriteService;
 
-    @Operation(summary = "찜 목록 조회")
+    @Operation(summary = "찜한 활동 목록 조회")
     @GetMapping
-    public ApiResponse<List<FavoriteResponse>> getFavorites(@AuthenticationPrincipal Long userId) {
-        return ApiResponse.success("찜 목록 조회 성공", favoriteService.getFavorites(userId));
+    public ApiResponse<List<FavoriteResponse>> getFavorites(
+            @AuthenticationPrincipal Long userId,
+            @Parameter(description = "정렬 기준: saved(담은순, 기본값), deadline(마감순)")
+            @RequestParam(value = "sort", required = false, defaultValue = "saved") String sort
+    ) {
+        return ApiResponse.success("찜한 활동 목록 조회 성공", favoriteService.getFavorites(userId, sort));
     }
 
     @Operation(summary = "찜 추가")

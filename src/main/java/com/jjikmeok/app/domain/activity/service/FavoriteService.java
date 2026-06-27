@@ -6,7 +6,7 @@ import com.jjikmeok.app.domain.activity.dto.response.FavoriteResponse;
 import java.util.List;
 
 public interface FavoriteService {
-    List<FavoriteResponse> getFavorites(Long userId);
+    List<FavoriteResponse> getFavorites(Long userId, String sort);
     FavoriteResponse createFavorite(Long userId, FavoriteRequest request);
     void deleteFavorite(Long userId, Long activityId);
 }

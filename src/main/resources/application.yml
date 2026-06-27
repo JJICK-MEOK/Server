@@ -64,7 +64,7 @@ oauth2:
 jwt:
   secret: ${JWT_SECRET_KEY}
   access-token-expiration-ms: 3600000
-  refresh-token-expiration-ms: 604800000
+  refresh-token-expiration-ms: 1209600000
 
 app:
   cors:

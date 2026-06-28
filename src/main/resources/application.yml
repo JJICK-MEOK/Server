@@ -55,11 +55,19 @@ spring:
 oauth2:
   kakao:
     client-id: ${KAKAO_CLIENT_ID}          # REST API 키
-    redirect-uri: "{baseUrl}/api/v2/oauth2/code/kakao"
+    redirect-uri: ${KAKAO_REDIRECT_URI}
+    authorization-uri: ${KAKAO_AUTHORIZATION_URI}
+    token-uri: ${KAKAO_TOKEN_URI}
+    user-info-uri: ${KAKAO_USERINFO_URI}
+    app-deep-link-uri: ${KAKAO_APP_DEEPLINK_URI}
   google:
     client-id: ${GOOGLE_CLIENT_ID}
     client-secret: ${GOOGLE_CLIENT_SECRET}
-    redirect-uri: "{baseUrl}/api/v2/oauth2/code/google"
+    redirect-uri: ${GOOGLE_REDIRECT_URI}
+    authorization-uri: ${GOOGLE_AUTHORIZATION_URI}
+    token-uri: ${GOOGLE_TOKEN_URI}
+    user-info-uri: ${GOOGLE_USERINFO_URI}
+    app-deep-link-uri: ${GOOGLE_APP_DEEPLINK_URI}
 
 jwt:
   secret: ${JWT_SECRET_KEY}

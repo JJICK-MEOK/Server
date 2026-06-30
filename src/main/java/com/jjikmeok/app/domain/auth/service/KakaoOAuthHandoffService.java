@@ -91,7 +91,7 @@ public class KakaoOAuthHandoffService {
 
     private OAuthUserResult findOrCreateUser(final KakaoOAuthRes.UserInfoResponse userInfo) {
         final String providerId = String.valueOf(userInfo.id());
-        final String email = AuthUtils.normalizeEmail(userInfo.kakaoAccount().email());
+        final String email = AuthUtils.normalizeEmail(extractEmail(userInfo));
 
         return userRepository.findByAuthProviderAndProviderId(AuthProvider.KAKAO, providerId)
                 .map(user -> new OAuthUserResult(user, false))
@@ -100,6 +100,13 @@ public class KakaoOAuthHandoffService {
                     log.info("Kakao OAuth handoff signup completed. userId={}, providerId={}", savedUser.getId(), providerId);
                     return new OAuthUserResult(savedUser, true);
                 });
+    }
+
+    private String extractEmail(final KakaoOAuthRes.UserInfoResponse userInfo) {
+        if (userInfo.kakaoAccount() == null) {
+            return null;
+        }
+        return userInfo.kakaoAccount().email();
     }
 
     private String createHandoffToken(final OAuthUserResult userResult) {

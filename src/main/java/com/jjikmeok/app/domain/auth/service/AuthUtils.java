@@ -13,6 +13,9 @@ public final class AuthUtils {
     }
 
     public static String normalizeEmail(final String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
         return email.trim().toLowerCase(Locale.ROOT);
     }
 

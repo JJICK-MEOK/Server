@@ -1,28 +1,21 @@
 package com.jjikmeok.app.domain.auth.service;
 
 import java.net.URI;
-import java.time.Instant;
 import java.util.StringJoiner;
 
 import com.jjikmeok.app.domain.auth.client.kakao.KakaoOAuthClient;
 import com.jjikmeok.app.domain.auth.client.kakao.KakaoOAuthRes;
 import com.jjikmeok.app.domain.auth.config.KakaoOAuthProperties;
-import com.jjikmeok.app.domain.auth.store.HandoffTokenStore;
 import com.jjikmeok.app.domain.auth.store.OAuthStateStore;
-import com.jjikmeok.app.domain.auth.token.HandoffTokenEntry;
 import com.jjikmeok.app.domain.auth.token.OAuthTokenGenerator;
 import com.jjikmeok.app.domain.user.entity.AuthProvider;
-import com.jjikmeok.app.domain.user.entity.User;
-import com.jjikmeok.app.domain.user.repository.UserRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -31,9 +24,8 @@ public class KakaoOAuthHandoffService {
     private final KakaoOAuthClient kakaoOAuthClient;
     private final KakaoOAuthProperties kakaoOAuthProperties;
     private final OAuthStateStore oAuthStateStore;
-    private final HandoffTokenStore handoffTokenStore;
     private final OAuthTokenGenerator oAuthTokenGenerator;
-    private final UserRepository userRepository;
+    private final OAuthHandoffCommonService oAuthHandoffCommonService;
 
     public URI createKakaoLoginUri() {
         final String state = oAuthTokenGenerator.generateUrlSafeToken(kakaoOAuthProperties.getStateTokenBytes());
@@ -59,7 +51,11 @@ public class KakaoOAuthHandoffService {
         final KakaoOAuthRes.TokenResponse tokenResponse = kakaoOAuthClient.getToken(code);
         final KakaoOAuthRes.UserInfoResponse userInfo = kakaoOAuthClient.getUserInfo(tokenResponse.accessToken());
         final OAuthUserResult userResult = findOrCreateUser(userInfo);
-        final String handoffToken = createHandoffToken(userResult);
+        final String handoffToken = oAuthHandoffCommonService.createHandoffToken(
+                userResult,
+                kakaoOAuthProperties.getHandoffTokenBytes(),
+                kakaoOAuthProperties.getHandoffTtl()
+        );
 
         return createAppDeepLinkUri(handoffToken);
     }
@@ -90,27 +86,18 @@ public class KakaoOAuthHandoffService {
     }
 
     private OAuthUserResult findOrCreateUser(final KakaoOAuthRes.UserInfoResponse userInfo) {
-        final String providerId = String.valueOf(userInfo.id());
-        final String email = AuthUtils.normalizeEmail(userInfo.kakaoAccount().email());
-
-        return userRepository.findByAuthProviderAndProviderId(AuthProvider.KAKAO, providerId)
-                .map(user -> new OAuthUserResult(user, false))
-                .orElseGet(() -> {
-                    final User savedUser = userRepository.save(User.createForOAuth2(email, AuthProvider.KAKAO, providerId));
-                    log.info("Kakao OAuth handoff signup completed. userId={}, providerId={}", savedUser.getId(), providerId);
-                    return new OAuthUserResult(savedUser, true);
-                });
+        return oAuthHandoffCommonService.findOrCreateUser(
+                AuthProvider.KAKAO,
+                String.valueOf(userInfo.id()),
+                extractEmail(userInfo)
+        );
     }
 
-    private String createHandoffToken(final OAuthUserResult userResult) {
-        final String handoffToken = oAuthTokenGenerator.generateUrlSafeToken(kakaoOAuthProperties.getHandoffTokenBytes());
-        final HandoffTokenEntry entry = new HandoffTokenEntry(
-                userResult.user().getId(),
-                userResult.newMember(),
-                Instant.now()
-        );
-        handoffTokenStore.save(handoffToken, entry, kakaoOAuthProperties.getHandoffTtl());
-        return handoffToken;
+    private String extractEmail(final KakaoOAuthRes.UserInfoResponse userInfo) {
+        if (userInfo.kakaoAccount() == null) {
+            return null;
+        }
+        return userInfo.kakaoAccount().email();
     }
 
     private URI createAppDeepLinkUri(final String handoffToken) {
@@ -121,10 +108,4 @@ public class KakaoOAuthHandoffService {
                 .toUri();
     }
 
-    private record OAuthUserResult(
-
-            User user,
-            boolean newMember
-    ) {
-    }
 }

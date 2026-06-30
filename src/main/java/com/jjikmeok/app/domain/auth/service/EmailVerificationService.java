@@ -34,7 +34,7 @@ public class EmailVerificationService {
 
     @Transactional(readOnly = true)
     public EmailVerificationSendRes sendVerificationCode(final EmailVerificationSendReq request) {
-        final String email = request.email();
+        final String email = AuthUtils.normalizeEmail(request.email());
 
         validateEmailNotExists(email);
 
@@ -59,7 +59,7 @@ public class EmailVerificationService {
 
     @Transactional
     public EmailVerificationVerifyRes verifyVerificationCode(final EmailVerificationVerifyReq request) {
-        final String email = request.email();
+        final String email = AuthUtils.normalizeEmail(request.email());
 
         validateEmailNotExists(email);
 

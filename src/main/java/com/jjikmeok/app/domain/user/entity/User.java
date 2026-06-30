@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseEntity {
 
-    @Column(nullable = false, length = 150)
+    @Column(nullable = true, length = 150)
     private String email;
 
     @Column(name = "password_hash", length = 200)

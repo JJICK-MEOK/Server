@@ -1,20 +1,19 @@
 package com.jjikmeok.app.domain.auth.service;
 
-import java.security.SecureRandom;
 import java.time.Duration;
 
+import com.jjikmeok.app.domain.auth.dto.request.EmailVerificationSendReq;
 import com.jjikmeok.app.domain.auth.dto.request.EmailVerificationVerifyReq;
 import com.jjikmeok.app.domain.auth.dto.response.EmailVerificationSendRes;
 import com.jjikmeok.app.domain.auth.dto.response.EmailVerificationVerifyRes;
-import com.jjikmeok.app.domain.auth.store.VerificationCodeStore;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import com.jjikmeok.app.domain.auth.dto.request.EmailVerificationSendReq;
+import com.jjikmeok.app.domain.auth.store.RedisVerificationCodeStore;
 import com.jjikmeok.app.domain.user.repository.UserRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
 import com.jjikmeok.app.global.infra.mail.MailService;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,36 +24,21 @@ import lombok.extern.slf4j.Slf4j;
 public class EmailVerificationService {
 
     private static final Duration VERIFICATION_CODE_TTL = Duration.ofMinutes(3);
-    private static final int VERIFICATION_CODE_BOUND = 1_000_000;
 
-    private final VerificationCodeStore verificationCodeStore;
+    private final RedisVerificationCodeStore verificationCodeStore;
     private final UserRepository userRepository;
     private final MailService mailService;
-    private final SecureRandom secureRandom = new SecureRandom();
+    private final VerificationCodeService verificationCodeService;
 
     @Transactional(readOnly = true)
     public EmailVerificationSendRes sendVerificationCode(final EmailVerificationSendReq request) {
         final String email = AuthUtils.normalizeEmail(request.email());
 
         validateEmailNotExists(email);
-
-        final String code = generateVerificationCode();
-        verificationCodeStore.saveCode(email, code, VERIFICATION_CODE_TTL);
-
-        final String html = buildVerificationMailHtml(code);
-
-        mailService.sendHtml(
-                email,
-                "[찍먹] 이메일 인증번호 안내",
-                html
-        );
+        sendVerificationCodeMail(email);
 
         log.info("이메일 인증번호 발송 요청 완료. email={}", email);
-
-        return new EmailVerificationSendRes(
-                email,
-                (int) VERIFICATION_CODE_TTL.toSeconds()
-        );
+        return new EmailVerificationSendRes(email, (int) VERIFICATION_CODE_TTL.toSeconds());
     }
 
     @Transactional
@@ -63,14 +47,7 @@ public class EmailVerificationService {
 
         validateEmailNotExists(email);
 
-        final String savedCode = verificationCodeStore.getCode(email)
-                .orElseThrow(() -> new CustomException(ErrorCode.MAIL_VERIFICATION_CODE_EXPIRED));
-
-        if (!savedCode.equals(request.code())) {
-            throw new CustomException(ErrorCode.MAIL_VERIFICATION_CODE_INVALID);
-        }
-
-        verificationCodeStore.deleteCode(email);
+        verificationCodeService.verifyAndConsume(verificationCodeStore, email, request.code());
         log.info("이메일 인증번호 검증 완료. email={}", email);
 
         return new EmailVerificationVerifyRes(email, true);
@@ -82,8 +59,18 @@ public class EmailVerificationService {
         }
     }
 
-    private String generateVerificationCode() {
-        return String.format("%06d", secureRandom.nextInt(VERIFICATION_CODE_BOUND));
+    private void sendVerificationCodeMail(final String email) {
+        final String code = verificationCodeService.issueCode(
+                verificationCodeStore,
+                email,
+                VERIFICATION_CODE_TTL
+        );
+
+        mailService.sendHtml(
+                email,
+                "[찍먹] 이메일 인증번호 안내",
+                buildVerificationMailHtml(code)
+        );
     }
 
     private String buildVerificationMailHtml(final String code) {

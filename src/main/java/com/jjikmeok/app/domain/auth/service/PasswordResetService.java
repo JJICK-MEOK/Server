@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class PasswordResetService {
 
-    private static final Duration PASSWORD_RESET_CODE_TTL = Duration.ofMinutes(10);
+    private static final Duration PASSWORD_RESET_CODE_TTL = Duration.ofMinutes(3);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;

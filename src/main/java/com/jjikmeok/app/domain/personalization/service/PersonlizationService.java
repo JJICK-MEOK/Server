@@ -1,9 +1,11 @@
 package com.jjikmeok.app.domain.personalization.service;
 
+import com.jjikmeok.app.domain.personalization.dto.ActivityRecommendationResponse;
 import com.jjikmeok.app.domain.personalization.dto.PersonalizationResponse;
 import com.jjikmeok.app.domain.personalization.repository.PersonalizationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -76,5 +78,13 @@ public class PersonlizationService {
         List<String> shuffledTags = new ArrayList<>(userTags);
         Collections.shuffle(shuffledTags);
         return shuffledTags.subList(0, DISPLAY_TAG_LIMIT);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ActivityRecommendationResponse> getRecommendedActivities(Long userId) {
+        return personalizationRepository.findRecommendedActivitiesByUserId(userId)
+                .stream()
+                .map(ActivityRecommendationResponse::from)
+                .toList();
     }
 }

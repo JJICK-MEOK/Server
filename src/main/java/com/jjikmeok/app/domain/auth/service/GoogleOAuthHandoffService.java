@@ -1,28 +1,21 @@
 package com.jjikmeok.app.domain.auth.service;
 
 import java.net.URI;
-import java.time.Instant;
 import java.util.StringJoiner;
 
 import com.jjikmeok.app.domain.auth.client.google.GoogleOAuthClient;
 import com.jjikmeok.app.domain.auth.client.google.GoogleOAuthRes;
 import com.jjikmeok.app.domain.auth.config.GoogleOAuthProperties;
-import com.jjikmeok.app.domain.auth.store.HandoffTokenStore;
 import com.jjikmeok.app.domain.auth.store.OAuthStateStore;
-import com.jjikmeok.app.domain.auth.token.HandoffTokenEntry;
 import com.jjikmeok.app.domain.auth.token.OAuthTokenGenerator;
 import com.jjikmeok.app.domain.user.entity.AuthProvider;
-import com.jjikmeok.app.domain.user.entity.User;
-import com.jjikmeok.app.domain.user.repository.UserRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -31,9 +24,8 @@ public class GoogleOAuthHandoffService {
     private final GoogleOAuthClient googleOAuthClient;
     private final GoogleOAuthProperties googleOAuthProperties;
     private final OAuthStateStore oAuthStateStore;
-    private final HandoffTokenStore handoffTokenStore;
     private final OAuthTokenGenerator oAuthTokenGenerator;
-    private final UserRepository userRepository;
+    private final OAuthHandoffCommonService oAuthHandoffCommonService;
 
     public URI createGoogleLoginUri() {
         final String state = oAuthTokenGenerator.generateUrlSafeToken(googleOAuthProperties.getStateTokenBytes());
@@ -61,7 +53,11 @@ public class GoogleOAuthHandoffService {
         final GoogleOAuthRes.TokenResponse tokenResponse = googleOAuthClient.getToken(code);
         final GoogleOAuthRes.UserInfoResponse userInfo = googleOAuthClient.getUserInfo(tokenResponse.accessToken());
         final OAuthUserResult userResult = findOrCreateUser(userInfo);
-        final String handoffToken = createHandoffToken(userResult);
+        final String handoffToken = oAuthHandoffCommonService.createHandoffToken(
+                userResult,
+                googleOAuthProperties.getHandoffTokenBytes(),
+                googleOAuthProperties.getHandoffTtl()
+        );
 
         return createAppDeepLinkUri(handoffToken);
     }
@@ -95,27 +91,11 @@ public class GoogleOAuthHandoffService {
     }
 
     private OAuthUserResult findOrCreateUser(final GoogleOAuthRes.UserInfoResponse userInfo) {
-        final String providerId = userInfo.sub();
-        final String email = AuthUtils.normalizeEmail(userInfo.email());
-
-        return userRepository.findByAuthProviderAndProviderId(AuthProvider.GOOGLE, providerId)
-                .map(user -> new OAuthUserResult(user, false))
-                .orElseGet(() -> {
-                    final User savedUser = userRepository.save(User.createForOAuth2(email, AuthProvider.GOOGLE, providerId));
-                    log.info("Google OAuth handoff signup completed. userId={}, providerId={}", savedUser.getId(), providerId);
-                    return new OAuthUserResult(savedUser, true);
-                });
-    }
-
-    private String createHandoffToken(final OAuthUserResult userResult) {
-        final String handoffToken = oAuthTokenGenerator.generateUrlSafeToken(googleOAuthProperties.getHandoffTokenBytes());
-        final HandoffTokenEntry entry = new HandoffTokenEntry(
-                userResult.user().getId(),
-                userResult.newMember(),
-                Instant.now()
+        return oAuthHandoffCommonService.findOrCreateUser(
+                AuthProvider.GOOGLE,
+                userInfo.sub(),
+                userInfo.email()
         );
-        handoffTokenStore.save(handoffToken, entry, googleOAuthProperties.getHandoffTtl());
-        return handoffToken;
     }
 
     private URI createAppDeepLinkUri(final String handoffToken) {
@@ -126,10 +106,4 @@ public class GoogleOAuthHandoffService {
                 .toUri();
     }
 
-    private record OAuthUserResult(
-
-            User user,
-            boolean newMember
-    ) {
-    }
 }

@@ -17,15 +17,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/oauth")
-@Tag(name = "OAuth", description = "Backend-driven OAuth login API")
+@Tag(name = "OAuth", description = "서버 주도 OAuth 로그인 API")
 public class OAuthController {
 
     private final GoogleOAuthHandoffService googleOAuthHandoffService;
     private final KakaoOAuthHandoffService kakaoOAuthHandoffService;
 
     @Operation(
-            summary = "Start Google OAuth login",
-            description = "Creates a CSRF state and redirects to the Google OAuth authorization URL."
+            summary = "구글 OAuth 로그인 시작",
+            description = "CSRF 방지 state를 생성하고 구글 OAuth 인증 URL로 리다이렉트합니다."
     )
     @GetMapping("/google/login")
     public ResponseEntity<Void> googleLogin() {
@@ -34,8 +34,8 @@ public class OAuthController {
     }
 
     @Operation(
-            summary = "Google OAuth callback",
-            description = "Handles Google authorization code and redirects to the app deep link with a handoff token."
+            summary = "구글 OAuth 콜백",
+            description = "구글 인가 코드를 처리하고 handoff 토큰이 포함된 앱 딥링크로 리다이렉트합니다."
     )
     @GetMapping("/google/callback")
     public ResponseEntity<Void> googleCallback(
@@ -48,8 +48,8 @@ public class OAuthController {
     }
 
     @Operation(
-            summary = "Start Kakao OAuth login",
-            description = "Creates a CSRF state and redirects to the Kakao OAuth authorization URL."
+            summary = "카카오 OAuth 로그인 시작",
+            description = "CSRF 방지 state를 생성하고 카카오 OAuth 인증 URL로 리다이렉트합니다."
     )
     @GetMapping("/kakao/login")
     public ResponseEntity<Void> kakaoLogin() {
@@ -58,8 +58,8 @@ public class OAuthController {
     }
 
     @Operation(
-            summary = "Kakao OAuth callback",
-            description = "Handles Kakao authorization code and redirects to the app deep link with a handoff token."
+            summary = "카카오 OAuth 콜백",
+            description = "카카오 인가 코드를 처리하고 handoff 토큰이 포함된 앱 딥링크로 리다이렉트합니다."
     )
     @GetMapping("/kakao/callback")
     public ResponseEntity<Void> kakaoCallback(

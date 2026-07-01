@@ -50,7 +50,7 @@ public class AuthService {
         final User user = User.createForSignup(email, encodedPassword);
         final User saved = saveUserOrThrowDuplicateEmail(user, email);
 
-        log.info("Signup completed. email={}, userId={}", saved.getEmail(), saved.getId());
+        log.info("회원가입이 완료되었습니다.  userId={}", saved.getId());
         return new SignupRes(saved.getId(), saved.getEmail());
     }
 
@@ -77,11 +77,15 @@ public class AuthService {
         final Long userId = parseRefreshTokenUserId(refreshToken);
 
         if (!refreshTokenStore.matches(userId, refreshToken)) {
+            log.warn("토큰 재발급 실패 - 저장된 리프레시 토큰과 일치하지 않습니다. userId={}", userId);
             throw new CustomException(ErrorCode.AUTH_UNAUTHORIZED);
         }
 
         final User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.AUTH_UNAUTHORIZED));
+                .orElseThrow(() -> {
+                    log.warn("토큰 재발급 실패 - 사용자를 찾을 수 없습니다. userId={}", userId);
+                    return new CustomException(ErrorCode.AUTH_UNAUTHORIZED);
+                });
 
         return rotateAndIssueTokens(user);
     }
@@ -92,41 +96,53 @@ public class AuthService {
     @Transactional
     public LoginRes exchangeHandoffToken(final String handoffToken) {
         final HandoffTokenEntry entry = handoffTokenStore.consume(handoffToken)
-                .orElseThrow(() -> new CustomException(ErrorCode.AUTH_HANDOFF_TOKEN_INVALID));
+                .orElseThrow(() -> {
+                    log.warn("Handoff 토큰 교환 실패 - 유효하지 않은 handoff 토큰입니다.");
+                    return new CustomException(ErrorCode.AUTH_HANDOFF_TOKEN_INVALID);
+                });
         final User user = userRepository.findById(entry.memberId())
-                .orElseThrow(() -> new CustomException(ErrorCode.AUTH_UNAUTHORIZED));
+                .orElseThrow(() -> {
+                    log.warn("Handoff 토큰 교환 실패 - 사용자를 찾을 수 없습니다. userId={}", entry.memberId());
+                    return new CustomException(ErrorCode.AUTH_UNAUTHORIZED);
+                });
 
         return issueLoginTokens(user);
     }
 
     private void validateEmailNotExists(final String email) {
         if (userRepository.existsByEmail(email)) {
+            log.warn("회원가입 실패 - 이미 사용 중인 이메일입니다. email={}", email);
             throw new CustomException(ErrorCode.SIGNUP_FAILED);
         }
     }
 
     private User findUserOrThrowInvalidCredentials(final String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS));
+                .orElseThrow(() -> {
+                    log.warn("로그인 실패 - 가입되지 않은 이메일입니다. email={}", email);
+                    return new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+                });
     }
 
     private User saveUserOrThrowDuplicateEmail(final User user, final String email) {
         try {
             return userRepository.save(user);
         } catch (final DataIntegrityViolationException e) {
-            log.debug("Signup failed because email already exists. email={}", email);
+            log.warn("회원가입 실패 - DB 제약조건 위반으로 이메일 중복이 감지되었습니다. email={}", email);
             throw new CustomException(ErrorCode.SIGNUP_FAILED);
         }
     }
 
     private void validateLocalLogin(final User user) {
         if (user.getAuthProvider() != AuthProvider.LOCAL || user.getPasswordHash() == null) {
+            log.warn("로그인 실패 - 로컬 계정이 아닙니다. userId={}, provider={}", user.getId(), user.getAuthProvider());
             throw new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS);
         }
     }
 
     private void validatePasswordMatches(final String rawPassword, final String encodedPassword) {
         if (!passwordEncoder.matches(rawPassword, encodedPassword)) {
+            log.warn("로그인 실패 - 비밀번호가 일치하지 않습니다.");
             throw new CustomException(ErrorCode.AUTH_INVALID_CREDENTIALS);
         }
     }
@@ -140,6 +156,7 @@ public class AuthService {
 
         refreshTokenStore.saveToken(userId, refreshToken, AuthUtils.refreshTokenTtl(jwtProperties));
 
+        log.debug("로그인 토큰 발급 완료. userId={}", userId);
         return new LoginRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn, user.getRegistrationStatus());
     }
 
@@ -152,6 +169,7 @@ public class AuthService {
 
         storeRotatedRefreshToken(userId, refreshToken);
 
+        log.debug("토큰 재발급 완료. userId={}", userId);
         return new ReissueRes(accessToken, refreshToken, TOKEN_TYPE, expiresIn);
     }
 
@@ -164,8 +182,10 @@ public class AuthService {
             return jwtTokenProvider.getUserId(refreshToken);
         } catch (final JwtTokenException e) {
             if (e.getErrorCode() == ErrorCode.JWT_EXPIRED_TOKEN) {
+                log.warn("토큰 재발급 실패 - 리프레시 토큰이 만료되었습니다.");
                 throw new CustomException(ErrorCode.AUTH_REFRESH_TOKEN_EXPIRED);
             }
+            log.warn("토큰 재발급 실패 - 유효하지 않은 리프레시 토큰입니다. errorCode={}", e.getErrorCode());
             throw new CustomException(e.getErrorCode());
         }
     }

@@ -44,7 +44,7 @@ public class KakaoOAuthClient {
             validateTokenResponse(tokenResponse);
             return tokenResponse;
         } catch (final RestClientException e) {
-            log.error("Kakao access token request failed.", e);
+            log.error("카카오 액세스 토큰 요청에 실패했습니다.", e);
             throw new CustomException(ErrorCode.AUTH_INVALID_SOCIAL_ACCESS_TOKEN);
         }
     }
@@ -60,7 +60,7 @@ public class KakaoOAuthClient {
             validateUserInfoResponse(userInfo);
             return userInfo;
         } catch (final RestClientException e) {
-            log.error("Kakao user info request failed.", e);
+            log.error("카카오 사용자 정보 조회에 실패했습니다.", e);
             throw new CustomException(ErrorCode.AUTH_INVALID_SOCIAL_ACCESS_TOKEN);
         }
     }

@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Password Reset", description = "비밀번호 재설정 관련 API")
+@Tag(name = "비밀번호 재설정", description = "비밀번호 재설정 관련 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/auth/password-reset")

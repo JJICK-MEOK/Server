@@ -21,14 +21,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/auth")
-@Tag(name = "Auth", description = "Authentication API")
+@Tag(name = "인증", description = "인증 관련 API")
 public class AuthController {
 
     private final AuthService authService;
 
     @Operation(
-            summary = "Signup",
-            description = "Creates a local account with email and password."
+            summary = "회원가입",
+            description = "이메일과 비밀번호로 로컬 계정을 생성합니다."
     )
     @PostMapping("/signup")
     public ApiResponse<SignupRes> signup(@Valid @RequestBody final SignupReq request) {
@@ -37,8 +37,8 @@ public class AuthController {
     }
 
     @Operation(
-            summary = "Login",
-            description = "Authenticates a local account and issues access and refresh tokens."
+            summary = "로그인",
+            description = "로컬 계정을 인증하고 액세스 토큰과 리프레시 토큰을 발급합니다."
     )
     @PostMapping("/login")
     public ApiResponse<LoginRes> login(@Valid @RequestBody final LoginReq request) {
@@ -47,8 +47,8 @@ public class AuthController {
     }
 
     @Operation(
-            summary = "Reissue tokens",
-            description = "Validates a refresh token and reissues access and refresh tokens."
+            summary = "토큰 재발급",
+            description = "리프레시 토큰을 검증하고 액세스 토큰과 리프레시 토큰을 재발급합니다."
     )
     @PostMapping("/reissue")
     public ApiResponse<ReissueRes> reissue(@Valid @RequestBody final ReissueReq request) {
@@ -57,8 +57,8 @@ public class AuthController {
     }
 
     @Operation(
-            summary = "Exchange handoff token",
-            description = "Consumes a one-time handoff token and issues service access and refresh tokens."
+            summary = "Handoff 토큰 교환",
+            description = "1회용 handoff 토큰을 소비하고 서비스 액세스 토큰과 리프레시 토큰을 발급합니다."
     )
     @PostMapping("/handoff")
     public ApiResponse<LoginRes> exchangeHandoffToken(@Valid @RequestBody final HandoffTokenReq request) {

@@ -72,7 +72,7 @@ public class OAuthHandoffCommonService {
         }
 
         if (userRepository.existsByEmail(email)) {
-            log.info("{} OAuth 회원가입 차단: 이미 사용 중인 이메일입니다. providerId={}, email={}",
+            log.warn("{} OAuth 회원가입 차단: 이미 사용 중인 이메일입니다. providerId={}, email={}",
                     provider, providerId, email);
             throw new CustomException(ErrorCode.AUTH_SOCIAL_EMAIL_CONFLICT);
         }
@@ -92,9 +92,32 @@ public class OAuthHandoffCommonService {
                     provider, savedUser.getId(), providerId);
             return savedUser;
         } catch (final DataIntegrityViolationException e) {
-            log.info("{} OAuth 회원가입 차단: DB 제약조건 위반이 발생했습니다. providerId={}, email={}",
-                    provider, providerId, email);
-            throw new CustomException(ErrorCode.AUTH_SOCIAL_EMAIL_CONFLICT);
+            return resolveSaveConflict(provider, providerId, email, e);
         }
+    }
+
+    private User resolveSaveConflict(
+            final AuthProvider provider,
+            final String providerId,
+            final String email,
+            final DataIntegrityViolationException exception
+    ) {
+        return userRepository.findByAuthProviderAndProviderId(provider, providerId)
+                .map(user -> {
+                    log.warn("{} OAuth handoff 회원가입 경합 감지: 이미 생성된 계정을 사용합니다. userId={}, providerId={}",
+                            provider, user.getId(),providerId);
+                    return user;
+                })
+                .orElseGet(() -> {
+                    if (email != null && userRepository.existsByEmail(email)) {
+                        log.warn("{} OAuth 회원가입 차단: 이메일 중복 제약조건 위반이 발생했습니다. providerId={}, email={}",
+                                provider, providerId, email);
+                        throw new CustomException(ErrorCode.AUTH_SOCIAL_EMAIL_CONFLICT);
+                    }
+
+                    log.warn("{} OAuth 회원가입 실패: provider 계정 중복 또는 이메일 중복이 아닌 DB 제약조건 위반입니다. providerId={}, email={}",
+                            provider, providerId, email, exception);
+                    throw exception;
+                });
     }
 }

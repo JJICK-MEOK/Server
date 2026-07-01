@@ -37,7 +37,8 @@ public class EmailVerificationService {
         validateEmailNotExists(email);
         sendVerificationCodeMail(email);
 
-        log.info("이메일 인증번호 발송 요청 완료. email={}", email);
+        log.debug("이메일 인증번호 발송 요청 완료. email={}", email);
+
         return new EmailVerificationSendRes(email, (int) VERIFICATION_CODE_TTL.toSeconds());
     }
 
@@ -46,9 +47,9 @@ public class EmailVerificationService {
         final String email = AuthUtils.normalizeEmail(request.email());
 
         validateEmailNotExists(email);
-
         verificationCodeService.verifyAndConsume(verificationCodeStore, email, request.code());
-        log.info("이메일 인증번호 검증 완료. email={}", email);
+
+        log.debug("이메일 인증번호 검증 완료. email={}", email);
 
         return new EmailVerificationVerifyRes(email, true);
     }
@@ -91,6 +92,7 @@ public class EmailVerificationService {
     }
 
     private String buildVerificationMailHtml(final String code) {
+        final long ttlMinutes = VERIFICATION_CODE_TTL.toMinutes();
         return """
                 <div style="font-family: Arial, sans-serif; line-height: 1.6;">
                     <h2>찍먹 이메일 인증번호</h2>
@@ -98,9 +100,9 @@ public class EmailVerificationService {
                     <div style="font-size: 24px; font-weight: bold; letter-spacing: 4px; margin: 20px 0;">
                         %s
                     </div>
-                    <p>본 인증번호는 3분간 유효합니다.</p>
+                    <p>본 인증번호는 %d분간 유효합니다.</p>
                     <p>요청하지 않았다면 본 메일을 무시해주세요.</p>
                 </div>
-                """.formatted(code);
+                """.formatted(code, ttlMinutes);
     }
 }

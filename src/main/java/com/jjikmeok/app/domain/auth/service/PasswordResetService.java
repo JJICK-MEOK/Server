@@ -43,6 +43,7 @@ public class PasswordResetService {
         sendResetCodeMail(email);
 
         log.debug("비밀번호 재설정 인증번호 발송 요청 처리 완료. email={}", email);
+
         return new PasswordResetSendRes(email, (int) PASSWORD_RESET_CODE_TTL.toSeconds());
     }
 
@@ -57,7 +58,8 @@ public class PasswordResetService {
         verificationCodeService.verifyAndConsume(passwordResetCodeStore, email, request.code());
         user.changePassword(passwordEncoder.encode(request.newPassword()));
 
-        log.info("비밀번호 재설정 완료. email={}, userId={}", email, user.getId());
+        log.debug("비밀번호 재설정 완료. email={}, userId={}", email, user.getId());
+
         return new PasswordResetRes(true);
     }
 
@@ -121,6 +123,7 @@ public class PasswordResetService {
     }
 
     private String buildPasswordResetMailHtml(final String code) {
+        final long ttlMinutes = PASSWORD_RESET_CODE_TTL.toMinutes();
         return """
                 <div style="font-family: Arial, sans-serif; line-height: 1.6;">
                     <h2>찍먹 비밀번호 재설정 인증번호</h2>
@@ -128,9 +131,9 @@ public class PasswordResetService {
                     <div style="font-size: 24px; font-weight: bold; letter-spacing: 4px; margin: 20px 0;">
                         %s
                     </div>
-                    <p>본 인증번호는 10분간 유효합니다.</p>
+                    <p>본 인증번호는 %d분간 유효합니다.</p>
                     <p>요청하지 않았다면 본 메일을 무시해주세요.</p>
                 </div>
-                """.formatted(code);
+                """.formatted(code, ttlMinutes);
     }
 }

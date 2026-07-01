@@ -45,8 +45,8 @@ public class NaverOAuthHandoffService {
 
     @Transactional
     public URI handleNaverCallback(final String code, final String state, final String error) {
-        validateCallbackError(error);
         validateState(state);
+        validateCallbackError(error);
         validateCode(code);
 
         final NaverOAuthRes.TokenResponse tokenResponse = naverOAuthClient.getToken(code, state);

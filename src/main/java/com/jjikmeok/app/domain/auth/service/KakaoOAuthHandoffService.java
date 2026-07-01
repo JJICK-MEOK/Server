@@ -47,8 +47,8 @@ public class KakaoOAuthHandoffService {
 
     @Transactional
     public URI handleKakaoCallback(final String code, final String state, final String error) {
-        validateCallbackError(error);
         validateState(state);
+        validateCallbackError(error);
         validateCode(code);
 
         final KakaoOAuthRes.TokenResponse tokenResponse = kakaoOAuthClient.getToken(code);

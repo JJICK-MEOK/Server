@@ -9,8 +9,11 @@ import com.jjikmeok.app.domain.auth.token.OAuthTokenGenerator;
 import com.jjikmeok.app.domain.user.entity.AuthProvider;
 import com.jjikmeok.app.domain.user.entity.User;
 import com.jjikmeok.app.domain.user.repository.UserRepository;
+import com.jjikmeok.app.global.common.exception.CustomException;
+import com.jjikmeok.app.global.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,9 +38,8 @@ public class OAuthHandoffCommonService {
         return userRepository.findByAuthProviderAndProviderId(provider, providerId)
                 .map(user -> new OAuthUserResult(user, false))
                 .orElseGet(() -> {
-                    final User savedUser = userRepository.save(User.createForOAuth2(email, provider, providerId));
-                    log.info("{} OAuth handoff signup completed. userId={}, providerId={}",
-                            provider, savedUser.getId(), providerId);
+                    validateEmailNotConflicting(provider, providerId, email);
+                    final User savedUser = saveOAuthUserOrThrowEmailConflict(provider, providerId, email);
                     return new OAuthUserResult(savedUser, true);
                 });
     }
@@ -55,5 +57,67 @@ public class OAuthHandoffCommonService {
         );
         handoffTokenStore.save(handoffToken, entry, handoffTtl);
         return handoffToken;
+    }
+
+    /**
+     * 소셜 회원가입 시 동일 이메일을 사용하는 기존 계정이 있는지 검증한다.
+     */
+    private void validateEmailNotConflicting(
+            final AuthProvider provider,
+            final String providerId,
+            final String email
+    ) {
+        if (email == null) {
+            return;
+        }
+
+        if (userRepository.existsByEmail(email)) {
+            log.warn("{} OAuth 회원가입 차단: 이미 사용 중인 이메일입니다. providerId={}, email={}",
+                    provider, providerId, email);
+            throw new CustomException(ErrorCode.AUTH_SOCIAL_EMAIL_CONFLICT);
+        }
+    }
+
+    /**
+     * OAuth 사용자를 저장하고 DB 제약조건 위반 시 이메일 충돌 예외로 변환한다.
+     */
+    private User saveOAuthUserOrThrowEmailConflict(
+            final AuthProvider provider,
+            final String providerId,
+            final String email
+    ) {
+        try {
+            final User savedUser = userRepository.save(User.createForOAuth2(email, provider, providerId));
+            log.info("{} OAuth handoff 회원가입 완료: userId={}, providerId={}",
+                    provider, savedUser.getId(), providerId);
+            return savedUser;
+        } catch (final DataIntegrityViolationException e) {
+            return resolveSaveConflict(provider, providerId, email, e);
+        }
+    }
+
+    private User resolveSaveConflict(
+            final AuthProvider provider,
+            final String providerId,
+            final String email,
+            final DataIntegrityViolationException exception
+    ) {
+        return userRepository.findByAuthProviderAndProviderId(provider, providerId)
+                .map(user -> {
+                    log.warn("{} OAuth handoff 회원가입 경합 감지: 이미 생성된 계정을 사용합니다. userId={}, providerId={}",
+                            provider, user.getId(),providerId);
+                    return user;
+                })
+                .orElseGet(() -> {
+                    if (email != null && userRepository.existsByEmail(email)) {
+                        log.warn("{} OAuth 회원가입 차단: 이메일 중복 제약조건 위반이 발생했습니다. providerId={}, email={}",
+                                provider, providerId, email);
+                        throw new CustomException(ErrorCode.AUTH_SOCIAL_EMAIL_CONFLICT);
+                    }
+
+                    log.warn("{} OAuth 회원가입 실패: provider 계정 중복 또는 이메일 중복이 아닌 DB 제약조건 위반입니다. providerId={}, email={}",
+                            provider, providerId, email, exception);
+                    throw exception;
+                });
     }
 }

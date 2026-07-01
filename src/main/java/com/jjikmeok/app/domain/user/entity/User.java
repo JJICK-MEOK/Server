@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @Table(
         name = "users",
         uniqueConstraints = {
+                @UniqueConstraint(name = "uk_users_email", columnNames = {"email"}),
                 @UniqueConstraint(name = "uk_users_provider", columnNames = {"auth_provider", "provider_id"})
         }
 )
@@ -72,5 +73,9 @@ public class User extends BaseEntity {
 
     public void completeOnboarding() {
         this.registrationStatus = RegistrationStatus.ONBOARDING_COMPLETED;
+    }
+
+    public void changePassword(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 }

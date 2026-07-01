@@ -1,6 +1,7 @@
 package com.jjikmeok.app.global.infra.mail;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletableFuture;
 
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
@@ -25,7 +26,7 @@ public class MailService {
     private String from;
 
     @Async("mailAsyncExecutor")
-    public void sendHtml(String to, String subject, String htmlBody) {
+    public CompletableFuture<Void> sendHtml(String to, String subject, String htmlBody) {
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         try {
             MimeMessageHelper helper = new MimeMessageHelper(
@@ -39,6 +40,7 @@ public class MailService {
             helper.setText(htmlBody, true);
 
             mailSender.send(mimeMessage);
+            return CompletableFuture.completedFuture(null);
         }
         catch (MailException | MessagingException e) {
             throw new CustomException(ErrorCode.MAIL_SEND_FAILED);

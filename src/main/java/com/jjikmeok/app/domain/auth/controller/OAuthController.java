@@ -4,6 +4,7 @@ import java.net.URI;
 
 import com.jjikmeok.app.domain.auth.service.GoogleOAuthHandoffService;
 import com.jjikmeok.app.domain.auth.service.KakaoOAuthHandoffService;
+import com.jjikmeok.app.domain.auth.service.NaverOAuthHandoffService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class OAuthController {
 
     private final GoogleOAuthHandoffService googleOAuthHandoffService;
     private final KakaoOAuthHandoffService kakaoOAuthHandoffService;
+    private final NaverOAuthHandoffService naverOAuthHandoffService;
 
     @Operation(
             summary = "구글 OAuth 로그인 시작",
@@ -68,6 +70,30 @@ public class OAuthController {
             @RequestParam(required = false) final String error
     ) {
         final URI appDeepLinkUri = kakaoOAuthHandoffService.handleKakaoCallback(code, state, error);
+        return redirect(appDeepLinkUri);
+    }
+
+    @Operation(
+            summary = "네이버 OAuth 로그인 시작",
+            description = "CSRF 방지 state를 생성하고 네이버 OAuth 인증 URL로 리다이렉트합니다."
+    )
+    @GetMapping("/naver/login")
+    public ResponseEntity<Void> naverLogin() {
+        final URI redirectUri = naverOAuthHandoffService.createNaverLoginUri();
+        return redirect(redirectUri);
+    }
+
+    @Operation(
+            summary = "네이버 OAuth 콜백",
+            description = "네이버 인가 코드를 처리하고 handoff 토큰을 포함한 앱 딥링크로 리다이렉트합니다."
+    )
+    @GetMapping("/naver/callback")
+    public ResponseEntity<Void> naverCallback(
+            @RequestParam(required = false) final String code,
+            @RequestParam(required = false) final String state,
+            @RequestParam(required = false) final String error
+    ) {
+        final URI appDeepLinkUri = naverOAuthHandoffService.handleNaverCallback(code, state, error);
         return redirect(appDeepLinkUri);
     }
 

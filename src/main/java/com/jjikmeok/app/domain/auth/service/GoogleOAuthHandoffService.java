@@ -49,8 +49,8 @@ public class GoogleOAuthHandoffService {
 
     @Transactional
     public URI handleGoogleCallback(final String code, final String state, final String error) {
-        validateCallbackError(error);
         validateState(state);
+        validateCallbackError(error);
         validateCode(code);
 
         final GoogleOAuthRes.TokenResponse tokenResponse = googleOAuthClient.getToken(code);

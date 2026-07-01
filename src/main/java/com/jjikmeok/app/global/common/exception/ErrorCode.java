@@ -32,6 +32,7 @@ public enum ErrorCode {
     AUTH_HANDOFF_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "AUTH_401_HANDOFF", "유효하지 않은 handoff token입니다."),
     AUTH_GOOGLE_LOGIN_CANCELLED(HttpStatus.BAD_REQUEST, "AUTH_400_GOOGLE_CANCELLED", "Google 로그인이 취소되었습니다."),
     AUTH_GOOGLE_CALLBACK_FAILED(HttpStatus.BAD_REQUEST, "AUTH_400_GOOGLE_CALLBACK", "Google 로그인 콜백 처리에 실패했습니다."),
+    AUTH_NAVER_CALLBACK_FAILED(HttpStatus.BAD_REQUEST, "AUTH_400_NAVER_CALLBACK", "네이버 로그인 콜백 처리에 실패했습니다."),
     AUTH_SOCIAL_EMAIL_CONFLICT(HttpStatus.CONFLICT, "AUTH_409_SOCIAL_EMAIL_CONFLICT", "이미 이메일 회원가입 또는 다른 소셜 로그인으로 가입된 이메일입니다."),
     SIGNUP_FAILED(HttpStatus.CONFLICT, "AUTH_409_SIGNUP", "회원가입 요청을 처리할 수 없습니다."),
     MAIL_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AUTH_500_MAIL", "인증 메일 발송에 실패했습니다."),

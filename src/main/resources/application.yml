@@ -68,6 +68,14 @@ oauth2:
     token-uri: ${GOOGLE_TOKEN_URI}
     user-info-uri: ${GOOGLE_USERINFO_URI}
     app-deep-link-uri: ${GOOGLE_APP_DEEPLINK_URI}
+  naver:
+    client-id: ${NAVER_CLIENT_ID}
+    client-secret: ${NAVER_CLIENT_SECRET}
+    redirect-uri: ${NAVER_REDIRECT_URI}
+    authorization-uri: ${NAVER_AUTHORIZATION_URI}
+    token-uri: ${NAVER_TOKEN_URI}
+    user-info-uri: ${NAVER_USERINFO_URI}
+    app-deep-link-uri: ${NAVER_APP_DEEPLINK_URI}
 
 jwt:
   secret: ${JWT_SECRET_KEY}

@@ -82,9 +82,7 @@ public class EmailVerificationService {
      * 실패했다면 해당 인증번호를 조건부로 삭제하고 로그를 남긴다 (보상 처리)
      */
     private void deleteIssuedCodeIfCurrent(final String email, final String code, final Throwable throwable) {
-        verificationCodeStore.getCode(email)
-                .filter(code::equals)
-                .ifPresent(currentCode -> verificationCodeStore.deleteCode(email));
+        verificationCodeService.deleteCodeIfCurrent(verificationCodeStore, email, code);
 
         log.warn("이메일 인증번호 메일 발송에 실패했습니다. 현재 발급된 코드와 일치하는 경우 해당 코드를 무효화했습니다. email={}",
                 email,

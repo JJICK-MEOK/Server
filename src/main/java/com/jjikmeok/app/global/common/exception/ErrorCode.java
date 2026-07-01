@@ -35,8 +35,8 @@ public enum ErrorCode {
     AUTH_SOCIAL_EMAIL_CONFLICT(HttpStatus.CONFLICT, "AUTH_409_SOCIAL_EMAIL_CONFLICT", "이미 이메일 회원가입 또는 다른 소셜 로그인으로 가입된 이메일입니다."),
     SIGNUP_FAILED(HttpStatus.CONFLICT, "AUTH_409_SIGNUP", "회원가입 요청을 처리할 수 없습니다."),
     MAIL_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AUTH_500_MAIL", "인증 메일 발송에 실패했습니다."),
-    MAIL_VERIFICATION_CODE_INVALID(HttpStatus.BAD_REQUEST, "AUTH_400_MAIL_CODE", "인증번호가 올바르지 않습니다."),
-    MAIL_VERIFICATION_CODE_EXPIRED(HttpStatus.UNAUTHORIZED, "AUTH_401_MAIL_EXPIRED", "인증번호가 만료되었습니다."),
+    VERIFICATION_CODE_INVALID(HttpStatus.BAD_REQUEST, "AUTH_400_VERIFICATION_CODE", "인증번호가 올바르지 않습니다."),
+    VERIFICATION_CODE_EXPIRED(HttpStatus.UNAUTHORIZED, "AUTH_401_VERIFICATION_CODE_EXPIRED", "인증번호가 만료되었습니다."),
     AUTH_PASSWORD_CONFIRM_MISMATCH(HttpStatus.BAD_REQUEST, "AUTH_400_PASSWORD_CONFIRM", "새 비밀번호와 비밀번호 확인이 일치하지 않습니다."),
 
     // JWT

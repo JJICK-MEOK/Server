@@ -33,10 +33,10 @@ public class VerificationCodeService {
      */
     public void verifyAndConsume(final VerificationCodeStore store, final String key, final String code) {
         final String savedCode = store.getCode(key)
-                .orElseThrow(() -> new CustomException(ErrorCode.MAIL_VERIFICATION_CODE_EXPIRED));
+                .orElseThrow(() -> new CustomException(ErrorCode.VERIFICATION_CODE_EXPIRED));
 
         if (!savedCode.equals(code)) {
-            throw new CustomException(ErrorCode.MAIL_VERIFICATION_CODE_INVALID);
+            throw new CustomException(ErrorCode.VERIFICATION_CODE_INVALID);
         }
 
         store.deleteCode(key);

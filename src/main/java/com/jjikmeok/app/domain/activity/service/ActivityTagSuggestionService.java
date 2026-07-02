@@ -3,8 +3,8 @@ package com.jjikmeok.app.domain.activity.service;
 import com.jjikmeok.app.domain.activity.entity.Activity;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.PreferenceTag;
-import com.jjikmeok.app.domain.activity.enums.PreferenceTagGroup;
 import com.jjikmeok.app.domain.activity.publicactivity.service.ActivitySyncUtils;
+import com.jjikmeok.app.domain.tag.entity.TagGroupType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,21 +53,21 @@ public class ActivityTagSuggestionService {
             LocalDateTime endAt
     ) {
         String normalized = utils.cleanText(text);
-        Map<PreferenceTagGroup, PreferenceTag> selections = new EnumMap<>(PreferenceTagGroup.class);
+        Map<TagGroupType, PreferenceTag> selections = new EnumMap<>(TagGroupType.class);
 
-        selections.put(PreferenceTagGroup.MOOD, chooseMood(normalized, category));
-        selections.put(PreferenceTagGroup.INTENSITY, chooseIntensity(normalized, startAt, endAt));
-        selections.put(PreferenceTagGroup.PURPOSE, choosePurpose(normalized, category));
-        selections.put(PreferenceTagGroup.DURATION, chooseDuration(normalized, startAt, endAt));
-        selections.put(PreferenceTagGroup.SIZE, chooseSize(normalized));
+        selections.put(TagGroupType.MOOD, chooseMood(normalized, category));
+        selections.put(TagGroupType.INTENSITY, chooseIntensity(normalized, startAt, endAt));
+        selections.put(TagGroupType.PURPOSE, choosePurpose(normalized, category));
+        selections.put(TagGroupType.DURATION, chooseDuration(normalized, startAt, endAt));
+        selections.put(TagGroupType.SIZE, chooseSize(normalized));
 
         List<PreferenceTag> tags = new ArrayList<>();
-        for (PreferenceTagGroup group : List.of(
-                PreferenceTagGroup.MOOD,
-                PreferenceTagGroup.INTENSITY,
-                PreferenceTagGroup.PURPOSE,
-                PreferenceTagGroup.DURATION,
-                PreferenceTagGroup.SIZE
+        for (TagGroupType group : List.of(
+                TagGroupType.MOOD,
+                TagGroupType.INTENSITY,
+                TagGroupType.PURPOSE,
+                TagGroupType.DURATION,
+                TagGroupType.SIZE
         )) {
             PreferenceTag tag = selections.get(group);
             if (tag != null && !tags.contains(tag)) {

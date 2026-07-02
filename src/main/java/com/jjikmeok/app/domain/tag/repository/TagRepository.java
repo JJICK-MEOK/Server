@@ -1,6 +1,7 @@
 package com.jjikmeok.app.domain.tag.repository;
 
 import com.jjikmeok.app.domain.tag.entity.Tag;
+import com.jjikmeok.app.domain.tag.entity.TagGroupType;
 import com.jjikmeok.app.domain.tag.entity.TagType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -12,6 +13,10 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
     List<Tag> findAllByOrderByTypeAscNameAsc();
 
     List<Tag> findAllByTypeOrderByNameAsc(TagType type);
+
+    List<Tag> findAllByTagGroupTypeOrderByTypeAscNameAsc(TagGroupType tagGroupType);
+
+    List<Tag> findAllByTypeAndTagGroupTypeOrderByNameAsc(TagType type, TagGroupType tagGroupType);
 
     List<Tag> findAllByIdIn(Collection<Long> ids);
 

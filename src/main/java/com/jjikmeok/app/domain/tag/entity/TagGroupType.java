@@ -1,11 +1,11 @@
-package com.jjikmeok.app.domain.activity.enums;
+package com.jjikmeok.app.domain.tag.entity;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum PreferenceTagGroup {
+public enum TagGroupType {
     MOOD("활동 분위기", "활동에서 느껴지는 전체적인 정서와 무드"),
     INTENSITY("활동 강도", "활동에 필요한 부담감, 몰입도, 도전 정도"),
     PRICE("활동 금액", "활동 참여 비용 여부"),

@@ -7,7 +7,7 @@ import com.jjikmeok.app.domain.auth.client.google.GoogleOAuthClient;
 import com.jjikmeok.app.domain.auth.client.google.GoogleOAuthRes;
 import com.jjikmeok.app.domain.auth.config.GoogleOAuthProperties;
 import com.jjikmeok.app.domain.auth.store.OAuthStateStore;
-import com.jjikmeok.app.domain.auth.token.OAuthTokenGenerator;
+import com.jjikmeok.app.domain.auth.token.SecureTokenGenerator;
 import com.jjikmeok.app.domain.user.entity.AuthProvider;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
@@ -26,11 +26,11 @@ public class GoogleOAuthHandoffService {
     private final GoogleOAuthClient googleOAuthClient;
     private final GoogleOAuthProperties googleOAuthProperties;
     private final OAuthStateStore oAuthStateStore;
-    private final OAuthTokenGenerator oAuthTokenGenerator;
+    private final SecureTokenGenerator secureTokenGenerator;
     private final OAuthHandoffCommonService oAuthHandoffCommonService;
 
     public URI createGoogleLoginUri() {
-        final String state = oAuthTokenGenerator.generateUrlSafeToken(googleOAuthProperties.getStateTokenBytes());
+        final String state = secureTokenGenerator.generateUrlSafeToken(googleOAuthProperties.getStateTokenBytes());
         oAuthStateStore.save(state, googleOAuthProperties.getStateTtl());
 
         log.debug("구글 OAuth 로그인 URL 생성 완료.");

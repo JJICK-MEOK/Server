@@ -6,7 +6,7 @@ import com.jjikmeok.app.domain.auth.client.naver.NaverOAuthClient;
 import com.jjikmeok.app.domain.auth.client.naver.NaverOAuthRes;
 import com.jjikmeok.app.domain.auth.config.NaverOAuthProperties;
 import com.jjikmeok.app.domain.auth.store.OAuthStateStore;
-import com.jjikmeok.app.domain.auth.token.OAuthTokenGenerator;
+import com.jjikmeok.app.domain.auth.token.SecureTokenGenerator;
 import com.jjikmeok.app.domain.user.entity.AuthProvider;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
@@ -25,11 +25,11 @@ public class NaverOAuthHandoffService {
     private final NaverOAuthClient naverOAuthClient;
     private final NaverOAuthProperties naverOAuthProperties;
     private final OAuthStateStore oAuthStateStore;
-    private final OAuthTokenGenerator oAuthTokenGenerator;
+    private final SecureTokenGenerator secureTokenGenerator;
     private final OAuthHandoffCommonService oAuthHandoffCommonService;
 
     public URI createNaverLoginUri() {
-        final String state = oAuthTokenGenerator.generateUrlSafeToken(naverOAuthProperties.getStateTokenBytes());
+        final String state = secureTokenGenerator.generateUrlSafeToken(naverOAuthProperties.getStateTokenBytes());
         oAuthStateStore.save(state, naverOAuthProperties.getStateTtl());
 
         log.debug("네이버 OAuth 로그인 URL 생성 완료.");

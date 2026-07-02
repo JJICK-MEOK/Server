@@ -7,7 +7,7 @@ import com.jjikmeok.app.domain.auth.client.kakao.KakaoOAuthClient;
 import com.jjikmeok.app.domain.auth.client.kakao.KakaoOAuthRes;
 import com.jjikmeok.app.domain.auth.config.KakaoOAuthProperties;
 import com.jjikmeok.app.domain.auth.store.OAuthStateStore;
-import com.jjikmeok.app.domain.auth.token.OAuthTokenGenerator;
+import com.jjikmeok.app.domain.auth.token.SecureTokenGenerator;
 import com.jjikmeok.app.domain.user.entity.AuthProvider;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
@@ -26,11 +26,11 @@ public class KakaoOAuthHandoffService {
     private final KakaoOAuthClient kakaoOAuthClient;
     private final KakaoOAuthProperties kakaoOAuthProperties;
     private final OAuthStateStore oAuthStateStore;
-    private final OAuthTokenGenerator oAuthTokenGenerator;
+    private final SecureTokenGenerator secureTokenGenerator;
     private final OAuthHandoffCommonService oAuthHandoffCommonService;
 
     public URI createKakaoLoginUri() {
-        final String state = oAuthTokenGenerator.generateUrlSafeToken(kakaoOAuthProperties.getStateTokenBytes());
+        final String state = secureTokenGenerator.generateUrlSafeToken(kakaoOAuthProperties.getStateTokenBytes());
         oAuthStateStore.save(state, kakaoOAuthProperties.getStateTtl());
 
         log.debug("카카오 OAuth 로그인 URL 생성 완료.");

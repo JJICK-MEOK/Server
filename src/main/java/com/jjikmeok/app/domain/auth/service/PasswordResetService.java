@@ -4,9 +4,13 @@ import java.time.Duration;
 
 import com.jjikmeok.app.domain.auth.dto.request.PasswordResetReq;
 import com.jjikmeok.app.domain.auth.dto.request.PasswordResetSendReq;
+import com.jjikmeok.app.domain.auth.dto.request.PasswordResetVerifyReq;
 import com.jjikmeok.app.domain.auth.dto.response.PasswordResetRes;
 import com.jjikmeok.app.domain.auth.dto.response.PasswordResetSendRes;
+import com.jjikmeok.app.domain.auth.dto.response.PasswordResetVerifyRes;
 import com.jjikmeok.app.domain.auth.store.RedisPasswordResetCodeStore;
+import com.jjikmeok.app.domain.auth.store.PasswordResetTokenStore;
+import com.jjikmeok.app.domain.auth.token.SecureTokenGenerator;
 import com.jjikmeok.app.domain.user.entity.AuthProvider;
 import com.jjikmeok.app.domain.user.entity.User;
 import com.jjikmeok.app.domain.user.repository.UserRepository;
@@ -27,12 +31,16 @@ import lombok.extern.slf4j.Slf4j;
 public class PasswordResetService {
 
     private static final Duration PASSWORD_RESET_CODE_TTL = Duration.ofMinutes(3);
+    private static final Duration PASSWORD_RESET_TOKEN_TTL = Duration.ofMinutes(5);
+    private static final int PASSWORD_RESET_TOKEN_BYTES = 32;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
     private final RedisPasswordResetCodeStore passwordResetCodeStore;
+    private final PasswordResetTokenStore passwordResetTokenStore;
     private final VerificationCodeService verificationCodeService;
+    private final SecureTokenGenerator secureTokenGenerator;
 
     @Transactional(readOnly = true)
     public PasswordResetSendRes sendResetCode(final PasswordResetSendReq request) {
@@ -48,14 +56,34 @@ public class PasswordResetService {
     }
 
     @Transactional
-    public PasswordResetRes resetPassword(final PasswordResetReq request) {
+    public PasswordResetVerifyRes verifyResetCode(final PasswordResetVerifyReq request) {
         final String email = AuthUtils.normalizeEmail(request.email());
         final User user = validateEmailExists(email);
 
         validateLocalAccount(user, email);
-        validatePasswordConfirm(email, request);
-
         verificationCodeService.verifyAndConsume(passwordResetCodeStore, email, request.code());
+
+        final String resetToken = secureTokenGenerator.generateUrlSafeToken(PASSWORD_RESET_TOKEN_BYTES);
+        passwordResetTokenStore.save(resetToken, email, PASSWORD_RESET_TOKEN_TTL);
+
+        log.debug("비밀번호 재설정 인증번호 검증 완료. resetToken 발급 완료. email={}, userId={}", email, user.getId());
+
+        return new PasswordResetVerifyRes(email, resetToken, (int) PASSWORD_RESET_TOKEN_TTL.toSeconds());
+    }
+
+    @Transactional
+    public PasswordResetRes resetPassword(final PasswordResetReq request) {
+        validatePasswordConfirm(request);
+
+        final String email = passwordResetTokenStore.consume(request.resetToken())
+                .orElseThrow(() -> {
+                    log.warn("비밀번호 재설정 요청 실패 - resetToken이 유효하지 않거나 만료되었습니다.");
+                    return new CustomException(ErrorCode.AUTH_PASSWORD_RESET_TOKEN_INVALID);
+                });
+        final User user = validateEmailExists(email);
+
+        validateLocalAccount(user, email);
+
         user.changePassword(passwordEncoder.encode(request.newPassword()));
 
         log.debug("비밀번호 재설정 완료. email={}, userId={}", email, user.getId());
@@ -84,9 +112,9 @@ public class PasswordResetService {
     /**
      * 비밀번호와 비밀번호 확인이 일치하는지 검증
      */
-    private void validatePasswordConfirm(final String email, final PasswordResetReq request) {
+    private void validatePasswordConfirm(final PasswordResetReq request) {
         if (!request.newPassword().equals(request.newPasswordConfirm())) {
-            log.warn("비밀번호 재설정 요청 실패 - 새 비밀번호와 확인 값이 일치하지 않습니다. email={}", email);
+            log.warn("비밀번호 재설정 요청 실패 - 새 비밀번호와 확인 값이 일치하지 않습니다.");
             throw new CustomException(ErrorCode.AUTH_PASSWORD_CONFIRM_MISMATCH);
         }
     }

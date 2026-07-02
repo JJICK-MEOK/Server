@@ -1,11 +1,20 @@
 package com.jjikmeok.app.domain.personalization.service;
 
+import com.jjikmeok.app.domain.personalization.dto.ActivityRecommendationResponse;
 import com.jjikmeok.app.domain.personalization.dto.PersonalizationResponse;
 import com.jjikmeok.app.domain.personalization.repository.PersonalizationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,43 +39,19 @@ public class PersonlizationService {
                 .filter(Objects::nonNull)
                 .map(tag -> tag.replace("#", "").trim())
                 .filter(tag -> !tag.isBlank())
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
 
         if (userTagSet.isEmpty()) {
             return new PersonalizationResponse("분류 불가", pickRandomDisplayTags(userTags));
         }
 
         Map<String, List<String>> typeTags = new LinkedHashMap<>();
-
-        typeTags.put("우선 한입만 먹어보는 형",
-                List.of("입문", "가볍게", "단기", "취미"));
-
-        typeTags.put("부담 없는 것부터 고르는 형",
-                List.of("편안한", "힐링", "휴식", "가볍게", "단기"));
-
-        typeTags.put("천천히 음미하는 형",
-                List.of("편안한", "감성적", "취미", "배움", "한달"));
-
-        typeTags.put("제대로 맛보고 싶은 형",
-                List.of("몰입", "도전", "배움", "성장", "한달"));
-
-        typeTags.put("여러 가지 취향껏 골라먹는 형",
-                List.of("활기찬", "트렌디", "취미", "입문", "가볍게", "단기"));
-
-        typeTags.put("같이 먹어야 더 맛있는 형",
-                List.of("활기찬", "취미", "소규모", "대규모"));
-
-        typeTags.put("꽂히면 계속 먹는 형",
-                List.of("몰입", "취미", "성장", "한달", "6개월"));
-
-        typeTags.put("새로운 맛에 끌리는 형",
-                List.of("활기찬", "트렌디", "도전", "입문", "가볍게", "단기"));
-
-        typeTags.put("스테디한 맛을 좋아하는 형",
-                List.of("편안한", "휴식", "취미", "가볍게", "6개월"));
-
-        typeTags.put("끝까지 맛보는 형",
-                List.of("몰입", "도전", "배움", "성장", "6개월", "1년이상"));
+        typeTags.put("편안하게 쉬는 타입", List.of("편안한", "힐링", "휴식", "가볍게", "단기"));
+        typeTags.put("감성 충전 타입", List.of("감성적", "창의적", "취미", "배움", "한달"));
+        typeTags.put("배움 성장 타입", List.of("입문", "몰입", "배움", "성장", "한달"));
+        typeTags.put("활기 도전 타입", List.of("활기찬", "트렌디", "도전", "입문", "단기"));
+        typeTags.put("소규모 몰입 타입", List.of("몰입", "가볍게", "소규모", "단기"));
+        typeTags.put("대규모 트렌드 타입", List.of("활기찬", "트렌디", "대규모", "취미"));
 
         String bestType = "분류 불가";
         long bestMatchCount = 0;
@@ -93,5 +78,13 @@ public class PersonlizationService {
         List<String> shuffledTags = new ArrayList<>(userTags);
         Collections.shuffle(shuffledTags);
         return shuffledTags.subList(0, DISPLAY_TAG_LIMIT);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ActivityRecommendationResponse> getRecommendedActivities(Long userId) {
+        return personalizationRepository.findRecommendedActivitiesByUserId(userId)
+                .stream()
+                .map(ActivityRecommendationResponse::from)
+                .toList();
     }
 }

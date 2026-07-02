@@ -1,15 +1,13 @@
 package com.jjikmeok.app.domain.auth.controller;
 
+import com.jjikmeok.app.domain.auth.dto.request.HandoffTokenReq;
 import com.jjikmeok.app.domain.auth.dto.request.LoginReq;
 import com.jjikmeok.app.domain.auth.dto.request.ReissueReq;
-import com.jjikmeok.app.domain.auth.dto.request.SocialLoginReq;
 import com.jjikmeok.app.domain.auth.dto.request.SignupReq;
 import com.jjikmeok.app.domain.auth.dto.response.LoginRes;
 import com.jjikmeok.app.domain.auth.dto.response.ReissueRes;
 import com.jjikmeok.app.domain.auth.dto.response.SignupRes;
 import com.jjikmeok.app.domain.auth.service.AuthService;
-import com.jjikmeok.app.domain.auth.service.GoogleAuthService;
-import com.jjikmeok.app.domain.auth.service.KakaoAuthService;
 import com.jjikmeok.app.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,12 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/auth")
-@Tag(name = "Auth", description = "인증 관련 API")
+@Tag(name = "인증", description = "인증 관련 API")
 public class AuthController {
 
     private final AuthService authService;
-    private final GoogleAuthService googleAuthService;
-    private final KakaoAuthService kakaoAuthService;
 
     @Operation(
             summary = "회원가입",
@@ -42,7 +38,7 @@ public class AuthController {
 
     @Operation(
             summary = "로그인",
-            description = "이메일과 비밀번호로 로그인하고 access token과 refresh token을 발급합니다."
+            description = "로컬 계정을 인증하고 액세스 토큰과 리프레시 토큰을 발급합니다."
     )
     @PostMapping("/login")
     public ApiResponse<LoginRes> login(@Valid @RequestBody final LoginReq request) {
@@ -52,7 +48,7 @@ public class AuthController {
 
     @Operation(
             summary = "토큰 재발급",
-            description = "Request Body의 Refresh Token을 검증한 뒤 Access Token과 Refresh Token을 재발급합니다."
+            description = "리프레시 토큰을 검증하고 액세스 토큰과 리프레시 토큰을 재발급합니다."
     )
     @PostMapping("/reissue")
     public ApiResponse<ReissueRes> reissue(@Valid @RequestBody final ReissueReq request) {
@@ -61,22 +57,12 @@ public class AuthController {
     }
 
     @Operation(
-            summary = "구글 로그인",
-            description = "구글 인가 코드를 받아 소셜 로그인 후 access token과 refresh token을 발급합니다."
+            summary = "Handoff 토큰 교환",
+            description = "1회용 handoff 토큰을 소비하고 서비스 액세스 토큰과 리프레시 토큰을 발급합니다."
     )
-    @PostMapping("/google/login")
-    public ApiResponse<LoginRes> googleLogin(@Valid @RequestBody final SocialLoginReq request) {
-        final LoginRes response = googleAuthService.googleLogin(request.code());
-        return ApiResponse.success(response);
-    }
-
-    @Operation(
-            summary = "카카오 로그인",
-            description = "카카오 인가 코드를 받아 소셜 로그인 후 access token과 refresh token을 발급합니다."
-    )
-    @PostMapping("/kakao/login")
-    public ApiResponse<LoginRes> kakaoLogin(@Valid @RequestBody final SocialLoginReq request) {
-        final LoginRes response = kakaoAuthService.kakaoLogin(request.code());
+    @PostMapping("/handoff")
+    public ApiResponse<LoginRes> exchangeHandoffToken(@Valid @RequestBody final HandoffTokenReq request) {
+        final LoginRes response = authService.exchangeHandoffToken(request.handoffToken());
         return ApiResponse.success(response);
     }
 }

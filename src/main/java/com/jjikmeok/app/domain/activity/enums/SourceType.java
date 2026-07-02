@@ -1,12 +1,19 @@
 package com.jjikmeok.app.domain.activity.enums;
 
 public enum SourceType {
-    TOUR_API,
     KOPIS,
     EXHIBITION,
-    VOLUNTEER_1365,
-    YOUTH_CONTENT,
     SEOUL_CULTURE,
     SEOUL_RESERVATION,
+    DISCOVERY,
     URL_MANUAL
+
+    ;
+
+    public boolean isPublicApiSource() {
+        return this == KOPIS
+                || this == EXHIBITION
+                || this == SEOUL_CULTURE
+                || this == SEOUL_RESERVATION;
+    }
 }

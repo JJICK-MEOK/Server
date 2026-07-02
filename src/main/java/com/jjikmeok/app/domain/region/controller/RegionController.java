@@ -94,7 +94,7 @@ public class RegionController {
             @RequestBody @Valid RegionRequest request) {
 
         RegionResponse response = regionService.createRegion(request);
-        return ApiResponse.success("지역 생성 성공", response);
+        return ApiResponse.created("지역 생성 성공", response);
     }
 
     @Operation(summary = "지역 수정 (관리자)", description = "특정 지역 정보를 수정합니다.")

@@ -46,3 +46,4 @@ out/
 
 ### Setting ###
 .env
+/secrets

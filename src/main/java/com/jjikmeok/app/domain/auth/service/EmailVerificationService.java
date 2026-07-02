@@ -1,20 +1,19 @@
 package com.jjikmeok.app.domain.auth.service;
 
-import java.security.SecureRandom;
 import java.time.Duration;
 
+import com.jjikmeok.app.domain.auth.dto.request.EmailVerificationSendReq;
 import com.jjikmeok.app.domain.auth.dto.request.EmailVerificationVerifyReq;
 import com.jjikmeok.app.domain.auth.dto.response.EmailVerificationSendRes;
 import com.jjikmeok.app.domain.auth.dto.response.EmailVerificationVerifyRes;
-import com.jjikmeok.app.domain.auth.store.VerificationCodeStore;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import com.jjikmeok.app.domain.auth.dto.request.EmailVerificationSendReq;
+import com.jjikmeok.app.domain.auth.store.RedisVerificationCodeStore;
 import com.jjikmeok.app.domain.user.repository.UserRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
 import com.jjikmeok.app.global.infra.mail.MailService;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,53 +24,32 @@ import lombok.extern.slf4j.Slf4j;
 public class EmailVerificationService {
 
     private static final Duration VERIFICATION_CODE_TTL = Duration.ofMinutes(3);
-    private static final int VERIFICATION_CODE_BOUND = 1_000_000;
 
-    private final VerificationCodeStore verificationCodeStore;
+    private final RedisVerificationCodeStore verificationCodeStore;
     private final UserRepository userRepository;
     private final MailService mailService;
-    private final SecureRandom secureRandom = new SecureRandom();
+    private final VerificationCodeService verificationCodeService;
 
     @Transactional(readOnly = true)
     public EmailVerificationSendRes sendVerificationCode(final EmailVerificationSendReq request) {
-        final String email = request.email();
+        final String email = AuthUtils.normalizeEmail(request.email());
 
         validateEmailNotExists(email);
+        sendVerificationCodeMail(email);
 
-        final String code = generateVerificationCode();
-        verificationCodeStore.saveCode(email, code, VERIFICATION_CODE_TTL);
+        log.debug("이메일 인증번호 발송 요청 완료. email={}", email);
 
-        final String html = buildVerificationMailHtml(code);
-
-        mailService.sendHtml(
-                email,
-                "[찍먹] 이메일 인증번호 안내",
-                html
-        );
-
-        log.info("이메일 인증번호 발송 요청 완료. email={}", email);
-
-        return new EmailVerificationSendRes(
-                email,
-                (int) VERIFICATION_CODE_TTL.toSeconds()
-        );
+        return new EmailVerificationSendRes(email, (int) VERIFICATION_CODE_TTL.toSeconds());
     }
 
     @Transactional
     public EmailVerificationVerifyRes verifyVerificationCode(final EmailVerificationVerifyReq request) {
-        final String email = request.email();
+        final String email = AuthUtils.normalizeEmail(request.email());
 
         validateEmailNotExists(email);
+        verificationCodeService.verifyAndConsume(verificationCodeStore, email, request.code());
 
-        final String savedCode = verificationCodeStore.getCode(email)
-                .orElseThrow(() -> new CustomException(ErrorCode.MAIL_VERIFICATION_CODE_EXPIRED));
-
-        if (!savedCode.equals(request.code())) {
-            throw new CustomException(ErrorCode.MAIL_VERIFICATION_CODE_INVALID);
-        }
-
-        verificationCodeStore.deleteCode(email);
-        log.info("이메일 인증번호 검증 완료. email={}", email);
+        log.debug("이메일 인증번호 검증 완료. email={}", email);
 
         return new EmailVerificationVerifyRes(email, true);
     }
@@ -82,11 +60,37 @@ public class EmailVerificationService {
         }
     }
 
-    private String generateVerificationCode() {
-        return String.format("%06d", secureRandom.nextInt(VERIFICATION_CODE_BOUND));
+    private void sendVerificationCodeMail(final String email) {
+        final String code = verificationCodeService.issueCode(
+                verificationCodeStore,
+                email,
+                VERIFICATION_CODE_TTL
+        );
+
+        mailService.sendHtml(
+                email,
+                "[찍먹] 이메일 인증번호 안내",
+                buildVerificationMailHtml(code)
+        ).whenComplete((unused, throwable) -> {
+            if (throwable != null) {
+                deleteIssuedCodeIfCurrent(email, code, throwable);
+            }
+        });
+    }
+
+    /**
+     * 실패했다면 해당 인증번호를 조건부로 삭제하고 로그를 남긴다 (보상 처리)
+     */
+    private void deleteIssuedCodeIfCurrent(final String email, final String code, final Throwable throwable) {
+        verificationCodeService.deleteCodeIfCurrent(verificationCodeStore, email, code);
+
+        log.warn("이메일 인증번호 메일 발송에 실패했습니다. 현재 발급된 코드와 일치하는 경우 해당 코드를 무효화했습니다. email={}",
+                email,
+                throwable);
     }
 
     private String buildVerificationMailHtml(final String code) {
+        final long ttlMinutes = VERIFICATION_CODE_TTL.toMinutes();
         return """
                 <div style="font-family: Arial, sans-serif; line-height: 1.6;">
                     <h2>찍먹 이메일 인증번호</h2>
@@ -94,9 +98,9 @@ public class EmailVerificationService {
                     <div style="font-size: 24px; font-weight: bold; letter-spacing: 4px; margin: 20px 0;">
                         %s
                     </div>
-                    <p>본 인증번호는 3분간 유효합니다.</p>
+                    <p>본 인증번호는 %d분간 유효합니다.</p>
                     <p>요청하지 않았다면 본 메일을 무시해주세요.</p>
                 </div>
-                """.formatted(code);
+                """.formatted(code, ttlMinutes);
     }
 }

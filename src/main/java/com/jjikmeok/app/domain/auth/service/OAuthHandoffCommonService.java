@@ -5,7 +5,7 @@ import java.time.Instant;
 
 import com.jjikmeok.app.domain.auth.store.HandoffTokenStore;
 import com.jjikmeok.app.domain.auth.token.HandoffTokenEntry;
-import com.jjikmeok.app.domain.auth.token.OAuthTokenGenerator;
+import com.jjikmeok.app.domain.auth.token.SecureTokenGenerator;
 import com.jjikmeok.app.domain.user.entity.AuthProvider;
 import com.jjikmeok.app.domain.user.entity.User;
 import com.jjikmeok.app.domain.user.repository.UserRepository;
@@ -25,7 +25,7 @@ public class OAuthHandoffCommonService {
 
     private final UserRepository userRepository;
     private final HandoffTokenStore handoffTokenStore;
-    private final OAuthTokenGenerator oAuthTokenGenerator;
+    private final SecureTokenGenerator secureTokenGenerator;
 
     @Transactional
     public OAuthUserResult findOrCreateUser(
@@ -49,7 +49,7 @@ public class OAuthHandoffCommonService {
             final int handoffTokenBytes,
             final Duration handoffTtl
     ) {
-        final String handoffToken = oAuthTokenGenerator.generateUrlSafeToken(handoffTokenBytes);
+        final String handoffToken = secureTokenGenerator.generateUrlSafeToken(handoffTokenBytes);
         final HandoffTokenEntry entry = new HandoffTokenEntry(
                 userResult.user().getId(),
                 userResult.newMember(),
@@ -96,6 +96,12 @@ public class OAuthHandoffCommonService {
         }
     }
 
+    /**
+     *  동일한 provider/providerId 계정이 이미 생성되어 있는지 확인한다.
+     *  이미 생성된 계정이 있으면 회원가입 경합 상황으로 판단하고 기존 User를 반환한다.
+     *  기존 provider 계정이 없고 이메일이 중복된 경우, 소셜 이메일 충돌 예외를 발생.
+     *  providerId 중복이나 이메일 중복이 아닌 다른 DB 제약조건 위반이면 원본 예외를 다시 던진다.
+     */
     private User resolveSaveConflict(
             final AuthProvider provider,
             final String providerId,

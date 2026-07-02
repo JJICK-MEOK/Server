@@ -9,7 +9,7 @@ import com.jjikmeok.app.domain.auth.dto.response.PasswordResetRes;
 import com.jjikmeok.app.domain.auth.dto.response.PasswordResetSendRes;
 import com.jjikmeok.app.domain.auth.dto.response.PasswordResetVerifyRes;
 import com.jjikmeok.app.domain.auth.store.RedisPasswordResetCodeStore;
-import com.jjikmeok.app.domain.auth.store.RedisPasswordResetTokenStore;
+import com.jjikmeok.app.domain.auth.store.PasswordResetTokenStore;
 import com.jjikmeok.app.domain.auth.token.SecureTokenGenerator;
 import com.jjikmeok.app.domain.user.entity.AuthProvider;
 import com.jjikmeok.app.domain.user.entity.User;
@@ -38,7 +38,7 @@ public class PasswordResetService {
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
     private final RedisPasswordResetCodeStore passwordResetCodeStore;
-    private final RedisPasswordResetTokenStore passwordResetTokenStore;
+    private final PasswordResetTokenStore passwordResetTokenStore;
     private final VerificationCodeService verificationCodeService;
     private final SecureTokenGenerator secureTokenGenerator;
 

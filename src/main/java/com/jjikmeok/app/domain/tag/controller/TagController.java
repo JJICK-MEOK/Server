@@ -65,7 +65,7 @@ public class TagController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<TagRegisterRes> createTag(@RequestBody @Valid TagRegisterReq request) {
-        return ApiResponse.success("태그 생성 성공", tagService.createTag(request));
+        return ApiResponse.created("태그 생성 성공", tagService.createTag(request));
     }
 
     @Operation(summary = "태그 수정")

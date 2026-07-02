@@ -29,15 +29,29 @@ public class Tag extends BaseEntity {
     @Column(nullable = false, length = 50)
     private TagType type;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tag_group_type", length = 50)
+    private TagGroupType tagGroupType;
+
     public static Tag create(String name, TagType type) {
+        return create(name, type, null);
+    }
+
+    public static Tag create(String name, TagType type, TagGroupType tagGroupType) {
         Tag tag = new Tag();
         tag.name = name;
         tag.type = type;
+        tag.tagGroupType = tagGroupType;
         return tag;
     }
 
     public void update(String name, TagType type) {
+        update(name, type, null);
+    }
+
+    public void update(String name, TagType type, TagGroupType tagGroupType) {
         this.name = name;
         this.type = type;
+        this.tagGroupType = tagGroupType;
     }
 }

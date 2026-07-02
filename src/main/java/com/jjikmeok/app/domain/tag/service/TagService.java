@@ -1,23 +1,26 @@
 package com.jjikmeok.app.domain.tag.service;
 
-import com.jjikmeok.app.domain.tag.dto.request.TagRequest;
-import com.jjikmeok.app.domain.tag.dto.response.PreferenceTagGroupResponse;
-import com.jjikmeok.app.domain.tag.dto.response.TagResponse;
+import com.jjikmeok.app.domain.tag.dto.request.TagDetailReq;
+import com.jjikmeok.app.domain.tag.dto.request.TagRegisterReq;
+import com.jjikmeok.app.domain.tag.dto.request.TagUpdateReq;
+import com.jjikmeok.app.domain.tag.dto.response.TagDetailRes;
+import com.jjikmeok.app.domain.tag.dto.response.TagListRes;
+import com.jjikmeok.app.domain.tag.dto.response.TagRegisterRes;
+import com.jjikmeok.app.domain.tag.dto.response.TagUpdateRes;
+import com.jjikmeok.app.domain.tag.entity.TagGroupType;
 import com.jjikmeok.app.domain.tag.entity.TagType;
 
 import java.util.List;
 
 public interface TagService {
 
-    List<TagResponse> getTags(TagType type);
+    List<TagListRes> getTags(TagType tagType, TagGroupType tagGroupType);
 
-    List<PreferenceTagGroupResponse> getPreferenceTagGroups();
+    TagDetailRes getTag(TagDetailReq request);
 
-    TagResponse getTag(Long id);
+    TagRegisterRes createTag(TagRegisterReq request);
 
-    TagResponse createTag(TagRequest request);
-
-    TagResponse updateTag(Long id, TagRequest request);
+    TagUpdateRes updateTag(Long id, TagUpdateReq request);
 
     void deleteTag(Long id);
 }

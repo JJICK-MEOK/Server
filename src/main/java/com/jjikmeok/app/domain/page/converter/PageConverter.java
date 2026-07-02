@@ -3,11 +3,11 @@ package com.jjikmeok.app.domain.page.converter;
 import com.jjikmeok.app.domain.activity.entity.Activity;
 import com.jjikmeok.app.domain.activity.entity.ActivityTag;
 import com.jjikmeok.app.domain.activity.enums.PreferenceTag;
-import com.jjikmeok.app.domain.activity.enums.PreferenceTagGroup;
 import com.jjikmeok.app.domain.image.entity.Image;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCardResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ImageItemResponse;
+import com.jjikmeok.app.domain.tag.entity.TagGroupType;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -15,7 +15,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -107,7 +106,7 @@ public final class PageConverter {
     }
 
     private static List<String> tagCandidates(Activity activity) {
-        Map<PreferenceTagGroup, List<String>> tagsByGroup = new EnumMap<>(PreferenceTagGroup.class);
+        Map<TagGroupType, List<String>> tagsByGroup = new EnumMap<>(TagGroupType.class);
         for (ActivityTag activityTag : activity.getTags()) {
             if (activityTag.getTag() == null) {
                 continue;
@@ -123,15 +122,15 @@ public final class PageConverter {
         }
 
         List<String> candidates = new ArrayList<>();
-        addOne(candidates, tagsByGroup, PreferenceTagGroup.MOOD);
-        addOne(candidates, tagsByGroup, PreferenceTagGroup.INTENSITY);
-        addOne(candidates, tagsByGroup, PreferenceTagGroup.PURPOSE);
-        addOne(candidates, tagsByGroup, PreferenceTagGroup.DURATION);
-        addOne(candidates, tagsByGroup, PreferenceTagGroup.SIZE);
+        addOne(candidates, tagsByGroup, TagGroupType.MOOD);
+        addOne(candidates, tagsByGroup, TagGroupType.INTENSITY);
+        addOne(candidates, tagsByGroup, TagGroupType.PURPOSE);
+        addOne(candidates, tagsByGroup, TagGroupType.DURATION);
+        addOne(candidates, tagsByGroup, TagGroupType.SIZE);
         return candidates;
     }
 
-    private static void addOne(List<String> candidates, Map<PreferenceTagGroup, List<String>> tagsByGroup, PreferenceTagGroup group) {
+    private static void addOne(List<String> candidates, Map<TagGroupType, List<String>> tagsByGroup, TagGroupType group) {
         List<String> values = tagsByGroup.getOrDefault(group, List.of()).stream()
                 .filter(value -> value != null && !value.isBlank())
                 .distinct()

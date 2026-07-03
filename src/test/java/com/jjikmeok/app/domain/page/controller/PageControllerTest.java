@@ -11,6 +11,7 @@ import com.jjikmeok.app.domain.page.dto.response.ActivityCardResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCategoryPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCustomPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityFavoritePageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityFilterOptionResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomePageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ImageItemResponse;
@@ -107,6 +108,30 @@ class PageControllerTest {
     }
 
     @Test
+    void getFavoritePage_returnsFavoriteCards() throws Exception {
+        when(pageService.getFavoritePage(null, "saved")).thenReturn(favoritePageResponse());
+
+        mockMvc.perform(get("/api/v1/pages/favorites").param("sort", "saved"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("찜한 활동 페이지 조회 성공"))
+                .andExpect(jsonPath("$.data.activities[0].id").value(1L))
+                .andExpect(jsonPath("$.data.activities[0].liked").value(true));
+
+        verify(pageService).getFavoritePage(null, "saved");
+    }
+
+    @Test
+    void getFavoritePage_passesDeadlineSort() throws Exception {
+        when(pageService.getFavoritePage(null, "deadline")).thenReturn(favoritePageResponse());
+
+        mockMvc.perform(get("/api/v1/pages/favorites").param("sort", "deadline"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.activities[0].liked").value(true));
+
+        verify(pageService).getFavoritePage(null, "deadline");
+    }
+
+    @Test
     void getDetailPage_returnsDisplayFields() throws Exception {
         when(pageService.getDetailPage(null, 1L)).thenReturn(detailPageResponse());
 
@@ -173,6 +198,10 @@ class PageControllerTest {
         );
     }
 
+    private ActivityFavoritePageResponse favoritePageResponse() {
+        return new ActivityFavoritePageResponse(List.of(favoriteCard()));
+    }
+
     private ActivityDetailPageResponse detailPageResponse() {
         return new ActivityDetailPageResponse(
                 1L,
@@ -227,6 +256,31 @@ class PageControllerTest {
                 2,
                 3,
                 false,
+                BASE_TIME.plusDays(4),
+                BASE_TIME.plusDays(4),
+                BASE_TIME,
+                BASE_TIME.plusDays(3)
+        );
+    }
+
+    private ActivityCardResponse favoriteCard() {
+        return new ActivityCardResponse(
+                1L,
+                "테스트 활동",
+                "https://example.com/thumb.png",
+                3,
+                10L,
+                "서울",
+                "서울",
+                ActivityType.PROGRAM,
+                ActivityCategory.CRAFT,
+                List.of("#공예 / 만들기", "#프로그램"),
+                false,
+                0,
+                1,
+                2,
+                3,
+                true,
                 BASE_TIME.plusDays(4),
                 BASE_TIME.plusDays(4),
                 BASE_TIME,

@@ -5,6 +5,7 @@ import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
+import com.jjikmeok.app.domain.favorite.entity.Favorite;
 import com.jjikmeok.app.domain.favorite.repository.FavoriteRepository;
 import com.jjikmeok.app.domain.image.entity.Image;
 import com.jjikmeok.app.domain.image.repository.ImageRepository;
@@ -13,6 +14,7 @@ import com.jjikmeok.app.domain.page.dto.response.ActivityCardResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCategoryPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCustomPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityFavoritePageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityFilterOptionResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomePageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivitySectionResponse;
@@ -130,6 +132,16 @@ public class PageServiceImpl implements PageService {
     }
 
     @Override
+    public ActivityFavoritePageResponse getFavoritePage(Long userId, String sort) {
+
+        String selectedSort = normalizeFavoriteSort(sort);
+        LocalDateTime now = LocalDate.now(SEOUL).atStartOfDay();
+        List<Activity> activities = favoritePageActivities(userId, selectedSort, now);
+
+        return new ActivityFavoritePageResponse(favoriteCards(activities));
+    }
+
+    @Override
     @Transactional
     public ActivityDetailPageResponse getDetailPage(Long userId, Long activityId) {
         LocalDateTime recruitCutoff = LocalDate.now(SEOUL).atStartOfDay();
@@ -198,6 +210,26 @@ public class PageServiceImpl implements PageService {
                 .toList();
     }
 
+    /**
+     * 찜 엔티티 목록에서 실제 활동 엔티티 목록만 뽑아내기 위한 변환 코드
+     */
+    private List<Activity> favoritePageActivities(Long userId, String sort, LocalDateTime now) {
+        List<Favorite> favorites = "deadline".equals(sort)
+                ? favoriteRepository.findPageFavoritesOrderByDeadlineAsc(userId, PUBLIC_STATUS, now) //deadline == sort
+                : favoriteRepository.findPageFavoritesOrderBySavedDesc(userId, PUBLIC_STATUS, now); //deadline != sort
+
+        return favorites.stream()
+                .map(Favorite::getActivity)
+                .toList();
+    }
+
+    private List<ActivityCardResponse> favoriteCards(List<Activity> activities) {
+        LocalDate today = LocalDate.now(SEOUL);
+        return distinct(activities).stream()
+                .map(activity -> PageConverter.toCard(activity, true, false, today))
+                .toList();
+    }
+
     private Set<Long> adActivityIds(List<Activity> activities) {
         List<Activity> ranked = activities.stream()
                 .sorted(Comparator
@@ -260,6 +292,18 @@ public class PageServiceImpl implements PageService {
         return switch (value) {
             case "deadline", "popular" -> value;
             default -> "recommended";
+        };
+    }
+
+    private String normalizeFavoriteSort(String sort) {
+        if (sort == null || sort.isBlank()) {
+            return "saved";
+        }
+
+        String value = sort.trim().toLowerCase(Locale.ROOT);
+        return switch (value) {
+            case "deadline" -> "deadline";
+            default -> "saved";
         };
     }
 

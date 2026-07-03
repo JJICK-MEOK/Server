@@ -5,12 +5,14 @@ import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCategoryPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCustomPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityFavoritePageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomePageResponse;
 import com.jjikmeok.app.domain.page.service.PageService;
 import com.jjikmeok.app.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -62,6 +64,17 @@ public class PageController {
             @RequestParam(value = "limit", required = false) Integer limit
     ) {
         return ApiResponse.success("맞춤 페이지 조회 성공", pageService.getCustomPage(userId, limit));
+    }
+
+    // TODO: 무한스크롤 커서 기반 pagination 적용 필요 (상의후)
+    @Operation(summary = "찜한 활동 화면 데이터 조회", description = "로그인 사용자의 찜한 활동을 카드 화면 데이터로 조회합니다.")
+    @GetMapping("/favorites")
+    public ApiResponse<ActivityFavoritePageResponse> getFavoritePage(
+            @AuthenticationPrincipal Long userId,
+            @Parameter(description = "정렬 기준: saved(저장순, 기본값), deadline(마감순)", example = "saved")
+            @RequestParam(value = "sort", required = false, defaultValue = "saved") String sort
+    ) {
+        return ApiResponse.success("찜한 활동 페이지 조회 성공", pageService.getFavoritePage(userId, sort));
     }
 
     @Operation(summary = "상세 화면 활동 데이터 조회", description = "상세 화면에 표시할 활동 정보, 이미지, 찜 여부를 조회합니다.")

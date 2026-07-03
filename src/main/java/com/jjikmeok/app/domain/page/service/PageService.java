@@ -2,6 +2,7 @@ package com.jjikmeok.app.domain.page.service;
 
 import com.jjikmeok.app.domain.page.dto.response.ActivityCategoryPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCustomPageResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityFavoritePageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomePageResponse;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
@@ -20,6 +21,8 @@ public interface PageService {
     );
 
     ActivityCustomPageResponse getCustomPage(Long userId, Integer limit);
+
+    ActivityFavoritePageResponse getFavoritePage(Long userId, String sort);
 
     ActivityDetailPageResponse getDetailPage(Long userId, Long activityId);
 }

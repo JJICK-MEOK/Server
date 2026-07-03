@@ -20,7 +20,14 @@ public record ActivityRecommendationResponse(
                 projection.getActivityRecruitEndAt(),
                 projection.getActivityFavoriteId(),
                 projection.getActivityFavoriteCount() == null ? 0 : projection.getActivityFavoriteCount(),
-                projection.getRecommendScore() == null ? 0 : projection.getRecommendScore()
+                toInt(projection.getRecommendScore())
         );
+    }
+
+    private static int toInt(Long value) {
+        if (value == null) {
+            return 0;
+        }
+        return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : value.intValue();
     }
 }

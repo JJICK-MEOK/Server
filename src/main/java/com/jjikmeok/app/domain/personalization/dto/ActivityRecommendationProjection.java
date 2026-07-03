@@ -16,5 +16,5 @@ public interface ActivityRecommendationProjection {
 
     Integer getActivityFavoriteCount();
 
-    Integer getRecommendScore();
+    Long getRecommendScore();
 }

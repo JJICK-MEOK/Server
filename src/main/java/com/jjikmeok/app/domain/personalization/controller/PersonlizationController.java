@@ -19,7 +19,7 @@ import java.util.List;
 @Tag(name = "Personalization", description = "개인화 추천 관련 API")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/personalization")
+@RequestMapping({"/api/v1/personalization", "/api/v1/personlization"})
 public class PersonlizationController {
 
     private final PersonlizationService personlizationService;
@@ -50,7 +50,7 @@ public class PersonlizationController {
             summary = "개인화 활동 조회",
             description = "인증된 사용자를 기준으로 가장 적합한 활동을 조회합니다."
     )
-    @GetMapping("/users/me/personlization-activities")
+    @GetMapping({"/users/me/personlization-activities", "/users/me/personalization-activities"})
     public ApiResponse<List<ActivityRecommendationResponse>> getPersonlizedActivity(
             @Parameter(hidden = true)
             @AuthenticationPrincipal Long userId

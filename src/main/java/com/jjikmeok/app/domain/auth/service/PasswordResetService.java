@@ -83,6 +83,7 @@ public class PasswordResetService {
         final User user = validateEmailExists(email);
 
         validateLocalAccount(user, email);
+        validateNewPasswordIsDifferent(request.newPassword(), user);
 
         user.changePassword(passwordEncoder.encode(request.newPassword()));
 
@@ -116,6 +117,16 @@ public class PasswordResetService {
         if (!request.newPassword().equals(request.newPasswordConfirm())) {
             log.warn("비밀번호 재설정 요청 실패 - 새 비밀번호와 확인 값이 일치하지 않습니다.");
             throw new CustomException(ErrorCode.AUTH_PASSWORD_CONFIRM_MISMATCH);
+        }
+    }
+
+    /**
+     * 새 비밀번호가 기존 비밀번호와 동일한지 검증
+     */
+    private void validateNewPasswordIsDifferent(final String newPassword, final User user) {
+        if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
+            log.warn("비밀번호 재설정 요청 실패 - 새 비밀번호가 기존 비밀번호와 동일합니다. userId={}", user.getId());
+            throw new CustomException(ErrorCode.PASSWORD_SAME_AS_OLD);
         }
     }
 

@@ -6,13 +6,17 @@ import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
 import com.jjikmeok.app.domain.activity.enums.SourceType;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
+import com.jjikmeok.app.domain.favorite.entity.Favorite;
 import com.jjikmeok.app.domain.image.repository.ImageRepository;
 import com.jjikmeok.app.domain.favorite.repository.FavoriteRepository;
 import com.jjikmeok.app.domain.region.entity.Region;
 import com.jjikmeok.app.domain.region.enums.RegionDepth;
+import com.jjikmeok.app.domain.user.entity.User;
 import com.jjikmeok.app.domain.user.repository.UserOnboardingRegionRepository;
 import com.jjikmeok.app.domain.user.repository.UserOnboardingTagRepository;
 import com.jjikmeok.app.domain.user.repository.UserProfileRepository;
+import com.jjikmeok.app.global.common.exception.CustomException;
+import com.jjikmeok.app.global.common.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +30,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -77,6 +82,53 @@ class PageServiceImplTest {
 
         assertThat(response.recommendedActivities()).hasSize(1);
         assertThat(response.recommendedActivities().getFirst().isAd()).isTrue();
+    }
+
+    @Test
+    void getFavoritePage_returnsFavoriteCardsWithLikedTrue() {
+        Activity activity = activity(1L, 120);
+        Favorite favorite = Favorite.create(User.createForSignup("user@example.com", "hash"), activity);
+        when(favoriteRepository.findPageFavoritesOrderBySavedDesc(eq(1L), eq(ApprovalStatus.APPROVED), any(LocalDateTime.class)))
+                .thenReturn(List.of(favorite));
+
+        var response = pageService.getFavoritePage(1L, "saved");
+
+        assertThat(response.activities()).hasSize(1);
+        assertThat(response.activities().getFirst().id()).isEqualTo(1L);
+        assertThat(response.activities().getFirst().liked()).isTrue();
+        assertThat(response.activities().getFirst().isAd()).isFalse();
+    }
+
+    @Test
+    void getFavoritePage_returnsEmptyActivitiesWhenNoFavorites() {
+        when(favoriteRepository.findPageFavoritesOrderBySavedDesc(eq(1L), eq(ApprovalStatus.APPROVED), any(LocalDateTime.class)))
+                .thenReturn(List.of());
+
+        var response = pageService.getFavoritePage(1L, "saved");
+
+        assertThat(response.activities()).isEmpty();
+    }
+
+    @Test
+    void getFavoritePage_withDeadlineSortUsesDeadlineOrder() {
+        Activity activity = activity(1L, 120);
+        Favorite favorite = Favorite.create(User.createForSignup("user@example.com", "hash"), activity);
+        when(favoriteRepository.findPageFavoritesOrderByDeadlineAsc(eq(1L), eq(ApprovalStatus.APPROVED), any(LocalDateTime.class)))
+                .thenReturn(List.of(favorite));
+
+        var response = pageService.getFavoritePage(1L, "deadline");
+
+        assertThat(response.activities()).hasSize(1);
+        assertThat(response.activities().getFirst().liked()).isTrue();
+        assertThat(response.activities().getFirst().isAd()).isFalse();
+    }
+
+    @Test
+    void getFavoritePage_requiresLoginUser() {
+        assertThatThrownBy(() -> pageService.getFavoritePage(null, "saved"))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.AUTH_UNAUTHORIZED);
     }
 
     private Activity activity(Long id, int viewCount) {

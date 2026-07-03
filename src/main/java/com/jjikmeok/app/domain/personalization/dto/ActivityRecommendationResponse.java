@@ -1,33 +1,31 @@
 package com.jjikmeok.app.domain.personalization.dto;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.LocalDateTime;
 
+@Schema(description = "개인화 추천 활동 응답")
 public record ActivityRecommendationResponse(
-        Long activityId,
-        String activityThumbnailUri,
-        String activityTitle,
-        LocalDateTime activityRecruitEndAt,
+        @Schema(description = "활동 ID", example = "1")
+        Long id,
+
+        @Schema(description = "활동 제목", example = "서울 도예 원데이 클래스")
+        String title,
+
+        @Schema(description = "활동 썸네일 URL", example = "https://example.com/images/activity.png")
+        String thumbnailUrl,
+
+        @Schema(description = "모집 마감일", example = "2026-07-10T18:00:00")
+        LocalDateTime recruitEndAt,
+
+        @Schema(description = "로그인한 사용자의 해당 활동 찜 ID. 찜하지 않았으면 null", example = "10", nullable = true)
         Long activityFavoriteId,
-        int activityFavoriteCount,
-        int recommendScore
+
+        @ArraySchema(
+                arraySchema = @Schema(description = "활동 태그명 목록"),
+                schema = @Schema(description = "활동 태그명", example = "힐링")
+        )
+        String[] tags
 ) {
-
-    public static ActivityRecommendationResponse from(ActivityRecommendationProjection projection) {
-        return new ActivityRecommendationResponse(
-                projection.getActivityId(),
-                projection.getActivityThumbnailUri(),
-                projection.getActivityTitle(),
-                projection.getActivityRecruitEndAt(),
-                projection.getActivityFavoriteId(),
-                projection.getActivityFavoriteCount() == null ? 0 : projection.getActivityFavoriteCount(),
-                toInt(projection.getRecommendScore())
-        );
-    }
-
-    private static int toInt(Long value) {
-        if (value == null) {
-            return 0;
-        }
-        return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : value.intValue();
-    }
 }

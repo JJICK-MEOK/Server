@@ -6,15 +6,13 @@ public interface ActivityRecommendationProjection {
 
     Long getActivityId();
 
-    String getActivityThumbnailUri();
+    String getTitle();
 
-    String getActivityTitle();
+    String getThumbnailUrl();
 
-    LocalDateTime getActivityRecruitEndAt();
+    LocalDateTime getRecruitEndAt();
 
     Long getActivityFavoriteId();
 
-    Integer getActivityFavoriteCount();
-
-    Long getRecommendScore();
+    String getTagName();
 }

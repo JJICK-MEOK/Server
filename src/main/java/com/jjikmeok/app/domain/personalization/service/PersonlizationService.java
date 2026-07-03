@@ -1,5 +1,6 @@
 package com.jjikmeok.app.domain.personalization.service;
 
+import com.jjikmeok.app.domain.personalization.dto.ActivityRecommendationProjection;
 import com.jjikmeok.app.domain.personalization.dto.ActivityRecommendationResponse;
 import com.jjikmeok.app.domain.personalization.dto.PersonalizationResponse;
 import com.jjikmeok.app.domain.personalization.repository.PersonalizationRepository;
@@ -7,9 +8,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -82,9 +85,54 @@ public class PersonlizationService {
 
     @Transactional(readOnly = true)
     public List<ActivityRecommendationResponse> getRecommendedActivities(Long userId) {
-        return personalizationRepository.findRecommendedActivitiesByUserId(userId)
+        Map<Long, ActivityRecommendationAccumulator> recommendations = new LinkedHashMap<>();
+
+        for (ActivityRecommendationProjection projection : personalizationRepository.findRecommendedActivitiesByUserId(userId)) {
+            ActivityRecommendationAccumulator accumulator = recommendations.computeIfAbsent(
+                    projection.getActivityId(),
+                    ignored -> new ActivityRecommendationAccumulator(projection)
+            );
+            accumulator.addTag(projection.getTagName());
+        }
+
+        return recommendations.values()
                 .stream()
-                .map(ActivityRecommendationResponse::from)
+                .map(ActivityRecommendationAccumulator::toResponse)
                 .toList();
+    }
+
+    private static class ActivityRecommendationAccumulator {
+        private final Long id;
+        private final String title;
+        private final String thumbnailUrl;
+        private final LocalDateTime recruitEndAt;
+        private final Long activityFavoriteId;
+        private final Set<String> tags = new LinkedHashSet<>();
+
+        private ActivityRecommendationAccumulator(ActivityRecommendationProjection projection) {
+            this.id = projection.getActivityId();
+            this.title = projection.getTitle();
+            this.thumbnailUrl = projection.getThumbnailUrl();
+            this.recruitEndAt = projection.getRecruitEndAt();
+            this.activityFavoriteId = projection.getActivityFavoriteId();
+        }
+
+        private void addTag(String tagName) {
+            if (tagName == null || tagName.isBlank()) {
+                return;
+            }
+            tags.add(tagName);
+        }
+
+        private ActivityRecommendationResponse toResponse() {
+            return new ActivityRecommendationResponse(
+                    id,
+                    title,
+                    thumbnailUrl,
+                    recruitEndAt,
+                    activityFavoriteId,
+                    tags.toArray(String[]::new)
+            );
+        }
     }
 }

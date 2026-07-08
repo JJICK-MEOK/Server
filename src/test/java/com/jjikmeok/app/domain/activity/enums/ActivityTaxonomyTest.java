@@ -1,5 +1,6 @@
 package com.jjikmeok.app.domain.activity.enums;
 
+import com.jjikmeok.app.domain.activity.enums.PreferenceTag;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

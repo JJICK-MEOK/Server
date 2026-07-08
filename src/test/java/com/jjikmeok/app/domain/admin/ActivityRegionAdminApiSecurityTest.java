@@ -120,7 +120,7 @@ class ActivityRegionAdminApiSecurityTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(activityRequest())))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.code").value("200"))
+                .andExpect(jsonPath("$.code").value("201"))
                 .andExpect(jsonPath("$.data.id").value(1));
 
         verify(activityService).createActivity(any(ActivityRequest.class));
@@ -193,7 +193,7 @@ class ActivityRegionAdminApiSecurityTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(regionRequest())))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.code").value("200"))
+                .andExpect(jsonPath("$.code").value("201"))
                 .andExpect(jsonPath("$.data.id").value(10));
 
         verify(regionService).createRegion(any(RegionRequest.class));

@@ -10,7 +10,7 @@ import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
 
 public interface PageService {
 
-    ActivityHomePageResponse getHomePage(Long userId, Integer limit);
+    ActivityHomePageResponse getHomePage(Long userId);
 
     ActivityCategoryPageResponse getCategoryPage(
             Long userId,

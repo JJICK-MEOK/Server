@@ -29,14 +29,12 @@ public class PageController {
 
     private final PageService pageService;
 
-    @Operation(summary = "홈 화면 활동 데이터 조회", description = "홈 화면의 사용자 정보, 추천 활동, 마감 임박 활동을 조회합니다.")
+    @Operation(summary = "홈 화면 활동 데이터 조회", description = "홈 화면의 사용자 정보, 맞춤 추천, 인기 활동, 취향 확장 활동을 조회합니다.")
     @GetMapping("/home")
     public ApiResponse<ActivityHomePageResponse> getHomePage(
-            @AuthenticationPrincipal Long userId,
-            @Parameter(description = "섹션별 최대 활동 개수", example = "10")
-            @RequestParam(value = "limit", required = false) Integer limit
+            @AuthenticationPrincipal Long userId
     ) {
-        return ApiResponse.success("홈 페이지 조회 성공", pageService.getHomePage(userId, limit));
+        return ApiResponse.success("홈 페이지 조회 성공", pageService.getHomePage(userId));
     }
 
     @Operation(summary = "카테고리 화면 활동 데이터 조회", description = "활동 유형과 활동 카테고리 필터에 맞는 목록 화면 데이터를 조회합니다.")

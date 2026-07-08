@@ -60,18 +60,19 @@ class PageControllerTest {
 
     @Test
     void getHomePage_returnsScreenSections() throws Exception {
-        when(pageService.getHomePage(null, 5)).thenReturn(homePageResponse());
+        when(pageService.getHomePage(null)).thenReturn(homePageResponse());
 
-        mockMvc.perform(get("/api/v1/pages/home").param("limit", "5"))
+        mockMvc.perform(get("/api/v1/pages/home"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("홈 페이지 조회 성공"))
                 .andExpect(jsonPath("$.data.user.nickname").value("tester"))
                 .andExpect(jsonPath("$.data.user.profileImageUrl").value("https://example.com/profile.png"))
-                .andExpect(jsonPath("$.data.recommendedActivities[0].hashtags.length()").value(2))
-                .andExpect(jsonPath("$.data.recommendedActivities[0].deadline").value(3))
-                .andExpect(jsonPath("$.data.closingSoonActivities[0].deadline").value(3));
+                .andExpect(jsonPath("$.data.featured.activities[0].hashtags.length()").value(2))
+                .andExpect(jsonPath("$.data.featured.activities[0].deadline").value(3))
+                .andExpect(jsonPath("$.data.popular.activities[0].hashtags.length()").value(2))
+                .andExpect(jsonPath("$.data.expandedRecommendation.activities[0].hashtags.length()").value(2));
 
-        verify(pageService).getHomePage(null, 5);
+        verify(pageService).getHomePage(null);
     }
 
     @Test
@@ -149,9 +150,14 @@ class PageControllerTest {
     private ActivityHomePageResponse homePageResponse() {
         return new ActivityHomePageResponse(
                 new ActivityHomePageResponse.UserResponse("tester", "https://example.com/profile.png"),
-                List.of(card()),
-                List.of(card())
+                section(),
+                section(),
+                section()
         );
+    }
+
+    private ActivitySectionResponse section() {
+        return new ActivitySectionResponse(List.of(card()));
     }
 
     private ActivityCategoryPageResponse categoryPageResponse() {
@@ -194,7 +200,7 @@ class PageControllerTest {
         return new ActivityCustomPageResponse(
                 "tester",
                 new ActivityCustomPageResponse.TasteProfile("추천 활동", "취향에 맞는 활동을 모아봤어요.", List.of("#모임")),
-                new ActivitySectionResponse("customRecommended", "맞춤 추천 활동", null, List.of(card()))
+                new ActivitySectionResponse(List.of(card()))
         );
     }
 
@@ -250,7 +256,7 @@ class PageControllerTest {
                 ActivityType.PROGRAM,
                 ActivityCategory.CRAFT,
                 List.of("#공예 / 만들기", "#프로그램"),
-                true,
+                false,
                 0,
                 1,
                 2,

@@ -36,6 +36,15 @@ class PageConverterTest {
     }
 
     @Test
+    void toCard_fillsMissingHashtagsToTwoWhenActivityHasOneTag() {
+        Activity activity = activityWithSingleTag();
+
+        assertThat(PageConverter.toCard(activity, false, false, TODAY).hashtags())
+                .hasSize(2)
+                .doesNotHaveDuplicates();
+    }
+
+    @Test
     void toDetail_returnsThreeRandomHashtagsFromFiveCandidates() {
         Activity activity = activityWithTags();
 
@@ -43,6 +52,15 @@ class PageConverterTest {
                 .hasSize(3)
                 .doesNotHaveDuplicates()
                 .allMatch(tag -> tag.startsWith("#"));
+    }
+
+    @Test
+    void toDetail_fillsMissingHashtagsToThreeWhenActivityHasOneTag() {
+        Activity activity = activityWithSingleTag();
+
+        assertThat(PageConverter.toDetail(activity, List.<Image>of(), false, TODAY).hashtags())
+                .hasSize(3)
+                .doesNotHaveDuplicates();
     }
 
     @Test
@@ -86,6 +104,13 @@ class PageConverterTest {
         for (String name : List.of("편안한", "힐링", "가볍게", "취미", "단기", "소규모", "사교")) {
             activity.getTags().add(ActivityTag.create(activity, Tag.create(name, TagType.PREFERENCE_TAG)));
         }
+        return activity;
+    }
+
+    private Activity activityWithSingleTag() {
+        Activity activity = activityWithTags();
+        activity.getTags().clear();
+        activity.getTags().add(ActivityTag.create(activity, Tag.create("편안한", TagType.PREFERENCE_TAG)));
         return activity;
     }
 }

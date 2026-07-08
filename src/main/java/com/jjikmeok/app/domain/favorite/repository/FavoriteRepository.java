@@ -13,20 +13,34 @@ import java.util.Optional;
 
 public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
 
-    List<Favorite> findAllByUserIdOrderByCreatedAtDesc(Long userId);
+    @Query("""
+            SELECT DISTINCT f
+            FROM Favorite f
+            JOIN FETCH f.user u
+            JOIN FETCH f.activity a
+            JOIN FETCH a.region
+            LEFT JOIN FETCH a.tags activityTag
+            LEFT JOIN FETCH activityTag.tag
+            WHERE u.id = :userId
+            ORDER BY f.createdAt DESC, f.id DESC
+            """)
+    List<Favorite> findAllByUserIdOrderByCreatedAtDesc(@Param("userId") Long userId);
 
     @Query("""
-        SELECT f
-        FROM Favorite f
-        JOIN FETCH f.activity a
-        JOIN FETCH f.user u
-        WHERE u.id = :userId
-          AND a.recruitEndAt IS NOT NULL
-        ORDER BY
-          a.recruitEndAt ASC,
-          f.createdAt DESC,
-          f.id DESC
-        """)
+            SELECT DISTINCT f
+            FROM Favorite f
+            JOIN FETCH f.user u
+            JOIN FETCH f.activity a
+            JOIN FETCH a.region
+            LEFT JOIN FETCH a.tags activityTag
+            LEFT JOIN FETCH activityTag.tag
+            WHERE u.id = :userId
+              AND a.recruitEndAt IS NOT NULL
+            ORDER BY
+              a.recruitEndAt ASC,
+              f.createdAt DESC,
+              f.id DESC
+            """)
     List<Favorite> findAllByUserIdOrderByRecruitEndAtAsc(@Param("userId") Long userId);
 
     Optional<Favorite> findByUserIdAndActivityId(Long userId, Long activityId);

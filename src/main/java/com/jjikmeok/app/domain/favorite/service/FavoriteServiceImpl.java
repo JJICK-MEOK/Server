@@ -7,6 +7,8 @@ import com.jjikmeok.app.domain.favorite.dto.request.FavoriteRequest;
 import com.jjikmeok.app.domain.favorite.dto.response.FavoriteResponse;
 import com.jjikmeok.app.domain.favorite.entity.Favorite;
 import com.jjikmeok.app.domain.favorite.repository.FavoriteRepository;
+import com.jjikmeok.app.domain.page.converter.PageConverter;
+import com.jjikmeok.app.domain.page.dto.response.ActivityCardResponse;
 import com.jjikmeok.app.domain.user.entity.User;
 import com.jjikmeok.app.domain.user.repository.UserRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
@@ -16,6 +18,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 
@@ -24,15 +28,24 @@ import java.util.Locale;
 @Transactional(readOnly = true)
 public class FavoriteServiceImpl implements FavoriteService {
 
+    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+
     private final FavoriteRepository favoriteRepository;
     private final ActivityRepository activityRepository;
     private final UserRepository userRepository;
 
     @Override
-    public List<FavoriteResponse> getFavorites(Long userId, String sort) {
+    public List<ActivityCardResponse> getFavorites(Long userId, String sort) {
         findUserOrThrow(userId);
+        LocalDate today = LocalDate.now(SEOUL);
+
         return findFavorites(userId, sort).stream()
-                .map(FavoriteConverter::toResponse)
+                .map(favorite -> PageConverter.toCard(
+                        favorite.getActivity(),
+                        true,
+                        false,
+                        today
+                ))
                 .toList();
     }
 

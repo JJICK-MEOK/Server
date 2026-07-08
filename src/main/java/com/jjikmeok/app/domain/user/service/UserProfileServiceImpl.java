@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserProfileServiceImpl implements UserProfileService {
 
     private static final String NEXT_STEP_ONBOARDING = "ONBOARDING";
-
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
 

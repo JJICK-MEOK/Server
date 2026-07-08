@@ -1,5 +1,7 @@
 package com.jjikmeok.app.domain.activity.enums;
 
+import java.util.List;
+
 public enum SourceType {
     KOPIS,
     EXHIBITION,
@@ -15,5 +17,9 @@ public enum SourceType {
                 || this == EXHIBITION
                 || this == SEOUL_CULTURE
                 || this == SEOUL_RESERVATION;
+    }
+
+    public static List<SourceType> publicApiSources() {
+        return List.of(KOPIS, EXHIBITION, SEOUL_CULTURE, SEOUL_RESERVATION);
     }
 }

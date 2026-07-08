@@ -40,6 +40,9 @@ public class SerperSearchServiceImpl implements SearchService {
     @Value("${app.discovery.search.serper.hl:ko}")
     private String hl;
 
+    @Value("${app.discovery.search.serper.tbs:qdr:m}")
+    private String tbs;
+
     public SerperSearchServiceImpl(DiscoveryUrlNormalizer urlNormalizer) {
         this.urlNormalizer = urlNormalizer;
     }
@@ -71,6 +74,9 @@ public class SerperSearchServiceImpl implements SearchService {
         }
         if (hl != null && !hl.isBlank()) {
             body.put("hl", hl);
+        }
+        if (tbs != null && !tbs.isBlank()) {
+            body.put("tbs", tbs);
         }
 
         try {

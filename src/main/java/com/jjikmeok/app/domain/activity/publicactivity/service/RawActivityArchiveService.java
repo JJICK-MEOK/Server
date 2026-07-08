@@ -46,6 +46,10 @@ public class RawActivityArchiveService {
             return;
         }
 
+        if (isInstagram(searchResult, candidate)) {
+            return;
+        }
+
         rawActivityRepository.save(RawActivity.create(
                 SourceType.DISCOVERY,
                 createDiscoveryArchiveExternalId(searchResult, candidate),
@@ -56,6 +60,13 @@ public class RawActivityArchiveService {
                 DISCOVERY_CONTENT_TYPE,
                 writeDiscoveryPayload(searchResult, candidate)
         ));
+    }
+
+    private boolean isInstagram(SearchResultDto searchResult, DiscoveryCandidateDto candidate) {
+        if (candidate != null && candidate.searchResult() != null && candidate.searchResult().sourceChannel() == com.jjikmeok.app.domain.activity.privateactivity.enums.DiscoverySourceChannel.INSTAGRAM) {
+            return true;
+        }
+        return searchResult != null && searchResult.sourceChannel() == com.jjikmeok.app.domain.activity.privateactivity.enums.DiscoverySourceChannel.INSTAGRAM;
     }
 
     private String writeDiscoveryPayload(SearchResultDto searchResult, DiscoveryCandidateDto candidate) {

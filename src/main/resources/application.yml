@@ -2,6 +2,9 @@ server:
   forward-headers-strategy: framework
 
 spring:
+  config:
+    import: optional:file:.env[.properties]
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -36,7 +39,7 @@ spring:
 
   ai:
     openai:
-      api-key: ${SPRING_AI_OPENAI_API_KEY}
+      api-key: ${SPRING_AI_OPENAI_API_KEY:${OPENAI_API_KEY:}}
 
   # 파일 업로드 용량 설정 (테스트 영상 업로드용 50MB)
   # 실제 운영 환경에선 500MB로 늘릴 예정
@@ -52,8 +55,8 @@ spring:
       region:
         static: ap-northeast-2
       credentials:
-        access-key: ${AWS_ACCESS_KEY}
-        secret-key: ${AWS_SECRET_KEY}
+        access-key: ${AWS_ACCESS_KEY:${AWS_ACCESS_KEY_ID:}}
+        secret-key: ${AWS_SECRET_KEY:${AWS_SECRET_ACCESS_KEY:}}
 
 oauth2:
   kakao:
@@ -100,6 +103,25 @@ app:
       - "*"
     allow-credentials: true
 
+  activity-sync:
+    default-region-id: ${ACTIVITY_SYNC_DEFAULT_REGION_ID:1}
+    default-max-pages: ${ACTIVITY_SYNC_DEFAULT_MAX_PAGES:1}
+    months-ahead: ${ACTIVITY_SYNC_MONTHS_AHEAD:1}
+    kopis:
+      base-url: ${KOPIS_BASE_URL:${KOPIS_API_BASE_URL:https://www.kopis.or.kr/openApi/restful/pblprfr}}
+      service-key: ${KOPIS_SERVICE_KEY:${KOPIS_API_SERVICE_KEY:}}
+      max-pages: ${KOPIS_MAX_PAGES:1}
+    exhibition:
+      base-url: ${EXHIBITION_BASE_URL:${EXHIBITION_API_BASE_URL:https://api.kcisa.kr/openapi/API_CCA_145/request}}
+      service-key: ${EXHIBITION_SERVICE_KEY:${EXHIBITION_API_SERVICE_KEY:}}
+      max-pages: ${EXHIBITION_MAX_PAGES:1}
+    seoul-culture:
+      base-url: ${SEOUL_CULTURE_BASE_URL:${SEOUL_CULTURE_API_BASE_URL:}}
+      max-pages: ${SEOUL_CULTURE_MAX_PAGES:1}
+    seoul-reservation:
+      base-url: ${SEOUL_RESERVATION_BASE_URL:${SEOUL_RESERVATION_API_BASE_URL:}}
+      max-pages: ${SEOUL_RESERVATION_MAX_PAGES:1}
+
   discovery:
     search:
       provider: serper
@@ -111,8 +133,8 @@ app:
     publish:
       fixed-delay-ms: 300000
     sheets:
-      enabled: false
+      enabled: ${GOOGLE_SHEETS_ENABLED:true}
       spreadsheet-id: ${GOOGLE_SHEETS_SPREADSHEET_ID:}
-      sheet-name: Discovery
+      sheet-name: 찍먹활동DB
       credentials-path: ${GOOGLE_SHEETS_CREDENTIALS_PATH:}
       credentials-json: ${GOOGLE_SHEETS_CREDENTIALS_JSON:}

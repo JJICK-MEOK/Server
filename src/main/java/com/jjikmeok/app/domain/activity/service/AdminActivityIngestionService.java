@@ -1,13 +1,13 @@
 package com.jjikmeok.app.domain.activity.service;
 
+import com.jjikmeok.app.domain.activity.enums.PublicActivitySourceType;
 import com.jjikmeok.app.domain.activity.enums.SourceType;
 import com.jjikmeok.app.domain.activity.privateactivity.collector.DiscoveryCollectorService;
 import com.jjikmeok.app.domain.activity.privateactivity.dto.response.DiscoverySheetRowDto;
 import com.jjikmeok.app.domain.activity.privateactivity.publish.DiscoveryPublishService;
+import com.jjikmeok.app.domain.activity.publicactivity.publish.PublicActivityPublishService;
 import com.jjikmeok.app.domain.activity.publicactivity.dto.ActivitySyncResponse;
 import com.jjikmeok.app.domain.activity.publicactivity.service.ActivitySyncService;
-import com.jjikmeok.app.global.common.exception.CustomException;
-import com.jjikmeok.app.global.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -21,6 +21,7 @@ public class AdminActivityIngestionService {
     private final ActivitySyncService activitySyncService;
     private final DiscoveryCollectorService discoveryCollectorService;
     private final DiscoveryPublishService discoveryPublishService;
+    private final PublicActivityPublishService publicActivityPublishService;
 
     @Value("${app.discovery.scheduler.keywords-per-run:${app.discovery.scheduler.keyword-limit:10}}")
     private int defaultKeywordLimit;
@@ -32,9 +33,9 @@ public class AdminActivityIngestionService {
         activitySyncService.syncAllSources();
     }
 
-    public ActivitySyncResponse syncPublicSource(SourceType sourceType, Integer maxPages) {
-        validatePublicSource(sourceType);
-        return activitySyncService.sync(sourceType, null, maxPages);
+    public ActivitySyncResponse syncPublicSource(PublicActivitySourceType sourceType, Integer maxPages) {
+        SourceType publicSourceType = sourceType.toSourceType();
+        return activitySyncService.sync(publicSourceType, null, maxPages);
     }
 
     public List<DiscoverySheetRowDto> collectDiscoveryActivities(Integer keywordLimit, Integer resultLimit) {
@@ -48,9 +49,7 @@ public class AdminActivityIngestionService {
         return discoveryPublishService.publishReadyRows();
     }
 
-    private void validatePublicSource(SourceType sourceType) {
-        if (sourceType == null || !sourceType.isPublicApiSource()) {
-            throw new CustomException(ErrorCode.ACTIVITY_SYNC_UNSUPPORTED_SOURCE);
-        }
+    public int publishPublicActivities() {
+        return publicActivityPublishService.publishReadyRows();
     }
 }

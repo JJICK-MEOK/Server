@@ -14,68 +14,79 @@ public class ActivityRegionResolver {
     private final RegionRepository regionRepository;
 
     public Region resolve(String title, String address, Long defaultRegionId) {
-        String source = ((address == null ? "" : address) + " " + (title == null ? "" : title));
+        return resolve(null, title, address, defaultRegionId);
+    }
 
+    public Region resolve(String regionName, String title, String address, Long defaultRegionId) {
+        String source = join(regionName, title, address);
         List<Region> regions = regionRepository.findAll();
 
         Region district = regions.stream()
                 .filter(r -> r.getParent() != null)
-                .filter(r -> containsDistrict(source, r.getName()))
+                .filter(r -> matches(source, r.getName()))
                 .findFirst()
                 .orElse(null);
-
-        if (district != null) return district;
+        if (district != null) {
+            return district;
+        }
 
         Region province = regions.stream()
                 .filter(r -> r.getParent() == null)
-                .filter(r -> containsProvince(source, r.getName()))
+                .filter(r -> matches(source, r.getName()))
                 .findFirst()
                 .orElse(null);
-
-        if (province != null) return province;
+        if (province != null) {
+            return province;
+        }
 
         return regionRepository.findById(defaultRegionId)
-                .orElseThrow(() -> new IllegalStateException("기본 지역을 찾을 수 없습니다. id=" + defaultRegionId));
+                .orElseGet(() -> regions.stream()
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalStateException("기본 지역을 찾을 수 없습니다. id=" + defaultRegionId)));
     }
 
-    private boolean containsDistrict(String source, String name) {
-        if (source == null || name == null) return false;
-        if (name.endsWith("전체")) return false;
-
-        return source.contains(name + "구")
-                || source.contains(name + "시")
-                || source.contains(name + "군")
-                || source.contains(name);
-    }
-
-    private boolean containsProvince(String source, String name) {
-        if (source == null || name == null) return false;
-
-        return switch (name) {
-            case "서울" -> source.contains("서울");
-            case "경기" -> source.contains("경기") || containsAny(source, "수원", "성남", "고양", "용인", "부천", "안산", "안양", "화성", "평택");
-            case "인천" -> source.contains("인천");
-            case "강원" -> source.contains("강원") || containsAny(source, "춘천", "원주", "강릉");
-            case "충북" -> source.contains("충북") || source.contains("청주");
-            case "충남" -> source.contains("충남") || containsAny(source, "천안", "아산", "당진");
-            case "세종" -> source.contains("세종");
-            case "대전" -> source.contains("대전");
-            case "광주" -> source.contains("광주");
-            case "전북" -> source.contains("전북") || source.contains("전주");
-            case "전남" -> source.contains("전남") || containsAny(source, "순천", "여수", "목포");
-            case "경북" -> source.contains("경북") || containsAny(source, "포항", "경주", "구미");
-            case "대구" -> source.contains("대구");
-            case "제주" -> source.contains("제주");
-            case "경남/울산" -> source.contains("경남") || source.contains("울산") || containsAny(source, "창원", "김해", "진주");
-            case "부산" -> source.contains("부산");
-            default -> source.contains(name);
-        };
-    }
-
-    private boolean containsAny(String source, String... keywords) {
-        for (String keyword : keywords) {
-            if (source.contains(keyword)) return true;
+    private String join(String... values) {
+        StringBuilder builder = new StringBuilder();
+        for (String value : values) {
+            if (value == null || value.isBlank()) {
+                continue;
+            }
+            if (!builder.isEmpty()) {
+                builder.append(' ');
+            }
+            builder.append(value.trim());
         }
-        return false;
+        return builder.toString();
+    }
+
+    private boolean matches(String source, String name) {
+        if (source == null || source.isBlank() || name == null || name.isBlank()) {
+            return false;
+        }
+
+        String normalizedSource = normalize(source);
+        String normalizedName = normalize(name);
+        if (normalizedSource.contains(normalizedName)) {
+            return true;
+        }
+
+        return normalizedSource.contains(stripSuffix(normalizedName));
+    }
+
+    private String normalize(String value) {
+        return value.replaceAll("\\s+", "").replace("-", "").trim().toLowerCase();
+    }
+
+    private String stripSuffix(String value) {
+        return value
+                .replace("특별시", "")
+                .replace("광역시", "")
+                .replace("특별자치시", "")
+                .replace("특별자치도", "")
+                .replace("자치시", "")
+                .replace("자치도", "")
+                .replace("시", "")
+                .replace("군", "")
+                .replace("구", "");
     }
 }

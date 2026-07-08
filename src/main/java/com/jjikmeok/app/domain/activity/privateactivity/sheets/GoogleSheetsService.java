@@ -6,8 +6,11 @@ import com.jjikmeok.app.domain.activity.privateactivity.dto.DiscoveryCandidateDt
 import com.jjikmeok.app.domain.ai.dto.DiscoveryAnalysisDto;
 import com.jjikmeok.app.domain.activity.privateactivity.dto.response.DiscoverySheetRowDto;
 import com.jjikmeok.app.domain.activity.privateactivity.enums.DiscoverySheetStatus;
+import com.jjikmeok.app.domain.activity.enums.SourceType;
 import com.jjikmeok.app.domain.activity.publicactivity.dto.NormalizedActivity;
+import com.jjikmeok.app.domain.activity.publicactivity.service.ActivityRegionResolver;
 import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -17,7 +20,7 @@ import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,11 +30,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class GoogleSheetsService {
 
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
     private static final List<String> SCOPES = List.of("https://www.googleapis.com/auth/spreadsheets");
 
+    private final ActivityRegionResolver activityRegionResolver;
     private final RestClient restClient = RestClient.create();
     private final List<DiscoverySheetRowDto> memoryRows = new CopyOnWriteArrayList<>();
     private final AtomicInteger memorySequence = new AtomicInteger(1);
@@ -42,7 +47,7 @@ public class GoogleSheetsService {
     @Value("${app.discovery.sheets.spreadsheet-id:}")
     private String spreadsheetId;
 
-    @Value("${app.discovery.sheets.sheet-name:Discovery}")
+    @Value("${app.discovery.sheets.sheet-name:찍먹활동DB}")
     private String sheetName;
 
     @Value("${app.discovery.sheets.credentials-path:}")
@@ -50,6 +55,9 @@ public class GoogleSheetsService {
 
     @Value("${app.discovery.sheets.credentials-json:}")
     private String credentialsJson;
+
+    @Value("${app.activity-sync.default-region-id:1}")
+    private Long defaultRegionId;
 
     private volatile GoogleCredentials googleCredentials;
 
@@ -61,51 +69,56 @@ public class GoogleSheetsService {
                 ensureHeaders();
             }
             if (googleCredentials == null) {
-                log.warn("[발견] Google Sheets 자격 증명을 불러오지 못해 메모리 모드로 동작합니다.");
+                log.warn("[시트] Google Sheets 자격 증명 로드에 실패했습니다. 메모리 모드로 동작합니다.");
             }
         }
     }
 
     public DiscoverySheetRowDto append(DiscoveryAnalysisDto analysis) {
-        if (enabled && isApiReady()) {
+        if (useSheet()) {
             return appendToSheet(analysis);
         }
         return appendToMemory(analysis);
     }
 
     public DiscoverySheetRowDto append(DiscoveryCandidateDto candidate) {
-        if (enabled && isApiReady()) {
+        if (useSheet()) {
             return appendCandidateToSheet(candidate);
         }
         return appendCandidateToMemory(candidate);
     }
 
     public DiscoverySheetRowDto upsertPublicActivity(NormalizedActivity activity) {
+        return upsertPublicActivity(null, activity);
+    }
+
+    public DiscoverySheetRowDto upsertPublicActivity(SourceType sourceType, NormalizedActivity activity) {
         DiscoverySheetRowDto existing = findPublicRow(activity);
         if (existing != null) {
-            DiscoverySheetRowDto updated = copyPublicRow(existing, activity);
+            DiscoverySheetRowDto updated = copyPublicRow(existing, activity, sourceType);
             updateRow(updated);
             return updated;
         }
 
-        if (enabled && isApiReady()) {
-            return appendPublicActivityToSheet(activity);
+        if (useSheet()) {
+            return appendPublicActivityToSheet(sourceType, activity);
         }
-        return appendPublicActivityToMemory(activity);
+        return appendPublicActivityToMemory(sourceType, activity);
+    }
+
+    public boolean hasPublicActivity(NormalizedActivity activity) {
+        return findPublicRow(activity) != null;
     }
 
     public List<DiscoverySheetRowDto> snapshot() {
-        if (enabled && isApiReady()) {
-            List<DiscoverySheetRowDto> rows = readRowsFromSheet("A2:AC");
-            if (!rows.isEmpty()) {
-                return rows;
-            }
+        if (useSheet()) {
+            return readRowsFromSheet("A2:AD");
         }
         return List.copyOf(memoryRows);
     }
 
     public List<DiscoverySheetRowDto> findReadyRows() {
-        if (enabled && isApiReady()) {
+        if (useSheet()) {
             return readReadyRowsFromSheet();
         }
         return memoryRows.stream()
@@ -118,15 +131,17 @@ public class GoogleSheetsService {
             return;
         }
 
-        if (enabled && isApiReady()) {
+        if (useSheet()) {
             writeRowToSheet(row);
+            return;
         }
         replaceMemoryRow(row);
     }
 
     public void clear() {
-        if (enabled && isApiReady()) {
+        if (useSheet()) {
             clearSheetRows();
+            return;
         }
         memoryRows.clear();
         memorySequence.set(1);
@@ -134,52 +149,52 @@ public class GoogleSheetsService {
 
     private DiscoverySheetRowDto appendToMemory(DiscoveryAnalysisDto analysis) {
         int rowNumber = memorySequence.incrementAndGet();
-        DiscoverySheetRowDto row = DiscoverySheetRowDto.from(analysis, rowNumber, LocalDateTime.now(SEOUL));
+        DiscoverySheetRowDto row = DiscoverySheetRowDto.from(analysis, rowNumber, LocalDate.now(SEOUL), resolveRegionName(analysis.title(), analysis.address()));
         memoryRows.add(row);
-        log.info("[발견] 임시 저장했습니다. 행 번호={}, 제목={}", row.rowNumber(), row.title());
+        log.info("[시트] 메모리에 활동을 추가했습니다. row={}, title={}", row.rowNumber(), row.title());
         return row;
     }
 
     private DiscoverySheetRowDto appendCandidateToMemory(DiscoveryCandidateDto candidate) {
         int rowNumber = memorySequence.incrementAndGet();
-        DiscoverySheetRowDto row = DiscoverySheetRowDto.fromCandidate(candidate, rowNumber, LocalDateTime.now(SEOUL));
+        DiscoverySheetRowDto row = DiscoverySheetRowDto.fromCandidate(candidate, rowNumber, LocalDate.now(SEOUL), resolveRegionName(candidate.title(), candidate.address()));
         memoryRows.add(row);
-        log.info("[발견] 추출 결과를 먼저 저장했습니다. 행 번호={}, 제목={}", row.rowNumber(), row.title());
+        log.info("[시트] 메모리에 후보를 추가했습니다. row={}, title={}", row.rowNumber(), row.title());
         return row;
     }
 
     private DiscoverySheetRowDto appendToSheet(DiscoveryAnalysisDto analysis) {
         int rowNumber = nextRowNumber();
-        DiscoverySheetRowDto row = DiscoverySheetRowDto.from(analysis, rowNumber, LocalDateTime.now(SEOUL));
+        DiscoverySheetRowDto row = DiscoverySheetRowDto.from(analysis, rowNumber, LocalDate.now(SEOUL), resolveRegionName(analysis.title(), analysis.address()));
         putRowValues(rowRange(rowNumber), row.toSheetRow());
         replaceMemoryRow(row);
-        log.info("[발견] 시트에 저장했습니다. 행 번호={}, 제목={}", row.rowNumber(), row.title());
+        log.info("[시트] 활동을 시트에 저장했습니다. row={}, title={}", row.rowNumber(), row.title());
         return row;
     }
 
     private DiscoverySheetRowDto appendCandidateToSheet(DiscoveryCandidateDto candidate) {
         int rowNumber = nextRowNumber();
-        DiscoverySheetRowDto row = DiscoverySheetRowDto.fromCandidate(candidate, rowNumber, LocalDateTime.now(SEOUL));
+        DiscoverySheetRowDto row = DiscoverySheetRowDto.fromCandidate(candidate, rowNumber, LocalDate.now(SEOUL), resolveRegionName(candidate.title(), candidate.address()));
         putRowValues(rowRange(rowNumber), row.toSheetRow());
         replaceMemoryRow(row);
-        log.info("[발견] 추출 결과를 시트에 먼저 저장했습니다. 행 번호={}, 제목={}", row.rowNumber(), row.title());
+        log.info("[시트] 후보를 시트에 저장했습니다. row={}, title={}", row.rowNumber(), row.title());
         return row;
     }
 
     private DiscoverySheetRowDto appendPublicActivityToMemory(NormalizedActivity activity) {
         int rowNumber = memorySequence.incrementAndGet();
-        DiscoverySheetRowDto row = DiscoverySheetRowDto.fromPublicActivity(activity, rowNumber, LocalDateTime.now(SEOUL));
+        DiscoverySheetRowDto row = DiscoverySheetRowDto.fromPublicActivity(activity, rowNumber, LocalDate.now(SEOUL), resolveRegionName(activity.title(), activity.address()));
         memoryRows.add(row);
-        log.info("[시트] 공공 활동을 메모리에 캐시했습니다. 행 번호={}, 제목={}", row.rowNumber(), row.title());
+        log.info("[공개] 활동을 메모리에 캐시했습니다. row={}, title={}", row.rowNumber(), row.title());
         return row;
     }
 
     private DiscoverySheetRowDto appendPublicActivityToSheet(NormalizedActivity activity) {
         int rowNumber = nextRowNumber();
-        DiscoverySheetRowDto row = DiscoverySheetRowDto.fromPublicActivity(activity, rowNumber, LocalDateTime.now(SEOUL));
+        DiscoverySheetRowDto row = DiscoverySheetRowDto.fromPublicActivity(activity, rowNumber, LocalDate.now(SEOUL), resolveRegionName(activity.title(), activity.address()));
         putRowValues(rowRange(rowNumber), row.toSheetRow());
         replaceMemoryRow(row);
-        log.info("[시트] 공공 활동을 시트에 추가했습니다. 행 번호={}, 제목={}", row.rowNumber(), row.title());
+        log.info("[공개] 활동을 시트에 추가했습니다. row={}, title={}", row.rowNumber(), row.title());
         return row;
     }
 
@@ -199,25 +214,9 @@ public class GoogleSheetsService {
     }
 
     private List<DiscoverySheetRowDto> readReadyRowsFromSheet() {
-        JsonNode root = getSheetValues("B2:B");
-        JsonNode values = root == null ? null : root.path("values");
-        if (values == null || !values.isArray()) {
-            return List.of();
-        }
-
-        List<DiscoverySheetRowDto> rows = new ArrayList<>();
-        int rowNumber = 2;
-        for (JsonNode statusRow : values) {
-            String status = text(statusRow, 0);
-            if (DiscoverySheetStatus.READY.name().equalsIgnoreCase(status)) {
-                DiscoverySheetRowDto row = readRowFromSheet(rowNumber);
-                if (row != null) {
-                    rows.add(row);
-                }
-            }
-            rowNumber++;
-        }
-        return rows;
+        return readRowsFromSheet("A2:AD").stream()
+                .filter(row -> row != null && row.status() == DiscoverySheetStatus.READY)
+                .toList();
     }
 
     private DiscoverySheetRowDto readRowFromSheet(int rowNumber) {
@@ -239,13 +238,13 @@ public class GoogleSheetsService {
                     .uri(builder -> builder
                             .scheme("https")
                             .host("sheets.googleapis.com")
-                    .path("/v4/spreadsheets/{spreadsheetId}/values/{range}:clear")
-                            .build(spreadsheetId, sheetName + "!A2:AC"))
+                            .path("/v4/spreadsheets/{spreadsheetId}/values/{range}:clear")
+                            .build(spreadsheetId, sheetRange("A2:AD")))
                     .headers(headers -> headers.setBearerAuth(accessToken()))
                     .retrieve()
                     .toBodilessEntity();
         } catch (Exception e) {
-            log.warn("[발견] Google Sheets 초기화에 실패했습니다. reason={}", e.getMessage());
+            throw new IllegalStateException("Google Sheets clear failed: " + e.getMessage(), e);
         }
     }
 
@@ -256,19 +255,18 @@ public class GoogleSheetsService {
                             .scheme("https")
                             .host("sheets.googleapis.com")
                             .path("/v4/spreadsheets/{spreadsheetId}/values/{range}")
-                            .build(spreadsheetId, sheetName + "!" + range))
+                            .build(spreadsheetId, sheetRange(range)))
                     .headers(headers -> headers.setBearerAuth(accessToken()))
                     .retrieve()
                     .body(JsonNode.class);
         } catch (Exception e) {
-            log.warn("[발견] Google Sheets 조회에 실패했습니다. range={}, reason={}", range, e.getMessage());
-            return null;
+            throw new IllegalStateException("Google Sheets read failed. range=" + range + ": " + e.getMessage(), e);
         }
     }
 
     private void ensureHeaders() {
         try {
-            JsonNode root = getSheetValues("A1:AC1");
+            JsonNode root = getSheetValues("A1:AD1");
             JsonNode values = root == null ? null : root.path("values");
             if (values != null && values.isArray() && !values.isEmpty()) {
                 List<Object> current = asValueList(values.get(0));
@@ -276,7 +274,7 @@ public class GoogleSheetsService {
                     return;
                 }
             }
-            putRowValues("A1:AC1", new ArrayList<>(Arrays.asList(DiscoverySheetRowDto.sheetHeaders())));
+            putRowValues("A1:AD1", new ArrayList<>(Arrays.asList(DiscoverySheetRowDto.sheetHeaders())));
         } catch (Exception e) {
             log.warn("[시트] 헤더 검증에 실패했습니다. reason={}", e.getMessage());
         }
@@ -290,21 +288,42 @@ public class GoogleSheetsService {
                             .host("sheets.googleapis.com")
                             .path("/v4/spreadsheets/{spreadsheetId}/values/{range}")
                             .queryParam("valueInputOption", "RAW")
-                            .build(spreadsheetId, sheetName + "!" + range))
+                            .build(spreadsheetId, sheetRange(range)))
                     .headers(headers -> headers.setBearerAuth(accessToken()))
                     .body(java.util.Map.of("values", java.util.List.of(values)))
                     .retrieve()
                     .toBodilessEntity();
         } catch (Exception e) {
-            throw new IllegalStateException("Google Sheets 업데이트에 실패했습니다: " + e.getMessage(), e);
+            throw new IllegalStateException("Google Sheets update failed: " + e.getMessage(), e);
         }
     }
 
     private int nextRowNumber() {
+        if (useSheet()) {
+            return firstEmptySheetRowNumber();
+        }
         return snapshot().stream()
                 .mapToInt(DiscoverySheetRowDto::rowNumber)
                 .max()
                 .orElse(1) + 1;
+    }
+
+    private int firstEmptySheetRowNumber() {
+        for (int rowNumber = 2; rowNumber <= 2000; rowNumber++) {
+            if (isSheetRowEmpty(rowNumber)) {
+                return rowNumber;
+            }
+        }
+        return 2001;
+    }
+
+    private boolean isSheetRowEmpty(int rowNumber) {
+        JsonNode root = getSheetValues(rowRange(rowNumber));
+        JsonNode values = root == null ? null : root.path("values");
+        if (values == null || !values.isArray() || values.isEmpty()) {
+            return true;
+        }
+        return isEmptyRow(values.get(0));
     }
 
     private void replaceMemoryRow(DiscoverySheetRowDto row) {
@@ -319,47 +338,119 @@ public class GoogleSheetsService {
 
     private DiscoverySheetRowDto findPublicRow(NormalizedActivity activity) {
         String sourceUrl = blankToNull(activity.sourceUrl());
-        String sourceName = activity.sourceType() == null ? null : activity.sourceType().name();
+        String organizer = blankToNull(activity.organizer());
 
         for (DiscoverySheetRowDto row : snapshot()) {
-            if (row == null || !isPublicSourceName(row.sourceName())) {
+            if (row == null) {
                 continue;
             }
             if (sourceUrl != null && sourceUrl.equals(blankToNull(row.sourceUrl()))) {
                 return row;
             }
             if (sourceUrl == null
-                    && equalsNullable(sourceName, row.sourceName())
+                    && equalsNullable(organizer, blankToNull(row.sourceName()))
                     && equalsNullable(blankToNull(activity.title()), blankToNull(row.title()))
-                    && equalsNullable(activity.startAt(), row.startAt())) {
+                    && equalsNullable(activity.startAt() == null ? null : activity.startAt().toLocalDate(), row.startAt())) {
                 return row;
             }
         }
         return null;
     }
 
-    private DiscoverySheetRowDto copyPublicRow(DiscoverySheetRowDto existing, NormalizedActivity activity) {
+    private DiscoverySheetRowDto appendPublicActivityToMemory(SourceType sourceType, NormalizedActivity activity) {
+        int rowNumber = memorySequence.incrementAndGet();
+        DiscoverySheetRowDto row = DiscoverySheetRowDto.fromPublicActivity(
+                activity,
+                rowNumber,
+                LocalDate.now(SEOUL),
+                resolveRegionName(activity.title(), activity.address()),
+                sourceType
+        );
+        memoryRows.add(row);
+        log.info("[공공] 공공 활동을 메모리에 적재했습니다. row={}, title={}", row.rowNumber(), row.title());
+        return row;
+    }
+
+    private DiscoverySheetRowDto appendPublicActivityToSheet(SourceType sourceType, NormalizedActivity activity) {
+        int rowNumber = nextRowNumber();
+        DiscoverySheetRowDto row = DiscoverySheetRowDto.fromPublicActivity(
+                activity,
+                rowNumber,
+                LocalDate.now(SEOUL),
+                resolveRegionName(activity.title(), activity.address()),
+                sourceType
+        );
+        putRowValues(rowRange(rowNumber), row.toSheetRow());
+        replaceMemoryRow(row);
+        log.info("[공공] 공공 활동을 시트에 저장했습니다. row={}, title={}", row.rowNumber(), row.title());
+        return row;
+    }
+
+    private DiscoverySheetRowDto copyPublicRow(DiscoverySheetRowDto existing, NormalizedActivity activity, SourceType sourceType) {
+        String keyword = existing.keyword();
+        if (keyword == null || keyword.isBlank()) {
+            keyword = sourceType == null ? null : sourceType.name();
+        }
+
         return new DiscoverySheetRowDto(
                 existing.rowNumber(),
-                DiscoverySheetStatus.PUBLISHED,
+                existing.reviewer(),
+                existing.status(),
                 existing.createdAt(),
                 existing.publishedAt(),
-                null,
-                activity.sourceType() == null ? existing.sourceName() : activity.sourceType().name(),
+                keyword,
+                visibleOrganizer(activity.organizer(), existing.sourceName(), activity.title()),
                 activity.title(),
                 activity.sourceUrl(),
                 activity.thumbnailUrl(),
                 activity.activityType(),
                 activity.category(),
-                activity.startAt(),
-                activity.endAt(),
-                activity.recruitStartAt(),
-                activity.recruitEndAt(),
+                activity.startAt() == null ? null : activity.startAt().toLocalDate(),
+                activity.endAt() == null ? null : activity.endAt().toLocalDate(),
+                activity.recruitStartAt() == null ? null : activity.recruitStartAt().toLocalDate(),
+                activity.recruitEndAt() == null ? null : activity.recruitEndAt().toLocalDate(),
                 activity.target(),
                 activity.price(),
                 activity.description(),
                 activity.contactInfo(),
                 activity.organizer(),
+                firstText(existing.regionName(), resolveRegionName(activity.title(), activity.address())),
+                activity.address(),
+                existing.moodTag1(),
+                existing.moodTag2(),
+                existing.intensity(),
+                existing.purpose(),
+                existing.duration(),
+                existing.groupSize(),
+                existing.confidenceScore(),
+                existing.searchSnippet()
+        );
+    }
+
+    private DiscoverySheetRowDto copyPublicRow(DiscoverySheetRowDto existing, NormalizedActivity activity) {
+        return new DiscoverySheetRowDto(
+                existing.rowNumber(),
+                existing.reviewer(),
+                existing.status(),
+                existing.createdAt(),
+                existing.publishedAt(),
+                null,
+                visibleOrganizer(activity.organizer(), existing.sourceName(), activity.title()),
+                activity.title(),
+                activity.sourceUrl(),
+                activity.thumbnailUrl(),
+                activity.activityType(),
+                activity.category(),
+                activity.startAt() == null ? null : activity.startAt().toLocalDate(),
+                activity.endAt() == null ? null : activity.endAt().toLocalDate(),
+                activity.recruitStartAt() == null ? null : activity.recruitStartAt().toLocalDate(),
+                activity.recruitEndAt() == null ? null : activity.recruitEndAt().toLocalDate(),
+                activity.target(),
+                activity.price(),
+                activity.description(),
+                activity.contactInfo(),
+                activity.organizer(),
+                firstText(existing.regionName(), resolveRegionName(activity.title(), activity.address())),
                 activity.address(),
                 existing.moodTag1(),
                 existing.moodTag2(),
@@ -378,6 +469,16 @@ public class GoogleSheetsService {
 
     private boolean isApiReady() {
         return hasApiConfiguration() && googleCredentials != null;
+    }
+
+    private boolean useSheet() {
+        if (!enabled) {
+            return false;
+        }
+        if (!isApiReady()) {
+            throw new IllegalStateException("Google Sheets is enabled but spreadsheet-id or credentials are not configured correctly.");
+        }
+        return true;
     }
 
     private GoogleCredentials loadCredentials() {
@@ -399,7 +500,7 @@ public class GoogleSheetsService {
 
             return GoogleCredentials.getApplicationDefault().createScoped(SCOPES);
         } catch (Exception e) {
-            log.warn("[발견] Google Sheets 자격 증명 로드에 실패했습니다. reason={}", e.getMessage());
+            log.warn("[시트] Google Sheets 자격 증명 로드에 실패했습니다. reason={}", e.getMessage());
             return null;
         }
     }
@@ -411,16 +512,20 @@ public class GoogleSheetsService {
         try {
             googleCredentials.refreshIfExpired();
             if (googleCredentials.getAccessToken() == null) {
-                throw new IllegalStateException("Google Sheets 액세스 토큰이 없습니다.");
+                throw new IllegalStateException("Google Sheets 액세스 토큰을 가져오지 못했습니다.");
             }
             return googleCredentials.getAccessToken().getTokenValue();
         } catch (Exception e) {
-            throw new IllegalStateException("Google Sheets 인증에 실패했습니다: " + e.getMessage(), e);
+            throw new IllegalStateException("Google Sheets 토큰 갱신에 실패했습니다: " + e.getMessage(), e);
         }
     }
 
     private String rowRange(int rowNumber) {
-        return "A" + rowNumber + ":AC" + rowNumber;
+        return "A" + rowNumber + ":AD" + rowNumber;
+    }
+
+    private String sheetRange(String range) {
+        return "'" + sheetName + "'!" + range;
     }
 
     private List<Object> asValueList(JsonNode rowNode) {
@@ -441,6 +546,22 @@ public class GoogleSheetsService {
         return cell == null || cell.isNull() ? null : cell.asText();
     }
 
+    private boolean isEmptyRow(JsonNode rowNode) {
+        if (rowNode == null || !rowNode.isArray() || rowNode.isEmpty()) {
+            return true;
+        }
+
+        for (JsonNode cell : rowNode) {
+            if (cell != null && !cell.isNull()) {
+                String value = cell.asText();
+                if (value != null && !value.isBlank()) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     private boolean equalsNullable(Object left, Object right) {
         return left == null ? right == null : left.equals(right);
     }
@@ -453,6 +574,45 @@ public class GoogleSheetsService {
         return "KOPIS".equals(sourceName)
                 || "EXHIBITION".equals(sourceName)
                 || "SEOUL_CULTURE".equals(sourceName)
-                || "SEOUL_RESERVATION".equals(sourceName);
+                || "SEOUL_RESERVATION".equals(sourceName)
+                || "WEBSITE".equals(sourceName)
+                || "BAND".equals(sourceName)
+                || "NAVER_CAFE".equals(sourceName)
+                || "NAVER_BLOG".equals(sourceName)
+                || "BRUNCH".equals(sourceName)
+                || "TISTORY".equals(sourceName)
+                || "NOTION".equals(sourceName);
+    }
+
+    private String visibleOrganizer(String organizer, String existingSourceName, String title) {
+        String normalizedOrganizer = blankToNull(organizer);
+        if (isPublicSourceName(normalizedOrganizer)) {
+            normalizedOrganizer = null;
+        }
+        if (normalizedOrganizer != null) {
+            return normalizedOrganizer;
+        }
+
+        String normalizedExisting = blankToNull(existingSourceName);
+        if (isPublicSourceName(normalizedExisting)) {
+            normalizedExisting = null;
+        }
+        if (normalizedExisting != null) {
+            return normalizedExisting;
+        }
+
+        return blankToNull(title);
+    }
+
+    private String resolveRegionName(String title, String address) {
+        try {
+            return activityRegionResolver.resolve(title, address, defaultRegionId).getName();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String firstText(String first, String second) {
+        return first != null && !first.isBlank() ? first : second;
     }
 }

@@ -17,6 +17,7 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashSet;
 
 public final class PageConverter {
 
@@ -27,6 +28,16 @@ public final class PageConverter {
     }
 
     public static ActivityCardResponse toCard(Activity activity, boolean liked, boolean isAd, LocalDate today) {
+        return toCard(activity, liked, isAd, today, CARD_TAG_LIMIT);
+    }
+
+    public static ActivityCardResponse toCard(
+            Activity activity,
+            boolean liked,
+            boolean isAd,
+            LocalDate today,
+            int hashtagLimit
+    ) {
         Deadline deadline = deadline(activity.getRecruitEndAt(), today);
 
         return new ActivityCardResponse(
@@ -39,7 +50,7 @@ public final class PageConverter {
                 activity.getAddress(),
                 activity.getActivityType(),
                 activity.getCategory(),
-                randomHashtags(activity, CARD_TAG_LIMIT),
+                randomHashtags(activity, hashtagLimit),
                 isAd,
                 activity.getPrice(),
                 activity.getViewCount(),
@@ -97,10 +108,28 @@ public final class PageConverter {
     }
 
     private static List<String> randomHashtags(Activity activity, int limit) {
-        List<String> candidates = new ArrayList<>(tagCandidates(activity));
-        Collections.shuffle(candidates);
-        return candidates.stream()
-                .distinct()
+        LinkedHashSet<String> selected = new LinkedHashSet<>(tagCandidates(activity));
+        if (selected.size() < limit) {
+            List<String> fallback = new ArrayList<>();
+            for (PreferenceTag preferenceTag : PreferenceTag.values()) {
+                String hashtag = preferenceTag.getHashtag();
+                if (hashtag != null && !hashtag.isBlank() && !selected.contains(hashtag)) {
+                    fallback.add(hashtag);
+                }
+            }
+
+            Collections.shuffle(fallback);
+            for (String hashtag : fallback) {
+                selected.add(hashtag);
+                if (selected.size() >= limit) {
+                    break;
+                }
+            }
+        }
+
+        List<String> hashtags = new ArrayList<>(selected);
+        Collections.shuffle(hashtags);
+        return hashtags.stream()
                 .limit(limit)
                 .toList();
     }

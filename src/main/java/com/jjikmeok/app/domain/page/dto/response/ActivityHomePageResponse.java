@@ -1,11 +1,10 @@
 package com.jjikmeok.app.domain.page.dto.response;
 
-import java.util.List;
-
 public record ActivityHomePageResponse(
         UserResponse user,
-        List<ActivityCardResponse> recommendedActivities,
-        List<ActivityCardResponse> closingSoonActivities
+        ActivitySectionResponse featured,
+        ActivitySectionResponse popular,
+        ActivitySectionResponse expandedRecommendation
 ) {
     public record UserResponse(
             String nickname,

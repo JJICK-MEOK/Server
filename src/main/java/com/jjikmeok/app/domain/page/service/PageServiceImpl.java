@@ -1,5 +1,6 @@
 package com.jjikmeok.app.domain.page.service;
 
+import com.jjikmeok.app.domain.activity.dto.response.ActivityRecommendationResponse;
 import com.jjikmeok.app.domain.activity.entity.Activity;
 import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
@@ -18,8 +19,8 @@ import com.jjikmeok.app.domain.page.dto.response.ActivityFavoritePageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityFilterOptionResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomePageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivitySectionResponse;
+import com.jjikmeok.app.domain.tag.entity.TagType;
 import com.jjikmeok.app.domain.user.entity.UserOnboardingTag;
-import com.jjikmeok.app.domain.user.repository.UserOnboardingRegionRepository;
 import com.jjikmeok.app.domain.user.repository.UserOnboardingTagRepository;
 import com.jjikmeok.app.domain.user.repository.UserProfileRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
@@ -37,6 +38,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -44,10 +46,14 @@ import java.util.Set;
 public class PageServiceImpl implements PageService {
 
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
-    private static final int DEFAULT_HOME_LIMIT = 10;
+    private static final int DEFAULT_CUSTOM_LIMIT = 10;
     private static final int DEFAULT_LIST_LIMIT = 20;
     private static final int MAX_LIMIT = 50;
     private static final int SORT_FETCH_LIMIT = 100;
+    private static final int HOME_FEATURED_LIMIT = 4;
+    private static final int HOME_POPULAR_LIMIT = 9;
+    private static final int HOME_EXPANDED_LIMIT = 8;
+    private static final int HOME_RECOMMENDATION_FETCH_LIMIT = 50;
     private static final ApprovalStatus PUBLIC_STATUS = ApprovalStatus.APPROVED;
 
     private final ActivityRepository activityRepository;
@@ -55,21 +61,17 @@ public class PageServiceImpl implements PageService {
     private final ImageRepository imageRepository;
     private final UserProfileRepository userProfileRepository;
     private final UserOnboardingTagRepository userOnboardingTagRepository;
-    private final UserOnboardingRegionRepository userOnboardingRegionRepository;
 
     @Override
-    public ActivityHomePageResponse getHomePage(Long userId, Integer limit) {
-        int size = limit(limit, DEFAULT_HOME_LIMIT);
-        ActivityHomePageResponse.UserResponse user = homeUser(userId);
+    public ActivityHomePageResponse getHomePage(Long userId) {
+        List<UserOnboardingTag> onboardingTags = onboardingTags(userId);
 
-        List<ActivityCardResponse> recommended = cards(userId, recommendedActivities(userId, size), size);
-        List<ActivityCardResponse> closingSoon = cards(
-                userId,
-                activityRepository.findApprovedClosingSoon(PUBLIC_STATUS, LocalDateTime.now(SEOUL), PageRequest.of(0, size)),
-                size
+        return new ActivityHomePageResponse(
+                homeUser(userId),
+                section(userId, personalizedActivities(userId, HOME_FEATURED_LIMIT, onboardingTags), HOME_FEATURED_LIMIT, 3),
+                section(userId, popularActivities(HOME_POPULAR_LIMIT), HOME_POPULAR_LIMIT, 2),
+                section(userId, expandedRecommendationActivities(userId, onboardingTags), HOME_EXPANDED_LIMIT, 3)
         );
-
-        return new ActivityHomePageResponse(user, recommended, closingSoon);
     }
 
     @Override
@@ -83,18 +85,24 @@ public class PageServiceImpl implements PageService {
         int size = limit(limit, DEFAULT_LIST_LIMIT);
         String selectedSort = normalizeSort(sort);
         LocalDateTime now = LocalDate.now(SEOUL).atStartOfDay();
-        List<Activity> activities = activityRepository.findApprovedActivitiesByFilters(
-                PUBLIC_STATUS,
-                category,
-                type,
+        List<Long> activityIds = activityRepository.findApprovedActivityIdsByFiltersNative(
+                category == null ? null : category.name(),
+                type == null ? null : type.name(),
                 now,
                 PageRequest.of(0, Math.max(size, SORT_FETCH_LIMIT))
         );
+        List<Activity> activities = activityIds.isEmpty()
+                ? List.of()
+                : activityRepository.findAllByIdInWithSummaryAssociations(activityIds);
 
         List<Activity> sorted = sort(activities, selectedSort).stream()
                 .limit(size)
                 .toList();
-        long totalCount = activityRepository.countApprovedActivitiesByFilters(PUBLIC_STATUS, category, type, now);
+        long totalCount = activityRepository.countApprovedActivitiesByFiltersNative(
+                category == null ? null : category.name(),
+                type == null ? null : type.name(),
+                now
+        );
 
         return new ActivityCategoryPageResponse(
                 type == null ? "전체" : type.getLabel(),
@@ -111,14 +119,19 @@ public class PageServiceImpl implements PageService {
 
     @Override
     public ActivityCustomPageResponse getCustomPage(Long userId, Integer limit) {
-        int size = limit(limit, DEFAULT_HOME_LIMIT);
+        int size = limit(limit, DEFAULT_CUSTOM_LIMIT);
+        List<UserOnboardingTag> onboardingTags = onboardingTags(userId);
         String nickname = nickname(userId);
-        List<UserOnboardingTag> preferenceTags = preferenceTags(userId);
-        List<String> hashtags = preferenceTags.stream()
+        List<String> hashtags = preferenceTags(onboardingTags).stream()
                 .map(userOnboardingTag -> "#" + userOnboardingTag.getTag().getName())
                 .toList();
 
-        List<ActivityCardResponse> recommended = cards(userId, recommendedActivities(userId, size), size);
+        List<ActivityCardResponse> recommended = cards(
+                userId,
+                personalizedActivities(userId, size, onboardingTags),
+                size,
+                3
+        );
 
         return new ActivityCustomPageResponse(
                 nickname,
@@ -127,18 +140,17 @@ public class PageServiceImpl implements PageService {
                         nickname + "님의 취향에 맞는 활동을 모아봤어요.",
                         hashtags
                 ),
-                new ActivitySectionResponse("customRecommended", "맞춤 추천 활동", null, recommended)
+                new ActivitySectionResponse(recommended)
         );
     }
 
     @Override
     public ActivityFavoritePageResponse getFavoritePage(Long userId, String sort) {
-
         String selectedSort = normalizeFavoriteSort(sort);
         LocalDateTime now = LocalDate.now(SEOUL).atStartOfDay();
         List<Activity> activities = favoritePageActivities(userId, selectedSort, now);
 
-        return new ActivityFavoritePageResponse(favoriteCards(activities));
+        return new ActivityFavoritePageResponse(cards(userId, activities, activities.size(), 2));
     }
 
     @Override
@@ -158,93 +170,115 @@ public class PageServiceImpl implements PageService {
         return PageConverter.toDetail(activity, images, liked, LocalDate.now(SEOUL));
     }
 
-    private List<Activity> recommendedActivities(Long userId, int size) {
-        LocalDateTime now = LocalDate.now(SEOUL).atStartOfDay();
-        List<Long> tagIds = preferenceTags(userId).stream()
-                .map(userOnboardingTag -> userOnboardingTag.getTag().getId())
-                .toList();
-
-        if (!tagIds.isEmpty()) {
-            List<Activity> byTags = activityRepository.findRecommendedByPreferenceTagIds(
-                    PUBLIC_STATUS,
-                    tagIds,
-                    now,
-                    PageRequest.of(0, size)
-            );
-            if (!byTags.isEmpty()) {
-                return byTags;
-            }
-        }
-
-        List<Long> regionIds = userId == null ? List.of() : userOnboardingRegionRepository.findRegionIdsByUserId(userId);
-        if (!regionIds.isEmpty()) {
-            List<Activity> byRegions = activityRepository.findRecommendedByRegionIds(
-                    PUBLIC_STATUS,
-                    regionIds,
-                    now,
-                    PageRequest.of(0, size)
-            );
-            if (!byRegions.isEmpty()) {
-                return byRegions;
-            }
-        }
-
-        return activityRepository.findApprovedLatest(PUBLIC_STATUS, now, PageRequest.of(0, size));
+    private ActivitySectionResponse section(
+            Long userId,
+            List<Activity> activities,
+            int limit,
+            int hashtagLimit
+    ) {
+        return new ActivitySectionResponse(cards(userId, activities, limit, hashtagLimit));
     }
 
-    private List<ActivityCardResponse> cards(Long userId, List<Activity> activities, int limit) {
-        List<Activity> distinctActivities = distinct(activities).stream()
+    private List<Activity> personalizedActivities(
+            Long userId,
+            int limit,
+            List<UserOnboardingTag> onboardingTags
+    ) {
+        if (userId == null) {
+            return approvedLatestActivities(limit);
+        }
+
+        List<UserOnboardingTag> preferenceTags = preferenceTags(onboardingTags);
+        if (preferenceTags.isEmpty()) {
+            return approvedLatestActivities(limit);
+        }
+
+        List<Activity> rankedActivities = activityRepository.findRecommendedActivitiesByUserTags(
+                        userId,
+                        1L,
+                        PUBLIC_STATUS,
+                        LocalDateTime.now(SEOUL),
+                        PageRequest.of(0, HOME_RECOMMENDATION_FETCH_LIMIT)
+                )
+                .stream()
+                .map(ActivityRecommendationResponse::activity)
+                .toList();
+
+        return distinct(rankedActivities).stream()
                 .limit(limit)
                 .toList();
-        Set<Long> likedActivityIds = likedActivityIds(userId, distinctActivities);
-        Set<Long> adActivityIds = adActivityIds(distinctActivities);
-        LocalDate today = LocalDate.now(SEOUL);
+    }
 
-        return distinctActivities.stream()
-                .map(activity -> PageConverter.toCard(
-                        activity,
-                        likedActivityIds.contains(activity.getId()),
-                        adActivityIds.contains(activity.getId()),
-                        today
-                ))
+    private List<Activity> expandedRecommendationActivities(Long userId, List<UserOnboardingTag> onboardingTags) {
+        List<UserOnboardingTag> preferenceTags = preferenceTags(onboardingTags);
+        if (userId == null || preferenceTags.isEmpty()) {
+            return approvedLatestActivities(HOME_EXPANDED_LIMIT);
+        }
+
+        Set<ActivityCategory> excludedCategories = selectedTopicCategories(onboardingTags);
+        List<Activity> rankedActivities = activityRepository.findRecommendedActivitiesByUserTags(
+                        userId,
+                        1L,
+                        PUBLIC_STATUS,
+                        LocalDateTime.now(SEOUL),
+                        PageRequest.of(0, HOME_RECOMMENDATION_FETCH_LIMIT)
+                )
+                .stream()
+                .map(ActivityRecommendationResponse::activity)
+                .filter(activity -> !excludedCategories.contains(activity.getCategory()))
+                .toList();
+
+        return distinct(rankedActivities).stream()
+                .limit(HOME_EXPANDED_LIMIT)
                 .toList();
     }
 
-    /**
-     * 찜 엔티티 목록에서 실제 활동 엔티티 목록만 뽑아내기 위한 변환 코드
-     */
+    private List<Activity> popularActivities(int limit) {
+        return activityRepository.findApprovedPopularByScore(
+                PUBLIC_STATUS,
+                LocalDateTime.now(SEOUL),
+                PageRequest.of(0, limit)
+        );
+    }
+
+    private List<Activity> approvedLatestActivities(int limit) {
+        return activityRepository.findApprovedLatest(
+                PUBLIC_STATUS,
+                LocalDateTime.now(SEOUL),
+                PageRequest.of(0, limit)
+        );
+    }
+
     private List<Activity> favoritePageActivities(Long userId, String sort, LocalDateTime now) {
         List<Favorite> favorites = "deadline".equals(sort)
-                ? favoriteRepository.findPageFavoritesOrderByDeadlineAsc(userId, PUBLIC_STATUS, now) //deadline == sort
-                : favoriteRepository.findPageFavoritesOrderBySavedDesc(userId, PUBLIC_STATUS, now); //deadline != sort
+                ? favoriteRepository.findPageFavoritesOrderByDeadlineAsc(userId, PUBLIC_STATUS, now)
+                : favoriteRepository.findPageFavoritesOrderBySavedDesc(userId, PUBLIC_STATUS, now);
 
         return favorites.stream()
                 .map(Favorite::getActivity)
                 .toList();
     }
 
-    private List<ActivityCardResponse> favoriteCards(List<Activity> activities) {
-        LocalDate today = LocalDate.now(SEOUL);
-        return distinct(activities).stream()
-                .map(activity -> PageConverter.toCard(activity, true, false, today))
-                .toList();
+    private List<ActivityCardResponse> cards(Long userId, List<Activity> activities, int limit) {
+        return cards(userId, activities, limit, 2);
     }
 
-    private Set<Long> adActivityIds(List<Activity> activities) {
-        List<Activity> ranked = activities.stream()
-                .sorted(Comparator
-                        .comparing(Activity::getViewCount, Comparator.nullsLast(Comparator.reverseOrder()))
-                        .thenComparing(Activity::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .limit(3)
+    private List<ActivityCardResponse> cards(Long userId, List<Activity> activities, int limit, int hashtagLimit) {
+        List<Activity> distinctActivities = distinct(activities).stream()
+                .limit(limit)
                 .toList();
+        Set<Long> likedActivityIds = likedActivityIds(userId, distinctActivities);
+        LocalDate today = LocalDate.now(SEOUL);
 
-        if (ranked.isEmpty()) {
-            return Set.of();
-        }
-
-        List<Activity> shuffled = new java.util.ArrayList<>(ranked);
-        java.util.Collections.shuffle(shuffled);
-        return Set.of(shuffled.getFirst().getId());
+        return distinctActivities.stream()
+                .map(activity -> PageConverter.toCard(
+                        activity,
+                        likedActivityIds.contains(activity.getId()),
+                        false,
+                        today,
+                        hashtagLimit
+                ))
+                .toList();
     }
 
     private Set<Long> likedActivityIds(Long userId, List<Activity> activities) {
@@ -336,11 +370,39 @@ public class PageServiceImpl implements PageService {
                 .orElseGet(() -> new ActivityHomePageResponse.UserResponse("게스트", ""));
     }
 
-    private List<UserOnboardingTag> preferenceTags(Long userId) {
+    private List<UserOnboardingTag> onboardingTags(Long userId) {
         if (userId == null) {
             return List.of();
         }
         return userOnboardingTagRepository.findAllByUserIdWithTag(userId);
+    }
+
+    private List<UserOnboardingTag> preferenceTags(List<UserOnboardingTag> onboardingTags) {
+        return onboardingTags.stream()
+                .filter(userOnboardingTag -> userOnboardingTag.getTag().getType() == TagType.PREFERENCE_TAG)
+                .toList();
+    }
+
+    private Set<ActivityCategory> selectedTopicCategories(List<UserOnboardingTag> onboardingTags) {
+        return onboardingTags.stream()
+                .filter(userOnboardingTag -> userOnboardingTag.getTag().getType() == TagType.TOPIC_CATEGORY)
+                .map(userOnboardingTag -> activityCategory(userOnboardingTag.getTag().getName()))
+                .filter(category -> category != null)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private ActivityCategory activityCategory(String label) {
+        if (label == null || label.isBlank()) {
+            return null;
+        }
+
+        String normalizedLabel = label.replace(" ", "");
+        for (ActivityCategory category : ActivityCategory.values()) {
+            if (category.getLabel().replace(" ", "").equals(normalizedLabel)) {
+                return category;
+            }
+        }
+        return null;
     }
 
     private String tasteTitle(List<String> hashtags) {

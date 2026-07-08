@@ -29,6 +29,10 @@ public class AiActivityParser {
         return parse(coreContext, null, "discovery");
     }
 
+    public ExtractedActivityDto parseDiscoveryRepair(String coreContext) {
+        return parse(coreContext, null, "discovery-repair");
+    }
+
     private ExtractedActivityDto parse(String coreContext, SourceType sourceType, String mode) {
         try {
             return chatClient.prompt()
@@ -58,6 +62,13 @@ public class AiActivityParser {
     }
 
     private String systemPrompt(SourceType sourceType, String mode) {
+        String discoveryGuidance = """
+                - Use title, URL, snippet, and page text together.
+                - If page text is sparse, infer organizer, contactInfo, target, address, and title from URL path, host, snippet, and page text.
+                - For discovery modes, do not leave a field null when a strong clue exists in the URL or snippet.
+                - Prefer conservative inference over null when the evidence is clear.
+                """;
+
         return """
                 You extract missing activity fields.
                 Return JSON only.
@@ -75,7 +86,8 @@ public class AiActivityParser {
                 title, address, category, activityType, moodTag1, moodTag2, intensity, purpose, duration, groupSize,
                 recruitStartAt, recruitEndAt, startAt, endAt, price, description, target, contactInfo, organizer
 
-                """ + sourcePrompt(sourceType, mode);
+                """ + sourcePrompt(sourceType, mode)
+                + (("discovery".equals(mode) || "discovery-repair".equals(mode)) ? discoveryGuidance : "");
     }
 
     private String sourcePrompt(SourceType sourceType, String mode) {

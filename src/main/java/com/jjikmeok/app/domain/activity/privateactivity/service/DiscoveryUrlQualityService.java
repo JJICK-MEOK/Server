@@ -14,21 +14,39 @@ import java.util.Locale;
 @Slf4j
 public class DiscoveryUrlQualityService {
 
-    private static final List<String> ADS = List.of("광고", "스폰서", "후원", "프로모션", "배너");
-    private static final List<String> NEWS = List.of("뉴스", "기사", "보도", "속보");
+    private static final List<String> ADS = List.of("광고", "스폰서", "프로모션", "배너");
+    private static final List<String> NEWS = List.of("뉴스", "기사", "보도", "언론");
     private static final List<String> COMMUNITY = List.of("커뮤니티", "게시판", "카페", "모임");
     private static final List<String> SEARCH = List.of("검색결과", "검색어", "검색", "찾으시는");
-    private static final List<String> ENDED = List.of("마감", "종료", "신청 종료", "모집 종료");
+    private static final List<String> ENDED = List.of("마감", "종료", "접수 종료", "모집 종료");
     private static final List<String> LOGIN = List.of("로그인", "회원 전용", "sign in", "login required", "unauthorized", "private");
-    private static final List<String> SIGNALS = List.of("모집", "신청", "접수", "참가", "예약");
-    private static final List<String> ACTIVITY = List.of("활동", "프로그램", "강연", "체험", "행사", "클래스", "투어", "전시", "봉사");
+    private static final List<String> PROMOTIONAL = List.of("광고", "홍보", "체험", "후기", "이벤트", "마케팅", "상품 안내");
+    private static final List<String> TRUST = List.of("공식", "주최", "주관", "운영", "센터", "재단", "기관", "협회", "대학");
+    private static final List<String> ACTIVITY = List.of("모집", "신청", "원데이", "프로그램", "동아리", "행사", "강연", "전시", "워크숍", "클래스", "교육");
     private static final List<String> OPERATING = List.of("운영", "진행", "주최", "주관");
-    private static final List<String> TARGET = List.of("대상", "누구나", "청소년", "성인", "대학생", "어린이", "가족");
-    private static final List<String> UNSUPPORTED_HOSTS = List.of("facebook.com", "x.com", "twitter.com", "onoffmix.com", "event-us.kr", "frip.co.kr", "munto.kr");
-    private static final List<String> URL_ONLY_HOSTS = List.of("instagram.com", "band.us", "cafe.naver.com");
-    private static final List<String> METADATA_HOSTS = List.of("blog.naver.com", "brunch.co.kr", "tistory.com", "notion.site");
+    private static final List<String> TARGET = List.of("대상", "청소년", "성인", "초등", "중등", "고등", "대학생", "직장인");
+    private static final List<String> INSTAGRAM_OFFICIAL = List.of("공식", "official", "verified", "인증", "account", "accounts", "프로필", "계정");
+    private static final List<String> INSTAGRAM_PROGRAM = List.of("모집", "신청", "프로그램", "동아리", "행사", "강연", "원데이", "클래스", "워크숍", "교육");
+
+    private static final List<String> TRUSTED_SOCIAL_HOSTS = List.of(
+            "band.us",
+            "cafe.naver.com",
+            "blog.naver.com",
+            "brunch.co.kr",
+            "tistory.com",
+            "notion.site",
+            "notion.so"
+    );
+    private static final List<String> UNSUPPORTED_HOSTS = List.of(
+            "facebook.com",
+            "x.com",
+            "twitter.com",
+            "onoffmix.com",
+            "event-us.kr",
+            "munto.kr"
+    );
     private static final List<String> FULL_CONTENT_HOST_SUFFIXES = List.of("go.kr", "or.kr", "ac.kr", "re.kr");
-    private static final List<String> FULL_CONTENT_TEXT_HINTS = List.of("공공기관", "지자체", "교육청", "복지관");
+    private static final List<String> FULL_CONTENT_TEXT_HINTS = List.of("공공기관", "지자체", "교육청", "문화재단");
 
     public Assessment evaluate(SearchResultDto searchResult) {
         String url = searchResult == null ? null : searchResult.url();
@@ -38,46 +56,79 @@ public class DiscoveryUrlQualityService {
         String text = join(title, snippet, lower(url));
 
         if (matchesAnyHost(host, UNSUPPORTED_HOSTS)) {
-            return new Assessment(ExtractionMode.URL_ONLY, 0, true, host, DiscoverySourceChannel.WEBSITE);
+            return excluded(host, DiscoverySourceChannel.WEBSITE);
         }
 
         if (containsAny(text, ADS) || containsAny(text, NEWS) || containsAny(text, COMMUNITY) || containsAny(text, SEARCH) || containsAny(text, ENDED)) {
+            return excluded(host, classifySourceChannel(host));
+        }
+
+        boolean trustedSocial = matchesAnyHost(host, TRUSTED_SOCIAL_HOSTS);
+        boolean official = matchesAnyHost(host, FULL_CONTENT_HOST_SUFFIXES) || containsAny(text, FULL_CONTENT_TEXT_HINTS);
+        boolean hasActivitySignal = containsAny(text, ACTIVITY);
+        boolean hasTrustSignal = containsAny(text, TRUST);
+        boolean hasOperatingSignal = containsAny(text, OPERATING);
+        boolean hasTargetSignal = containsAny(text, TARGET);
+        boolean promotional = containsAny(text, PROMOTIONAL);
+
+        if (containsAny(text, LOGIN)) {
             return new Assessment(ExtractionMode.URL_ONLY, 0, true, host, classifySourceChannel(host));
         }
 
-        ExtractionMode mode = resolveMode(host, text);
-        double score = switch (mode) {
-            case FULL_CONTENT -> 20;
-            case METADATA_ONLY -> 10;
-            case URL_ONLY -> 0;
-        };
-
-        if (containsAny(text, SIGNALS)) score += 6;
-        if (containsAny(text, ACTIVITY)) score += 6;
-        if (containsAny(text, OPERATING)) score += 4;
-        if (containsAny(text, TARGET)) score += 4;
-        if (containsAny(text, LOGIN)) {
-            mode = ExtractionMode.URL_ONLY;
-            score -= 20;
+        if (matchesHost(host, "instagram.com")) {
+            boolean officialInstagram = containsAny(text, INSTAGRAM_OFFICIAL);
+            boolean programLike = containsAny(text, INSTAGRAM_PROGRAM) || hasActivitySignal;
+            boolean trustLike = hasTrustSignal || hasOperatingSignal || hasTargetSignal;
+            boolean instagramPost = isInstagramPostPath(url);
+            if (!instagramPost || !officialInstagram || !programLike || !trustLike) {
+                return excluded(host, DiscoverySourceChannel.INSTAGRAM);
+            }
+            if (promotional && !hasTrustSignal) {
+                return excluded(host, DiscoverySourceChannel.INSTAGRAM);
+            }
+            double score = 42 + signalBonus(hasActivitySignal, hasTrustSignal, hasOperatingSignal, hasTargetSignal);
+            return new Assessment(ExtractionMode.METADATA_ONLY, score, false, host, DiscoverySourceChannel.INSTAGRAM);
         }
 
-        return new Assessment(mode, score, false, host, classifySourceChannel(host));
+        if (official) {
+            double score = 24 + signalBonus(hasActivitySignal, hasTrustSignal, hasOperatingSignal, hasTargetSignal);
+            if (promotional && !hasTrustSignal) {
+                return excluded(host, classifySourceChannel(host));
+            }
+            return new Assessment(ExtractionMode.FULL_CONTENT, score, false, host, classifySourceChannel(host));
+        }
+
+        if (trustedSocial) {
+            double score = 32 + signalBonus(hasActivitySignal, hasTrustSignal, hasOperatingSignal, hasTargetSignal);
+            if (promotional && !hasTrustSignal) {
+                return excluded(host, classifySourceChannel(host));
+            }
+            return new Assessment(ExtractionMode.METADATA_ONLY, score, false, host, classifySourceChannel(host));
+        }
+
+        if (!hasActivitySignal || promotional) {
+            return excluded(host, DiscoverySourceChannel.WEBSITE);
+        }
+
+        if (!(hasTrustSignal || hasOperatingSignal || hasTargetSignal)) {
+            return excluded(host, DiscoverySourceChannel.WEBSITE);
+        }
+
+        double score = 16 + signalBonus(hasActivitySignal, hasTrustSignal, hasOperatingSignal, hasTargetSignal);
+        return new Assessment(ExtractionMode.METADATA_ONLY, score, false, host, DiscoverySourceChannel.WEBSITE);
     }
 
-    private ExtractionMode resolveMode(String host, String text) {
-        if (containsAny(text, LOGIN)) {
-            return ExtractionMode.URL_ONLY;
-        }
-        if (matchesAnyHost(host, URL_ONLY_HOSTS)) {
-            return ExtractionMode.URL_ONLY;
-        }
-        if (matchesAnyHost(host, METADATA_HOSTS)) {
-            return ExtractionMode.METADATA_ONLY;
-        }
-        if (matchesAnyHost(host, FULL_CONTENT_HOST_SUFFIXES) || containsAny(text, FULL_CONTENT_TEXT_HINTS)) {
-            return ExtractionMode.FULL_CONTENT;
-        }
-        return ExtractionMode.METADATA_ONLY;
+    private Assessment excluded(String host, DiscoverySourceChannel sourceChannel) {
+        return new Assessment(ExtractionMode.URL_ONLY, 0, true, host, sourceChannel);
+    }
+
+    private double signalBonus(boolean hasActivitySignal, boolean hasTrustSignal, boolean hasOperatingSignal, boolean hasTargetSignal) {
+        double score = 0;
+        if (hasActivitySignal) score += 8;
+        if (hasTrustSignal) score += 6;
+        if (hasOperatingSignal) score += 4;
+        if (hasTargetSignal) score += 4;
+        return score;
     }
 
     private boolean containsAny(String text, List<String> keywords) {
@@ -85,7 +136,7 @@ public class DiscoveryUrlQualityService {
             return false;
         }
         for (String keyword : keywords) {
-            if (text.contains(lower(keyword))) {
+            if (keyword != null && !keyword.isBlank() && text.contains(lower(keyword))) {
                 return true;
             }
         }
@@ -140,6 +191,22 @@ public class DiscoveryUrlQualityService {
             return lower(uri.getHost());
         } catch (Exception e) {
             return "";
+        }
+    }
+
+    private boolean isInstagramPostPath(String url) {
+        if (url == null || url.isBlank()) {
+            return false;
+        }
+        try {
+            URI uri = URI.create(url);
+            String path = lower(uri.getPath());
+            return path.startsWith("/p/")
+                    || path.startsWith("/reel/")
+                    || path.startsWith("/tv/")
+                    || path.startsWith("/share/");
+        } catch (Exception e) {
+            return false;
         }
     }
 

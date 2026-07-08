@@ -88,6 +88,24 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             @Param("now") LocalDateTime now,
             Pageable pageable);
 
+    @Query(value = """
+            SELECT a.id
+            FROM activities a
+            WHERE a.is_active = true
+              AND a.approval_status = 'APPROVED'
+              AND (a.recruit_end_at IS NULL OR a.recruit_end_at >= :now)
+              AND a.activity_type IN ('PROGRAM', 'ONE_DAY', 'EVENT', 'CLUB')
+              AND a.category IN ('SPORTS', 'CULTURE', 'CRAFT', 'COOKING', 'PHOTO_VIDEO', 'HUMANITIES', 'TRAVEL', 'LANGUAGE', 'VOLUNTEER', 'CAREER')
+              AND (:category IS NULL OR a.category = :category)
+              AND (:type IS NULL OR a.activity_type = :type)
+            ORDER BY a.created_at DESC
+            """, nativeQuery = true)
+    List<Long> findApprovedActivityIdsByFiltersNative(
+            @Param("category") String category,
+            @Param("type") String type,
+            @Param("now") LocalDateTime now,
+            Pageable pageable);
+
     @Query("""
             SELECT COUNT(a)
             FROM Activity a
@@ -101,6 +119,22 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             @Param("approvalStatus") ApprovalStatus approvalStatus,
             @Param("category") ActivityCategory category,
             @Param("type") ActivityType type,
+            @Param("now") LocalDateTime now);
+
+    @Query(value = """
+            SELECT COUNT(*)
+            FROM activities a
+            WHERE a.is_active = true
+              AND a.approval_status = 'APPROVED'
+              AND (a.recruit_end_at IS NULL OR a.recruit_end_at >= :now)
+              AND a.activity_type IN ('PROGRAM', 'ONE_DAY', 'EVENT', 'CLUB')
+              AND a.category IN ('SPORTS', 'CULTURE', 'CRAFT', 'COOKING', 'PHOTO_VIDEO', 'HUMANITIES', 'TRAVEL', 'LANGUAGE', 'VOLUNTEER', 'CAREER')
+              AND (:category IS NULL OR a.category = :category)
+              AND (:type IS NULL OR a.activity_type = :type)
+            """, nativeQuery = true)
+    long countApprovedActivitiesByFiltersNative(
+            @Param("category") String category,
+            @Param("type") String type,
             @Param("now") LocalDateTime now);
 
     @Query("""
@@ -156,24 +190,13 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             JOIN FETCH a.region
             WHERE a.isActive = true
               AND a.approvalStatus = :approvalStatus
-              AND a.recruitEndAt >= :now
-            ORDER BY a.recruitEndAt ASC, a.viewCount DESC, a.likeCount DESC
-            """)
-    List<Activity> findApprovedClosingSoon(
-            @Param("approvalStatus") ApprovalStatus approvalStatus,
-            @Param("now") LocalDateTime now,
-            Pageable pageable);
-
-    @Query("""
-            SELECT DISTINCT a
-            FROM Activity a
-            JOIN FETCH a.region
-            WHERE a.isActive = true
-              AND a.approvalStatus = :approvalStatus
               AND (a.recruitEndAt IS NULL OR a.recruitEndAt >= :now)
-            ORDER BY a.viewCount DESC, a.likeCount DESC, a.createdAt DESC
+            ORDER BY (COALESCE(a.viewCount, 0) + (COALESCE(a.likeCount, 0) * 2)) DESC,
+                     a.viewCount DESC,
+                     a.likeCount DESC,
+                     a.createdAt DESC
             """)
-    List<Activity> findApprovedPopular(
+    List<Activity> findApprovedPopularByScore(
             @Param("approvalStatus") ApprovalStatus approvalStatus,
             @Param("now") LocalDateTime now,
             Pageable pageable);
@@ -254,6 +277,7 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             JOIN UserOnboardingTag uot ON uot.tag = at.tag
             LEFT JOIN Favorite f ON f.activity = a AND f.user.id = :userId
             WHERE uot.userOnboarding.user.id = :userId
+              AND uot.tag.type = com.jjikmeok.app.domain.tag.entity.TagType.PREFERENCE_TAG
               AND a.isActive = true
               AND a.approvalStatus = :approvalStatus
               AND (a.recruitEndAt IS NULL OR a.recruitEndAt >= :now)

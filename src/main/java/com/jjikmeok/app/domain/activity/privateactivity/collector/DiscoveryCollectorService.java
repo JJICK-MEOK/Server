@@ -90,8 +90,10 @@ public class DiscoveryCollectorService {
 
         List<DiscoverySheetRowDto> rows = new ArrayList<>();
         for (SearchResultDto searchResult : searchResults) {
+            DiscoveryUrlQualityService.Assessment assessment = urlQualityService.evaluate(searchResult);
             DiscoverySheetRowDto sheetRow = safeProcessSearchResult(
                     searchResult,
+                    assessment,
                     batchKeys,
                     sourceUrlKeys,
                     keyword,
@@ -106,14 +108,16 @@ public class DiscoveryCollectorService {
 
     private DiscoverySheetRowDto safeProcessSearchResult(
             SearchResultDto searchResult,
+            DiscoveryUrlQualityService.Assessment assessment,
             Set<String> batchKeys,
             Set<String> sourceUrlKeys,
             String keyword,
             AtomicInteger aiAnalysisCount
     ) {
         try {
-            return processSearchResult(searchResult, batchKeys, sourceUrlKeys, keyword, aiAnalysisCount);
+            return processSearchResult(searchResult, assessment, batchKeys, sourceUrlKeys, keyword, aiAnalysisCount);
         } catch (Exception e) {
+            rethrowInfrastructureException(e);
             log.warn(
                     "[Discovery] 후보 처리에 실패했습니다. keyword={}, url={}, reason={}",
                     keyword,
@@ -127,6 +131,7 @@ public class DiscoveryCollectorService {
 
     private DiscoverySheetRowDto processSearchResult(
             SearchResultDto searchResult,
+            DiscoveryUrlQualityService.Assessment assessment,
             Set<String> batchKeys,
             Set<String> sourceUrlKeys,
             String keyword,
@@ -141,11 +146,16 @@ public class DiscoveryCollectorService {
             return null;
         }
 
-        var assessment = urlQualityService.evaluate(searchResult);
         SearchResultDto classifiedSearchResult = searchResult.withSourceChannel(assessment.sourceChannel());
         if (assessment.excluded()) {
             log.info("[Discovery] 품질 필터로 URL을 제외했습니다. platform={}, url={}", assessment.platform(), searchResult.url());
             return null;
+        }
+
+        if (assessment.sourceChannel() == com.jjikmeok.app.domain.activity.privateactivity.enums.DiscoverySourceChannel.INSTAGRAM) {
+            DiscoveryCandidateDto instagramCandidate = instagramCandidate(classifiedSearchResult, assessment.confidenceScore());
+            DiscoverySheetRowDto sheetRow = appendCandidate(instagramCandidate);
+            return sheetRow;
         }
 
         ExtractionMode extractionMode = extractionMode(classifiedSearchResult, assessment.extractionMode());
@@ -217,7 +227,19 @@ public class DiscoveryCollectorService {
 
     private List<SearchResultDto> searchResults(String keyword, int resultLimit) {
         try {
-            return searchService.search(keyword, resultLimit);
+            List<SearchResultDto> results = searchService.search(keyword, resultLimit);
+            List<SearchResultDto> filtered = results.stream()
+                    .filter(result -> keywordService.isAllowedSourceUrlForKeyword(keyword, result == null ? null : result.url()))
+                    .toList();
+            if (filtered.size() != results.size()) {
+                log.info(
+                        "[Discovery] 브랜드 풀 밖 검색 결과를 제외했습니다. keyword={}, before={}, after={}",
+                        keyword,
+                        results.size(),
+                        filtered.size()
+                );
+            }
+            return filtered;
         } catch (Exception e) {
             log.warn("[Discovery] 검색 요청에 실패했습니다. keyword={}, reason={}", keyword, e.getMessage(), e);
             return List.of();
@@ -237,10 +259,63 @@ public class DiscoveryCollectorService {
         }
     }
 
+    private DiscoverySheetRowDto persistCandidate(
+            DiscoveryCandidateDto candidate,
+            SearchResultDto classifiedSearchResult,
+            Set<String> batchKeys,
+            Set<String> sourceUrlKeys,
+            String keyword,
+            AtomicInteger aiAnalysisCount
+    ) {
+        if (candidate == null || candidate.confidenceScore() < MIN_CONFIDENCE_SCORE) {
+            log.info("[Discovery] ?꾩슂??쒖쇅?덉뒿?덈떎. keyword={}, url={}", keyword, classifiedSearchResult == null ? null : classifiedSearchResult.url());
+            return null;
+        }
+
+        String sourceUrlKey = normalizedUrlKey(candidate.sourceUrl());
+        if (sourceUrlKey == null) {
+            log.info("[Discovery] sourceUrl ???놁뒿?덈떎. keyword={}, title={}", keyword, candidate.title());
+            return null;
+        }
+        if (!sourceUrlKeys.add(sourceUrlKey)) {
+            log.info("[Discovery] ?대? 泥섎━??sourceUrl ?낅땲?? url={}", candidate.sourceUrl());
+            return null;
+        }
+
+        String candidateKey = key("candidate", candidate.sourceUrl(), candidate.title(), candidate.organizer());
+        if (!batchKeys.add(candidateKey)) {
+            return null;
+        }
+
+        rawActivityArchiveService.archiveDiscoveryCandidate(classifiedSearchResult, candidate);
+
+        if (deduplicationService.findDuplicateReason(candidate.sourceUrl(), candidate.title(), candidate.organizer()).isPresent()) {
+            log.info("[Discovery] ??λ맂 ?쒕룞怨?以묐났?섏뼱 ?쒖쇅?덉뒿?덈떎. url={}", candidate.sourceUrl());
+            return null;
+        }
+
+        DiscoverySheetRowDto sheetRow = appendCandidate(candidate);
+        if (sheetRow == null) {
+            return null;
+        }
+
+        if (candidate.extractionMode() == ExtractionMode.URL_ONLY) {
+            return sheetRow;
+        }
+
+        if (aiAnalysisCount.get() >= maxAiAnalysisPerRun) {
+            log.info("[Discovery] AI 遺꾩꽍 ?쒕룄???꾨떖?덉뒿?덈떎. url={}", candidate.sourceUrl());
+            return sheetRow;
+        }
+
+        return analyzeCandidate(sheetRow, candidate, aiAnalysisCount);
+    }
+
     private DiscoverySheetRowDto appendCandidate(DiscoveryCandidateDto candidate) {
         try {
             return googleSheetsService.append(candidate);
         } catch (Exception e) {
+            rethrowInfrastructureException(e);
             log.warn("[Discovery] 후보를 시트에 추가하지 못했습니다. url={}, reason={}", candidate.sourceUrl(), e.getMessage(), e);
             return null;
         }
@@ -262,9 +337,33 @@ public class DiscoveryCollectorService {
             googleSheetsService.updateRow(analyzedRow);
             return analyzedRow;
         } catch (Exception e) {
+            rethrowInfrastructureException(e);
             log.warn("[Discovery] AI 분석에 실패했습니다. url={}, reason={}", candidate.sourceUrl(), e.getMessage(), e);
             return sheetRow;
         }
+    }
+
+    private DiscoveryCandidateDto instagramCandidate(SearchResultDto searchResult, double confidenceScore) {
+        return new DiscoveryCandidateDto(
+                searchResult.keyword(),
+                searchResult,
+                null,
+                searchResult.url(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                ExtractionMode.URL_ONLY,
+                confidenceScore,
+                null
+        );
     }
 
     private Set<String> existingSourceUrlKeys() {
@@ -277,9 +376,16 @@ public class DiscoveryCollectorService {
                 }
             }
         } catch (Exception e) {
+            rethrowInfrastructureException(e);
             log.warn("[Discovery] 기존 시트 URL을 불러오지 못했습니다. reason={}", e.getMessage(), e);
         }
         return keys;
+    }
+
+    private void rethrowInfrastructureException(Exception e) {
+        if (e instanceof IllegalStateException && e.getMessage() != null && e.getMessage().startsWith("Google Sheets")) {
+            throw (IllegalStateException) e;
+        }
     }
 
     private String normalizedUrlKey(String sourceUrl) {

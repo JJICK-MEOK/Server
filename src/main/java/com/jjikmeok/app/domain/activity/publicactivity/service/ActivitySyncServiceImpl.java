@@ -85,16 +85,9 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
     @Override
     @Transactional
     public void syncAllSources() {
-        log.info("[ActivitySync] 7개 소스 일괄 동기화 시작");
-        for (SourceType source : SourceType.values()) {
-            if (!source.isPublicApiSource()) {
-                continue;
-            }
-            try {
-                sync(source, null, null);
-            } catch (Exception e) {
-                log.error("[ActivitySync] {} 동기화 실패: {}", source, e.getMessage());
-            }
+        log.info("[ActivitySync] public source bulk sync started: {}", SourceType.publicApiSources());
+        for (SourceType source : SourceType.publicApiSources()) {
+            sync(source, null, null);
         }
     }
 
@@ -113,9 +106,7 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
         LocalDate today = LocalDate.now(SEOUL);
         LocalDate endDate = today.plusMonths(Math.max(0, Math.min(monthsAhead == null ? 1 : monthsAhead, HARD_MAX_MONTHS_AHEAD)));
 
-        activityRepository.deactivateEnded(LocalDateTime.now(SEOUL));
-
-        int rawSaved = 0, saved = 0, duplicated = 0, totalCount = 0, aiFallbackCount = 0;
+        int rawSaved = 0, staged = 0, duplicated = 0, totalCount = 0, aiFallbackCount = 0;
         Map<String, String> thumbnailCache = new HashMap<>();
 
         for (String prfstate : sourceType == SourceType.KOPIS ? List.of("02", "01") : List.of("")) {
@@ -131,9 +122,9 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
                                 ? externalActivityGateway.fetchKopisPage(baseUrl(sourceType), serviceKey(sourceType), window.start(), window.end(), page, prfstate)
                                 : externalActivityGateway.fetchPage(sourceType, baseUrl(sourceType), serviceKey(sourceType), window.start(), window.end(), page);
                     } catch (CustomException e) {
-                        log.warn("[ActivitySync] {} API 호출 실패, 동기화 종료. rawSaved={}, saved={}, reason={}",
-                                sourceType, rawSaved, saved, e.getErrorCode().getCode());
-                        return new ActivitySyncResponse(sourceType, rawSaved, saved, duplicated);
+                        log.warn("[ActivitySync] {} API call failed. rawSaved={}, staged={}, reason={}",
+                                sourceType, rawSaved, staged, e.getErrorCode().getCode());
+                        throw e;
                     }
 
                     rawActivityArchiveService.archiveFetchedPayload(fetchedPayload);
@@ -176,33 +167,12 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
                         na = withDefaults(na);
                         if (!validForPersist(na)) continue;
 
-                        Activity existing = activityRepository.findDuplicate(
-                                na.sourceType(), na.externalId(), na.sourceUrl(),
-                                na.title(), na.startAt(), na.address()
-                        ).orElse(null);
-
-                        if (existing != null) {
-                            Region region = activityRegionResolver.resolve(na.title(), na.address(), defaultRegionId);
-                            updateIfChanged(existing, region, na, categoryOverride);
-                            googleSheetsService.upsertPublicActivity(na);
+                        boolean existedInSheet = googleSheetsService.hasPublicActivity(na);
+                        googleSheetsService.upsertPublicActivity(sourceType, na);
+                        if (existedInSheet) {
                             duplicated++;
-                            continue;
-                        }
-
-                        Region resolvedRegion = activityRegionResolver.resolve(na.title(), na.address(), defaultRegionId);
-                        Activity savedActivity = activityRepository.save(toActivity(resolvedRegion, na, categoryOverride));
-                        activityTagAutoAttachService.refresh(savedActivity);
-                        googleSheetsService.upsertPublicActivity(na);
-                        saved++;
-
-                        try {
-                            String embeddingText = "카테고리: %s\n활동명: %s\n주최사: %s\n참여비용: %d원\n상세내용: %s".formatted(
-                                    savedActivity.getCategory().name(), savedActivity.getTitle(),
-                                    savedActivity.getOrganizer(), savedActivity.getPrice(), savedActivity.getDescription());
-                            vectorStore.accept(List.of(new Document(embeddingText,
-                                    Map.of("activityId", savedActivity.getId(), "sourceType", savedActivity.getSourceType().name()))));
-                        } catch (Exception e) {
-                            log.warn("[ActivitySync] {} VectorDB 임베딩 실패, 저장은 완료됨", sourceType);
+                        } else {
+                            staged++;
                         }
                     }
 
@@ -212,7 +182,7 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
         }
 
         log.info("[ActivitySync] {} 완료: 전체 {}건 중 AI 보완 {}건", sourceType, totalCount, aiFallbackCount);
-        return new ActivitySyncResponse(sourceType, rawSaved, saved, duplicated);
+        return new ActivitySyncResponse(sourceType, rawSaved, staged, duplicated);
     }
 
     private String safeAiText(String aiValue, String originalValue) {
@@ -538,10 +508,17 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
 
     private String serviceKey(SourceType src) {
         return switch (src) {
-            case KOPIS          -> kopisServiceKey;
-            case EXHIBITION     -> exhibitionServiceKey;
+            case KOPIS          -> requiredServiceKey(kopisServiceKey);
+            case EXHIBITION     -> requiredServiceKey(exhibitionServiceKey);
             default             -> "";
         };
+    }
+
+    private String requiredServiceKey(String serviceKey) {
+        if (serviceKey == null || serviceKey.isBlank()) {
+            throw new CustomException(ErrorCode.ACTIVITY_SYNC_CONFIG_MISSING);
+        }
+        return serviceKey;
     }
 
     private record DateWindow(LocalDate start, LocalDate end) {}

@@ -74,8 +74,19 @@ public class ActivityTagSuggestionService {
                 tags.add(tag);
             }
         }
+        addTag(tags, chooseMood(normalized, category));
+        addTag(tags, chooseIntensity(normalized, startAt, endAt));
+        addTag(tags, choosePurpose(normalized, category));
+        addTag(tags, chooseDuration(normalized, startAt, endAt));
+        addTag(tags, chooseSize(normalized));
 
         return tags;
+    }
+
+    private void addTag(List<PreferenceTag> tags, PreferenceTag tag) {
+        if (tag != null && !tags.contains(tag)) {
+            tags.add(tag);
+        }
     }
 
     private PreferenceTag chooseMood(String text, ActivityCategory category) {

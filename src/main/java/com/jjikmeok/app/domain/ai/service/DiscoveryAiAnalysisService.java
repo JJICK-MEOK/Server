@@ -37,6 +37,11 @@ public class DiscoveryAiAnalysisService {
 
         ExtractedActivityDto ai = aiActivityParser.parseDiscovery(context(candidate));
         DiscoveryCandidateDto merged = merge(candidate, ai);
+        if (needsRepair(candidate, merged, ai)) {
+            ExtractedActivityDto repair = aiActivityParser.parseDiscoveryRepair(repairContext(candidate, merged));
+            ai = merge(ai, repair);
+            merged = merge(merged, repair);
+        }
 
         String text = utils.cleanText(join(
                 merged.keyword(),
@@ -84,9 +89,7 @@ public class DiscoveryAiAnalysisService {
 
         return new DiscoveryAnalysisDto(
                 merged.keyword(),
-                merged.searchResult() == null || merged.searchResult().sourceChannel() == null
-                        ? "WEBSITE"
-                        : merged.searchResult().sourceChannel().name(),
+                first(merged.organizer(), merged.title(), candidate.title()),
                 merged.title(),
                 merged.sourceUrl(),
                 merged.thumbnailUrl(),
@@ -139,6 +142,138 @@ public class DiscoveryAiAnalysisService {
                 candidate.confidenceScore(),
                 candidate.pageText()
         );
+    }
+
+    private boolean needsRepair(DiscoveryCandidateDto original, DiscoveryCandidateDto merged, ExtractedActivityDto ai) {
+        if (merged == null) {
+            return false;
+        }
+
+        boolean importantMissing = utils.isBlank(merged.title())
+                || utils.isBlank(merged.description())
+                || utils.isBlank(merged.organizer())
+                || utils.isBlank(merged.contactInfo())
+                || utils.isBlank(merged.address())
+                || merged.startAt() == null
+                || merged.endAt() == null;
+        boolean hasHints = !utils.isBlank(original.sourceUrl())
+                || !utils.isBlank(original.searchResult() == null ? null : original.searchResult().snippet())
+                || !utils.isBlank(original.pageText());
+
+        return hasHints && importantMissing && ai != null;
+    }
+
+    private ExtractedActivityDto merge(ExtractedActivityDto first, ExtractedActivityDto second) {
+        if (first == null) {
+            return second;
+        }
+        if (second == null) {
+            return first;
+        }
+
+        return new ExtractedActivityDto(
+                firstText(first.title(), second.title()),
+                firstText(first.address(), second.address()),
+                firstText(first.category(), second.category()),
+                firstText(first.activityType(), second.activityType()),
+                firstText(first.moodTag1(), second.moodTag1()),
+                firstText(first.moodTag2(), second.moodTag2()),
+                firstText(first.intensity(), second.intensity()),
+                firstText(first.purpose(), second.purpose()),
+                firstText(first.duration(), second.duration()),
+                firstText(first.groupSize(), second.groupSize()),
+                firstDate(first.recruitStartAt(), second.recruitStartAt()),
+                firstDate(first.recruitEndAt(), second.recruitEndAt()),
+                firstDate(first.startAt(), second.startAt()),
+                firstDate(first.endAt(), second.endAt()),
+                firstPrice(first.price(), second.price()),
+                firstText(first.description(), second.description()),
+                firstText(first.target(), second.target()),
+                firstText(first.contactInfo(), second.contactInfo()),
+                firstText(first.organizer(), second.organizer())
+        );
+    }
+
+    private String repairContext(DiscoveryCandidateDto original, DiscoveryCandidateDto merged) {
+        return """
+                [mode]
+                discovery-repair
+
+                [keyword]
+                %s
+
+                [title]
+                %s
+
+                [url]
+                %s
+
+                [url_host]
+                %s
+
+                [url_path]
+                %s
+
+                [snippet]
+                %s
+
+                [current_title]
+                %s
+
+                [current_description]
+                %s
+
+                [current_organizer]
+                %s
+
+                [current_contact]
+                %s
+
+                [current_target]
+                %s
+
+                [current_address]
+                %s
+
+                [page]
+                %s
+
+                Fill only missing fields. Use URL, snippet, and page text as evidence.
+                """.formatted(
+                original.keyword(),
+                original.title(),
+                original.sourceUrl(),
+                urlHost(original.sourceUrl()),
+                urlPath(original.sourceUrl()),
+                original.searchResult() == null ? null : original.searchResult().snippet(),
+                merged.title(),
+                merged.description(),
+                merged.organizer(),
+                merged.contactInfo(),
+                merged.target(),
+                merged.address(),
+                merged.pageText()
+        );
+    }
+
+    private String urlHost(String sourceUrl) {
+        try {
+            return sourceUrl == null || sourceUrl.isBlank() ? null : java.net.URI.create(sourceUrl).getHost();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String urlPath(String sourceUrl) {
+        try {
+            if (sourceUrl == null || sourceUrl.isBlank()) {
+                return null;
+            }
+            String path = java.net.URI.create(sourceUrl).getPath();
+            return path == null || path.isBlank() ? null : path;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private ActivityCategory classifyCategory(String text) {
@@ -312,6 +447,12 @@ public class DiscoveryAiAnalysisService {
                 [url]
                 %s
 
+                [url_host]
+                %s
+
+                [url_path]
+                %s
+
                 [snippet]
                 %s
 
@@ -333,6 +474,8 @@ public class DiscoveryAiAnalysisService {
                 candidate.keyword(),
                 candidate.title(),
                 candidate.sourceUrl(),
+                urlHost(candidate.sourceUrl()),
+                urlPath(candidate.sourceUrl()),
                 candidate.searchResult() == null ? null : candidate.searchResult().snippet(),
                 candidate.organizer(),
                 candidate.contactInfo(),

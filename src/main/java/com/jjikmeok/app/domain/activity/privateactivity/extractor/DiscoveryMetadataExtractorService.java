@@ -17,6 +17,8 @@ import java.net.URI;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -75,29 +77,6 @@ public class DiscoveryMetadataExtractorService {
                 meta(html, "description"),
                 searchResult.snippet()
         ));
-
-        if (extractionMode == ExtractionMode.METADATA_ONLY) {
-            return new DiscoveryCandidateDto(
-                    searchResult.keyword(),
-                    searchResult,
-                    title,
-                    sourceUrl,
-                    thumbnailUrl,
-                    description,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    extractionMode,
-                    confidenceScore,
-                    compact(first(visibleText, searchResult.snippet(), description, title))
-            );
-        }
 
         String address = first(
                 utils.cleanAddressStrict(jsonLocation(jsonLd)),
@@ -243,12 +222,13 @@ public class DiscoveryMetadataExtractorService {
         }
 
         try {
-            return restClient.get()
+            String html = restClient.get()
                     .uri(URI.create(sourceUrl))
                     .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
                     .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
                     .retrieve()
                     .body(String.class);
+            return html;
         } catch (Exception e) {
             log.debug("[발견] 메타데이터 조회에 실패했습니다. URL={}", sourceUrl, e);
             return null;
@@ -504,7 +484,7 @@ public class DiscoveryMetadataExtractorService {
         }
 
         for (String label : labels) {
-            Matcher matcher = Pattern.compile(Pattern.quote(label) + "\\s*[:：]?\\s*([^\\n|]{2,160})", Pattern.CASE_INSENSITIVE).matcher(text);
+            Matcher matcher = Pattern.compile(Pattern.quote(label) + "\\s*[:竊??\\s*([^\\n|]{2,160})", Pattern.CASE_INSENSITIVE).matcher(text);
             if (matcher.find()) {
                 return utils.cleanText(matcher.group(1));
             }
@@ -542,7 +522,7 @@ public class DiscoveryMetadataExtractorService {
         if (cleaned == null || cleaned.length() > 80) {
             return null;
         }
-        if (cleaned.matches(".*(문의|연락처|전화번호|영업시간|로그인|회원가입|공지|URL복사|약관|계좌).*")) {
+        if (cleaned.matches(".*(臾몄쓽|?곕씫泥??꾪솕踰덊샇|?곸뾽?쒓컙|濡쒓렇???뚯썝媛??怨듭?|URL蹂듭궗|?쎄?|怨꾩쥖).*")) {
             return null;
         }
         return cleaned;
@@ -577,7 +557,7 @@ public class DiscoveryMetadataExtractorService {
             if (price != null) {
                 return price;
             }
-            if (text.contains("무료") || text.matches("(?is).*\\bfree\\b.*")) {
+            if (text.contains("臾대즺") || text.matches("(?is).*\\bfree\\b.*")) {
                 return 0;
             }
             price = utils.extractPriceFromText(text, false);
@@ -605,3 +585,4 @@ public class DiscoveryMetadataExtractorService {
         return null;
     }
 }
+

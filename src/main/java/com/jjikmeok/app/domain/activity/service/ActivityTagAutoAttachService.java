@@ -5,6 +5,8 @@ import com.jjikmeok.app.domain.activity.enums.PreferenceTag;
 import com.jjikmeok.app.domain.tag.entity.Tag;
 import com.jjikmeok.app.domain.tag.entity.TagType;
 import com.jjikmeok.app.domain.tag.repository.TagRepository;
+import com.jjikmeok.app.global.common.exception.CustomException;
+import com.jjikmeok.app.global.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +36,6 @@ public class ActivityTagAutoAttachService {
 
     private Tag resolve(PreferenceTag preferenceTag) {
         return tagRepository.findByNameAndType(preferenceTag.getLabel(), TagType.PREFERENCE_TAG)
-                .orElseGet(() -> tagRepository.save(Tag.create(preferenceTag.getLabel(), TagType.PREFERENCE_TAG)));
+                .orElseThrow(() -> new CustomException(ErrorCode.TAG_NOT_FOUND));
     }
 }

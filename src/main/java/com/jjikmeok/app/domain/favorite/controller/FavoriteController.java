@@ -3,6 +3,7 @@ package com.jjikmeok.app.domain.favorite.controller;
 import com.jjikmeok.app.domain.favorite.dto.request.FavoriteRequest;
 import com.jjikmeok.app.domain.favorite.dto.response.FavoriteResponse;
 import com.jjikmeok.app.domain.favorite.service.FavoriteService;
+import com.jjikmeok.app.domain.page.dto.response.ActivityCardResponse;
 import com.jjikmeok.app.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,9 +34,9 @@ public class FavoriteController {
 
     @Operation(summary = "찜한 활동 목록 조회")
     @GetMapping
-    public ApiResponse<List<FavoriteResponse>> getFavorites(
+    public ApiResponse<List<ActivityCardResponse>> getFavorites(
             @AuthenticationPrincipal Long userId,
-            @Parameter(description = "정렬 기준: saved(담은순, 기본값), deadline(마감순)")
+            @Parameter(description = "정렬 기준: saved(기본), deadline(마감순)")
             @RequestParam(value = "sort", required = false, defaultValue = "saved") String sort
     ) {
         return ApiResponse.success("찜한 활동 목록 조회 성공", favoriteService.getFavorites(userId, sort));

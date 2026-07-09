@@ -71,7 +71,7 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             @Param("now") LocalDateTime now);
 
     @Query("""
-            SELECT DISTINCT a
+            SELECT a
             FROM Activity a
             JOIN FETCH a.region
             WHERE a.isActive = true

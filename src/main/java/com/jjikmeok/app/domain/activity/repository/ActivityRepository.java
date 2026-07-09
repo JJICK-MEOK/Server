@@ -185,7 +185,7 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             Pageable pageable);
 
     @Query("""
-            SELECT DISTINCT a
+            SELECT a
             FROM Activity a
             JOIN FETCH a.region
             WHERE a.isActive = true

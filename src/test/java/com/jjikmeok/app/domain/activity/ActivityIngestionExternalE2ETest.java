@@ -11,6 +11,7 @@ import com.jjikmeok.app.domain.activity.publicactivity.dto.ActivitySyncResponse;
 import com.jjikmeok.app.domain.activity.publicactivity.service.ActivitySyncService;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @SpringBootTest(properties = {
         "spring.autoconfigure.exclude=org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAutoConfiguration",
@@ -40,6 +40,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 })
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@EnabledIfEnvironmentVariable(named = "JJIKMEOK_EXTERNAL_E2E", matches = "true")
 class ActivityIngestionExternalE2ETest {
 
     @Autowired
@@ -64,11 +65,7 @@ class ActivityIngestionExternalE2ETest {
     private VectorStore vectorStore;
 
     @BeforeAll
-    void enabledOnlyWhenExplicitlyRequested() {
-        assumeTrue(
-                "true".equalsIgnoreCase(System.getenv("JJIKMEOK_EXTERNAL_E2E")),
-                "Set JJIKMEOK_EXTERNAL_E2E=true to run real API/Sheets/DB tests."
-        );
+    void allowCurrentSourceTypesBeforeTests() {
         allowCurrentSourceTypes();
     }
 

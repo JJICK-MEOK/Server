@@ -103,15 +103,13 @@ public class PersonlizationService {
         }
 
         if (hasUserVector && !recommendations.isEmpty()) {
-            Map<Long, Integer> scoresByActivityId = activityPreferenceVectorRepository.findPersonalizationScores(
-                            userId,
-                            new ArrayList<>(recommendations.keySet())
-                    )
-                    .stream()
-                    .collect(Collectors.toMap(
-                            ActivityPersonalizationScoreProjection::getActivityId,
-                            ActivityPersonalizationScoreProjection::getPersonalizationScore
-                    ));
+            Map<Long, Integer> scoresByActivityId = new LinkedHashMap<>();
+            for (ActivityPersonalizationScoreProjection score : activityPreferenceVectorRepository.findPersonalizationScores(
+                    userId,
+                    new ArrayList<>(recommendations.keySet())
+            )) {
+                scoresByActivityId.put(score.getActivityId(), score.getPersonalizationScore());
+            }
 
             recommendations.forEach((activityId, accumulator) ->
                     accumulator.setPersonalizationScore(scoresByActivityId.get(activityId))

@@ -103,6 +103,25 @@ class PersonlizationServiceTest {
     }
 
     @Test
+    void getRecommendedActivities_returnsNullScoreWhenScoreQueryReturnsNull() {
+        UserPreferenceVector userPreferenceVector = mock(UserPreferenceVector.class);
+        when(userPreferenceVectorRepository.findByUserId(USER_ID)).thenReturn(Optional.of(userPreferenceVector));
+        when(personalizationRepository.findRecommendedActivitiesByUserId(USER_ID)).thenReturn(List.of(
+                recommendation(FIRST_ACTIVITY_ID, "First activity", 10L, "healing")
+        ));
+        when(activityPreferenceVectorRepository.findPersonalizationScores(
+                USER_ID,
+                List.of(FIRST_ACTIVITY_ID)
+        )).thenReturn(List.of(new TestActivityPersonalizationScoreProjection(FIRST_ACTIVITY_ID, null)));
+
+        List<ActivityRecommendationResponse> responses = personlizationService.getRecommendedActivities(USER_ID);
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.getFirst().personalizationScore()).isNull();
+        assertThat(responses.getFirst().tags()).containsExactly("healing");
+    }
+
+    @Test
     void getRecommendedActivities_doesNotQueryScoresWhenCandidatesAreEmpty() {
         UserPreferenceVector userPreferenceVector = mock(UserPreferenceVector.class);
         when(userPreferenceVectorRepository.findByUserId(USER_ID)).thenReturn(Optional.of(userPreferenceVector));

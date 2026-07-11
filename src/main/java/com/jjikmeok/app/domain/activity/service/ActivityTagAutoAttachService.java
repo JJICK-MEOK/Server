@@ -35,7 +35,7 @@ public class ActivityTagAutoAttachService {
     }
 
     private Tag resolve(PreferenceTag preferenceTag) {
-        return tagRepository.findByNameAndType(preferenceTag.getLabel(), TagType.PREFERENCE_TAG)
+        return tagRepository.findByNameAndType(preferenceTag.getHashtag(), TagType.PREFERENCE_TAG)
                 .orElseThrow(() -> new CustomException(ErrorCode.TAG_NOT_FOUND));
     }
 }

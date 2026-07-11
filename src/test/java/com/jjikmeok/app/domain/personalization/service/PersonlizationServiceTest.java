@@ -13,6 +13,7 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -103,6 +104,21 @@ class PersonlizationServiceTest {
     }
 
     @Test
+    void getRecommendedActivities_returnsNullScoreWhenUserVectorLookupFails() {
+        when(userPreferenceVectorRepository.findByUserId(USER_ID))
+                .thenThrow(new InvalidDataAccessResourceUsageException("relation does not exist"));
+        when(personalizationRepository.findRecommendedActivitiesByUserId(USER_ID)).thenReturn(List.of(
+                recommendation(FIRST_ACTIVITY_ID, "First activity", 10L, "healing")
+        ));
+
+        List<ActivityRecommendationResponse> responses = personlizationService.getRecommendedActivities(USER_ID);
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.getFirst().personalizationScore()).isNull();
+        verifyNoInteractions(activityPreferenceVectorRepository);
+    }
+
+    @Test
     void getRecommendedActivities_returnsNullScoreWhenScoreQueryReturnsNull() {
         UserPreferenceVector userPreferenceVector = mock(UserPreferenceVector.class);
         when(userPreferenceVectorRepository.findByUserId(USER_ID)).thenReturn(Optional.of(userPreferenceVector));
@@ -113,6 +129,25 @@ class PersonlizationServiceTest {
                 USER_ID,
                 List.of(FIRST_ACTIVITY_ID)
         )).thenReturn(List.of(new TestActivityPersonalizationScoreProjection(FIRST_ACTIVITY_ID, null)));
+
+        List<ActivityRecommendationResponse> responses = personlizationService.getRecommendedActivities(USER_ID);
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.getFirst().personalizationScore()).isNull();
+        assertThat(responses.getFirst().tags()).containsExactly("healing");
+    }
+
+    @Test
+    void getRecommendedActivities_returnsNullScoresWhenScoreQueryFails() {
+        UserPreferenceVector userPreferenceVector = mock(UserPreferenceVector.class);
+        when(userPreferenceVectorRepository.findByUserId(USER_ID)).thenReturn(Optional.of(userPreferenceVector));
+        when(personalizationRepository.findRecommendedActivitiesByUserId(USER_ID)).thenReturn(List.of(
+                recommendation(FIRST_ACTIVITY_ID, "First activity", 10L, "healing")
+        ));
+        when(activityPreferenceVectorRepository.findPersonalizationScores(
+                USER_ID,
+                List.of(FIRST_ACTIVITY_ID)
+        )).thenThrow(new InvalidDataAccessResourceUsageException("operator does not exist"));
 
         List<ActivityRecommendationResponse> responses = personlizationService.getRecommendedActivities(USER_ID);
 

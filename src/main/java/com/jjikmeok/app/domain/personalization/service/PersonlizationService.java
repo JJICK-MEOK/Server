@@ -8,6 +8,8 @@ import com.jjikmeok.app.domain.personalization.repository.ActivityPreferenceVect
 import com.jjikmeok.app.domain.personalization.repository.PersonalizationRepository;
 import com.jjikmeok.app.domain.personalization.repository.UserPreferenceVectorRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PersonlizationService {
 
     private static final int DISPLAY_TAG_LIMIT = 4;
@@ -90,8 +93,7 @@ public class PersonlizationService {
 
     @Transactional(readOnly = true)
     public List<ActivityRecommendationResponse> getRecommendedActivities(Long userId) {
-        boolean hasUserVector = userId != null
-                && userPreferenceVectorRepository.findByUserId(userId).isPresent();
+        boolean hasUserVector = hasUserPreferenceVector(userId);
         Map<Long, ActivityRecommendationAccumulator> recommendations = new LinkedHashMap<>();
 
         for (ActivityRecommendationProjection projection : personalizationRepository.findRecommendedActivitiesByUserId(userId)) {
@@ -103,13 +105,10 @@ public class PersonlizationService {
         }
 
         if (hasUserVector && !recommendations.isEmpty()) {
-            Map<Long, Integer> scoresByActivityId = new LinkedHashMap<>();
-            for (ActivityPersonalizationScoreProjection score : activityPreferenceVectorRepository.findPersonalizationScores(
+            Map<Long, Integer> scoresByActivityId = findPersonalizationScores(
                     userId,
                     new ArrayList<>(recommendations.keySet())
-            )) {
-                scoresByActivityId.put(score.getActivityId(), score.getPersonalizationScore());
-            }
+            );
 
             recommendations.forEach((activityId, accumulator) ->
                     accumulator.setPersonalizationScore(scoresByActivityId.get(activityId))
@@ -120,6 +119,41 @@ public class PersonlizationService {
                 .stream()
                 .map(ActivityRecommendationAccumulator::toResponse)
                 .toList();
+    }
+
+    private boolean hasUserPreferenceVector(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+
+        try {
+            return userPreferenceVectorRepository.findByUserId(userId).isPresent();
+        } catch (DataAccessException e) {
+            log.warn("User preference vector lookup failed. userId={}, returning recommendations without scores", userId, e);
+            return false;
+        }
+    }
+
+    private Map<Long, Integer> findPersonalizationScores(Long userId, List<Long> activityIds) {
+        Map<Long, Integer> scoresByActivityId = new LinkedHashMap<>();
+
+        try {
+            for (ActivityPersonalizationScoreProjection score : activityPreferenceVectorRepository.findPersonalizationScores(
+                    userId,
+                    activityIds
+            )) {
+                scoresByActivityId.put(score.getActivityId(), score.getPersonalizationScore());
+            }
+        } catch (DataAccessException e) {
+            log.warn(
+                    "Activity personalization score query failed. userId={}, activityIds={}, returning null scores",
+                    userId,
+                    activityIds,
+                    e
+            );
+        }
+
+        return scoresByActivityId;
     }
 
     private static class ActivityRecommendationAccumulator {

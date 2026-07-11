@@ -196,16 +196,16 @@ class PageServiceImplTest {
     @Test
     void getHomeCurationDetailPage_returnsThemeCards() {
         Activity activity = activity(1L, ActivityCategory.CULTURE, 100, 10);
-        when(tagRepository.findByNameAndType("감성적", TagType.PREFERENCE_TAG))
-                .thenReturn(Optional.of(tag(1L, "감성적")));
-        when(tagRepository.findByNameAndType("소규모", TagType.PREFERENCE_TAG))
-                .thenReturn(Optional.of(tag(2L, "소규모")));
-        when(tagRepository.findByNameAndType("편안한", TagType.PREFERENCE_TAG))
-                .thenReturn(Optional.of(tag(3L, "편안한")));
-        when(tagRepository.findByNameAndType("휴식", TagType.PREFERENCE_TAG))
-                .thenReturn(Optional.of(tag(4L, "휴식")));
-        when(tagRepository.findByNameAndType("가볍게", TagType.PREFERENCE_TAG))
-                .thenReturn(Optional.of(tag(5L, "가볍게")));
+        when(tagRepository.findByNameAndType("#감성적", TagType.PREFERENCE_TAG))
+                .thenReturn(Optional.of(tag(1L, "#감성적")));
+        when(tagRepository.findByNameAndType("#소규모", TagType.PREFERENCE_TAG))
+                .thenReturn(Optional.of(tag(2L, "#소규모")));
+        when(tagRepository.findByNameAndType("#편안한", TagType.PREFERENCE_TAG))
+                .thenReturn(Optional.of(tag(3L, "#편안한")));
+        when(tagRepository.findByNameAndType("#휴식", TagType.PREFERENCE_TAG))
+                .thenReturn(Optional.of(tag(4L, "#휴식")));
+        when(tagRepository.findByNameAndType("#가볍게", TagType.PREFERENCE_TAG))
+                .thenReturn(Optional.of(tag(5L, "#가볍게")));
         when(activityRepository.findActiveActivitiesByTagIds(
                 anyList(),
                 eq(ApprovalStatus.APPROVED),
@@ -244,7 +244,7 @@ class PageServiceImplTest {
         return List.of(
                 UserOnboardingTag.create(onboarding, Tag.create("운동 / 액티비티", TagType.TOPIC_CATEGORY)),
                 UserOnboardingTag.create(onboarding, Tag.create("문화 / 예술", TagType.TOPIC_CATEGORY)),
-                UserOnboardingTag.create(onboarding, Tag.create("편안한", TagType.PREFERENCE_TAG))
+                UserOnboardingTag.create(onboarding, Tag.create("#편안한", TagType.PREFERENCE_TAG))
         );
     }
 
@@ -300,8 +300,8 @@ class PageServiceImplTest {
         ReflectionTestUtils.setField(activity, "id", id);
         ReflectionTestUtils.setField(activity, "viewCount", viewCount);
         ReflectionTestUtils.setField(activity, "likeCount", likeCount);
-        activity.addTag(Tag.create("편안한", TagType.PREFERENCE_TAG));
-        activity.addTag(Tag.create("소규모", TagType.PREFERENCE_TAG));
+        activity.addTag(Tag.create("#편안한", TagType.PREFERENCE_TAG));
+        activity.addTag(Tag.create("#소규모", TagType.PREFERENCE_TAG));
         return activity;
     }
 

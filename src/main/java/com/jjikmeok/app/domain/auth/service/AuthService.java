@@ -4,6 +4,7 @@ import com.jjikmeok.app.domain.auth.dto.request.LoginReq;
 import com.jjikmeok.app.domain.auth.dto.request.ReissueReq;
 import com.jjikmeok.app.domain.auth.dto.request.SignupReq;
 import com.jjikmeok.app.domain.auth.dto.response.LoginRes;
+import com.jjikmeok.app.domain.auth.dto.response.LogoutRes;
 import com.jjikmeok.app.domain.auth.dto.response.ReissueRes;
 import com.jjikmeok.app.domain.auth.dto.response.SignupRes;
 import com.jjikmeok.app.domain.auth.store.HandoffTokenStore;
@@ -91,6 +92,19 @@ public class AuthService {
     }
 
     /**
+     * 인증된 사용자의 리프레시 토큰을 삭제하여 로그아웃 처리
+     */
+    @Transactional
+    public LogoutRes logout(final Long userId) {
+        validateAuthenticatedUser(userId);
+
+        refreshTokenStore.deleteToken(userId);
+
+        log.debug("로그아웃 완료. userId={}", userId);
+        return new LogoutRes(true);
+    }
+
+    /**
      * 소셜 로그인시, 클라이언트가 서버로 부터 받은 handoffToken 을 통해서 accessToken, refreshToken 을 발급
      */
     @Transactional
@@ -113,6 +127,13 @@ public class AuthService {
         if (userRepository.existsByEmail(email)) {
             log.warn("회원가입 실패 - 이미 사용 중인 이메일입니다. email={}", email);
             throw new CustomException(ErrorCode.SIGNUP_FAILED);
+        }
+    }
+
+    private void validateAuthenticatedUser(final Long userId) {
+        if (userId == null) {
+            log.warn("로그아웃 실패 - 인증된 사용자 정보가 없습니다.");
+            throw new CustomException(ErrorCode.AUTH_UNAUTHORIZED);
         }
     }
 

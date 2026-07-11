@@ -1,15 +1,17 @@
-package com.jjikmeok.app.domain.user.repository;
+package com.jjikmeok.app.domain.onboarding.repository.query;
 
-import com.jjikmeok.app.domain.user.entity.UserOnboardingRegion;
+import com.jjikmeok.app.domain.onboarding.entity.UserOnboardingRegion;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface UserOnboardingRegionRepository extends JpaRepository<UserOnboardingRegion, Long> {
+public interface UserOnboardingRegionQueryRepository extends JpaRepository<UserOnboardingRegion, Long> {
 
-    void deleteAllByUserOnboardingId(Long userOnboardingId);
+    @EntityGraph(attributePaths = "region")
+    List<UserOnboardingRegion> findAllByUserOnboardingIdOrderByIdAsc(Long userOnboardingId);
 
     @Query("""
             SELECT userOnboardingRegion.region.id

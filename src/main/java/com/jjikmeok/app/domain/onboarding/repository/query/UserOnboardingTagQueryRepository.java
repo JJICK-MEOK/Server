@@ -1,6 +1,6 @@
-package com.jjikmeok.app.domain.user.repository;
+package com.jjikmeok.app.domain.onboarding.repository.query;
 
-import com.jjikmeok.app.domain.user.entity.UserOnboardingTag;
+import com.jjikmeok.app.domain.onboarding.entity.UserOnboardingTag;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,6 +12,14 @@ public interface UserOnboardingTagQueryRepository extends JpaRepository<UserOnbo
 
     @EntityGraph(attributePaths = "tag")
     List<UserOnboardingTag> findAllByUserOnboardingIdOrderByIdAsc(Long userOnboardingId);
+
+    @Query("""
+            SELECT userOnboardingTag
+            FROM UserOnboardingTag userOnboardingTag
+            JOIN FETCH userOnboardingTag.tag
+            WHERE userOnboardingTag.userOnboarding.user.id = :userId
+            """)
+    List<UserOnboardingTag> findAllByUserIdWithTag(@Param("userId") Long userId);
 
     @Query("""
             SELECT userOnboardingTag.tag.id

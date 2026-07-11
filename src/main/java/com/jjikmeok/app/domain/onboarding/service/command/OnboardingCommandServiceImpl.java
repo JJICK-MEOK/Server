@@ -1,23 +1,24 @@
-package com.jjikmeok.app.domain.user.service;
+package com.jjikmeok.app.domain.onboarding.service.command;
 
 import com.jjikmeok.app.domain.region.entity.Region;
 import com.jjikmeok.app.domain.region.repository.RegionRepository;
 import com.jjikmeok.app.domain.tag.entity.Tag;
 import com.jjikmeok.app.domain.tag.entity.TagType;
 import com.jjikmeok.app.domain.tag.repository.TagRepository;
-import com.jjikmeok.app.domain.user.converter.OnboardingConverter;
-import com.jjikmeok.app.domain.user.dto.request.OnboardingReq;
-import com.jjikmeok.app.domain.user.dto.response.OnboardingRes;
+import com.jjikmeok.app.domain.onboarding.converter.OnboardingConverter;
+import com.jjikmeok.app.domain.onboarding.dto.request.OnboardingReq;
+import com.jjikmeok.app.domain.onboarding.dto.response.OnboardingRes;
 import com.jjikmeok.app.domain.user.entity.User;
-import com.jjikmeok.app.domain.user.entity.UserOnboarding;
-import com.jjikmeok.app.domain.user.entity.UserOnboardingTag;
-import com.jjikmeok.app.domain.user.repository.UserOnboardingRegionRepository;
-import com.jjikmeok.app.domain.user.repository.UserOnboardingRepository;
-import com.jjikmeok.app.domain.user.repository.UserOnboardingTagRepository;
+import com.jjikmeok.app.domain.onboarding.entity.UserOnboarding;
+import com.jjikmeok.app.domain.onboarding.entity.UserOnboardingTag;
+import com.jjikmeok.app.domain.onboarding.repository.command.UserOnboardingRegionRepository;
+import com.jjikmeok.app.domain.onboarding.repository.command.UserOnboardingRepository;
+import com.jjikmeok.app.domain.onboarding.repository.command.UserOnboardingTagRepository;
 import com.jjikmeok.app.domain.user.repository.UserRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,8 +30,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
-public class OnboardingServiceImpl implements OnboardingService {
+@Transactional
+public class OnboardingCommandServiceImpl implements OnboardingCommandService {
 
     private final UserRepository userRepository;
     private final RegionRepository regionRepository;
@@ -40,8 +43,9 @@ public class OnboardingServiceImpl implements OnboardingService {
     private final UserOnboardingTagRepository userOnboardingTagRepository;
 
     @Override
-    @Transactional
     public OnboardingRes completeOnboarding(Long userId, OnboardingReq request) {
+        validateAuthenticatedUser(userId);
+
         User user = findUserOrThrow(userId);
 
         List<Long> topicTagIds = normalizeIds(request.topicTagIds());
@@ -57,6 +61,7 @@ public class OnboardingServiceImpl implements OnboardingService {
 
         user.completeOnboarding();
 
+        log.debug("사용자 온보딩 완료. userId={}, onboardingId={}", user.getId(), userOnboarding.getId());
         return OnboardingConverter.toOnboardingResponse(user, userOnboarding, topicTagIds, regionIds, preferenceTagIds);
     }
 
@@ -75,7 +80,17 @@ public class OnboardingServiceImpl implements OnboardingService {
      */
     private User findUserOrThrow(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.AUTH_UNAUTHORIZED));
+                .orElseThrow(() -> {
+                    log.warn("온보딩 완료 실패 - 사용자를 찾을 수 없습니다. userId={}", userId);
+                    return new CustomException(ErrorCode.AUTH_UNAUTHORIZED);
+                });
+    }
+
+    private void validateAuthenticatedUser(Long userId) {
+        if (userId == null) {
+            log.warn("온보딩 완료 실패 - 인증된 사용자 정보가 없습니다.");
+            throw new CustomException(ErrorCode.AUTH_UNAUTHORIZED);
+        }
     }
 
     /**
@@ -91,6 +106,7 @@ public class OnboardingServiceImpl implements OnboardingService {
     private List<Region> findRegionsOrThrow(List<Long> regionIds) {
         List<Region> regions = regionRepository.findAllByIdIn(regionIds);
         if (regions.size() != regionIds.size()) {
+            log.warn("온보딩 완료 실패 - 존재하지 않는 지역 ID가 포함되었습니다. regionIds={}", regionIds);
             throw new CustomException(ErrorCode.REGION_NOT_FOUND);
         }
 
@@ -119,6 +135,7 @@ public class OnboardingServiceImpl implements OnboardingService {
     private List<Tag> findTopicTagsOrThrow(List<Long> topicTagIds) {
         List<Tag> tags = tagRepository.findAllByIdInAndType(topicTagIds, TagType.TOPIC_CATEGORY);
         if (tags.size() != topicTagIds.size()) {
+            log.warn("온보딩 완료 실패 - 관심 주제 태그 타입이 올바르지 않습니다. topicTagIds={}", topicTagIds);
             throw new CustomException(ErrorCode.ONBOARDING_INVALID_TOPIC_TAG_TYPE);
         }
 
@@ -128,6 +145,7 @@ public class OnboardingServiceImpl implements OnboardingService {
     private List<Tag> findPreferenceTagsOrThrow(List<Long> preferenceTagIds) {
         List<Tag> tags = tagRepository.findAllByIdInAndType(preferenceTagIds, TagType.PREFERENCE_TAG);
         if (tags.size() != preferenceTagIds.size()) {
+            log.warn("온보딩 완료 실패 - 취향 태그 타입이 올바르지 않습니다. preferenceTagIds={}", preferenceTagIds);
             throw new CustomException(ErrorCode.ONBOARDING_INVALID_PREFERENCE_TAG_TYPE);
         }
 

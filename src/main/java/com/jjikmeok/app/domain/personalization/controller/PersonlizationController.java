@@ -7,6 +7,8 @@ import com.jjikmeok.app.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -55,12 +57,34 @@ public class PersonlizationController {
 
     @Operation(
             summary = "개인화 추천 활동 조회",
-            description = "로그인한 사용자의 온보딩 태그 기준으로 활동을 추천합니다. 온보딩 태그 매칭 수, 태그명 매칭 수, 좋아요 수 순서로 내림차순 정렬하며 활동 ID, 제목, 썸네일 URL, 모집 마감일, 찜 ID, 태그명 목록을 반환합니다."
+            description = "로그인한 사용자의 온보딩 태그 기준으로 활동을 추천합니다. 온보딩 태그 매칭 수, 태그명 매칭 수, 좋아요 수 순서로 내림차순 정렬하며 활동 ID, 제목, 썸네일 URL, 모집 마감일, 찜 ID, 개인화 추천 점수, 태그명 목록을 반환합니다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
-                    description = "개인화 추천 활동 조회 성공"
+                    description = "개인화 추천 활동 조회 성공",
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    name = "개인화 추천 활동 조회 성공",
+                                    value = """
+                                            {
+                                              "code": "200",
+                                              "message": "개인화 추천 활동 조회 성공",
+                                              "data": [
+                                                {
+                                                  "id": 1,
+                                                  "title": "서울 도예 원데이 클래스",
+                                                  "thumbnailUrl": "https://example.com/image.png",
+                                                  "recruitEndAt": "2026-07-10T18:00:00",
+                                                  "activityFavoriteId": 10,
+                                                  "personalizationScore": 90,
+                                                  "tags": ["힐링"]
+                                                }
+                                              ]
+                                            }
+                                            """
+                            )
+                    )
             )
     })
     @GetMapping("/api/v1/personalization/users/me/personalization-activities")

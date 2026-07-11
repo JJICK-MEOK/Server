@@ -95,6 +95,7 @@ public enum ErrorCode {
     REGION_DUPLICATE_NAME(HttpStatus.CONFLICT, "REGION_409_DUPLICATE_NAME", "같은 상위 지역 아래에 동일한 지역명이 이미 존재합니다."),
 
     // User Profile
+    PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "PROFILE_404", "해당 사용자 프로필 정보를 찾을 수 없습니다."),
     PROFILE_ALREADY_EXISTS(HttpStatus.CONFLICT, "PROFILE_409_EXISTS", "이미 사용자의 프로필이 존재합니다."),
     NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "PROFILE_409_NICKNAME", "이미 사용 중인 닉네임입니다."),
     REQUIRED_TERMS_NOT_AGREED(HttpStatus.BAD_REQUEST, "PROFILE_400_TERMS", "필수 약관에 동의해야 합니다."),

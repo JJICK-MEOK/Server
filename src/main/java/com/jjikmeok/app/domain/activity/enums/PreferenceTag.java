@@ -25,24 +25,21 @@ public enum PreferenceTag {
     HOBBY("취미", TagGroupType.PURPOSE),
     LEARNING("배움", TagGroupType.PURPOSE),
     GROWTH("성장", TagGroupType.PURPOSE),
+    SOCIAL("사교", TagGroupType.PURPOSE),
+    EXPERIENCE("경험", TagGroupType.PURPOSE),
 
     SHORT_TERM("단기", TagGroupType.DURATION),
+    ONE_DAY("하루", TagGroupType.DURATION),
+    THREE_DAYS("3일", TagGroupType.DURATION),
+    ONE_WEEK("1주", TagGroupType.DURATION),
     ONE_MONTH("한달", TagGroupType.DURATION),
+    THREE_MONTHS("3개월", TagGroupType.DURATION),
     SIX_MONTHS("6개월", TagGroupType.DURATION),
+    OVER_SIX_MONTHS("6개월 이상", TagGroupType.DURATION),
     OVER_ONE_YEAR("1년 이상", TagGroupType.DURATION),
 
-    ONE_DAY("단기", TagGroupType.DURATION),
-    THREE_DAYS("단기", TagGroupType.DURATION),
-    ONE_WEEK("단기", TagGroupType.DURATION),
-    THREE_MONTHS("한달", TagGroupType.DURATION),
-    OVER_SIX_MONTHS("6개월", TagGroupType.DURATION),
-
     SMALL("소규모", TagGroupType.SIZE),
-    LARGE("대규모", TagGroupType.SIZE),
-
-    SOCIAL("사교", TagGroupType.PURPOSE),
-    EXPERIENCE("경험", TagGroupType.PURPOSE);
-
+    LARGE("대규모", TagGroupType.SIZE);
 
     private final String label;
     private final TagGroupType group;

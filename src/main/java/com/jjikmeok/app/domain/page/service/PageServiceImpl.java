@@ -12,6 +12,11 @@ import com.jjikmeok.app.domain.image.entity.Image;
 import com.jjikmeok.app.domain.image.repository.ImageRepository;
 import com.jjikmeok.app.domain.page.converter.PageConverter;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCardResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityCurationDetailPageResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityHomeActivityCardResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityHomeActivitySectionResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityHomeCurationCardResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityHomeCurationSectionResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCategoryPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCustomPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
@@ -19,7 +24,10 @@ import com.jjikmeok.app.domain.page.dto.response.ActivityFavoritePageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityFilterOptionResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomePageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivitySectionResponse;
+import com.jjikmeok.app.domain.page.model.HomeCurationType;
+import com.jjikmeok.app.domain.tag.entity.Tag;
 import com.jjikmeok.app.domain.tag.entity.TagType;
+import com.jjikmeok.app.domain.tag.repository.TagRepository;
 import com.jjikmeok.app.domain.user.entity.UserOnboardingTag;
 import com.jjikmeok.app.domain.user.repository.UserOnboardingTagRepository;
 import com.jjikmeok.app.domain.user.repository.UserProfileRepository;
@@ -33,10 +41,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -50,27 +62,36 @@ public class PageServiceImpl implements PageService {
     private static final int DEFAULT_LIST_LIMIT = 20;
     private static final int MAX_LIMIT = 50;
     private static final int SORT_FETCH_LIMIT = 100;
-    private static final int HOME_FEATURED_LIMIT = 4;
+    private static final int HOME_CURATION_LIMIT = 4;
     private static final int HOME_POPULAR_LIMIT = 9;
     private static final int HOME_EXPANDED_LIMIT = 8;
+    private static final int HOME_CURATION_DETAIL_LIMIT = 4;
     private static final int HOME_RECOMMENDATION_FETCH_LIMIT = 50;
     private static final ApprovalStatus PUBLIC_STATUS = ApprovalStatus.APPROVED;
 
     private final ActivityRepository activityRepository;
     private final FavoriteRepository favoriteRepository;
     private final ImageRepository imageRepository;
+    private final TagRepository tagRepository;
     private final UserProfileRepository userProfileRepository;
     private final UserOnboardingTagRepository userOnboardingTagRepository;
 
     @Override
     public ActivityHomePageResponse getHomePage(Long userId) {
         List<UserOnboardingTag> onboardingTags = onboardingTags(userId);
+        List<HomeCurationType> featuredCurations = featuredCurations(onboardingTags, HOME_CURATION_LIMIT);
 
         return new ActivityHomePageResponse(
                 homeUser(userId),
-                section(userId, personalizedActivities(userId, HOME_FEATURED_LIMIT, onboardingTags), HOME_FEATURED_LIMIT, 3),
-                section(userId, popularActivities(HOME_POPULAR_LIMIT), HOME_POPULAR_LIMIT, 2),
-                section(userId, expandedRecommendationActivities(userId, onboardingTags), HOME_EXPANDED_LIMIT, 3)
+                new ActivityHomeCurationSectionResponse(
+                        featuredCurationCards(userId, featuredCurations)
+                ),
+                new ActivityHomeActivitySectionResponse(
+                        homeActivityCards(userId, popularActivities(HOME_POPULAR_LIMIT), HOME_POPULAR_LIMIT, 2)
+                ),
+                new ActivityHomeActivitySectionResponse(
+                        homeActivityCards(userId, expandedRecommendationActivities(userId, onboardingTags), HOME_EXPANDED_LIMIT, 2)
+                )
         );
     }
 
@@ -164,10 +185,27 @@ public class PageServiceImpl implements PageService {
 
         Activity activity = activityRepository.findApprovedByIdWithRegion(activityId, PUBLIC_STATUS, recruitCutoff)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACTIVITY_NOT_FOUND));
+        activity = enrichActivities(List.of(activity)).getFirst();
         List<Image> images = imageRepository.findAllByActivityIdOrderBySortOrderAscIdAsc(activityId);
         boolean liked = userId != null && favoriteRepository.existsByUserIdAndActivityId(userId, activityId);
 
         return PageConverter.toDetail(activity, images, liked, LocalDate.now(SEOUL));
+    }
+
+    @Override
+    public ActivityCurationDetailPageResponse getHomeCurationDetailPage(Long userId, String curationKey) {
+        HomeCurationType curationType = HomeCurationType.fromKey(curationKey);
+        if (curationType == null) {
+            throw new CustomException(ErrorCode.ACTIVITY_NOT_FOUND);
+        }
+
+        List<ActivityHomeActivityCardResponse> activities = curationActivities(userId, curationType);
+        return new ActivityCurationDetailPageResponse(
+                curationType.getTitle(),
+                curationType.getSubtitle(),
+                curationType.getDisplayHashtags(),
+                activities
+        );
     }
 
     private ActivitySectionResponse section(
@@ -177,6 +215,52 @@ public class PageServiceImpl implements PageService {
             int hashtagLimit
     ) {
         return new ActivitySectionResponse(cards(userId, activities, limit, hashtagLimit));
+    }
+
+    private List<ActivityHomeActivityCardResponse> homeActivityCards(
+            Long userId,
+            List<Activity> activities,
+            int limit,
+            int hashtagLimit
+    ) {
+        List<Activity> enrichedActivities = enrichActivities(activities);
+        List<Activity> distinctActivities = distinct(enrichedActivities).stream()
+                .limit(limit)
+                .toList();
+        Set<Long> likedActivityIds = likedActivityIds(userId, distinctActivities);
+        LocalDate today = LocalDate.now(SEOUL);
+
+        return distinctActivities.stream()
+                .map(activity -> PageConverter.toHomeActivityCard(
+                        activity,
+                        likedActivityIds.contains(activity.getId()),
+                        today,
+                        hashtagLimit
+                ))
+                .toList();
+    }
+
+    private List<ActivityHomeCurationCardResponse> featuredCurationCards(
+            Long userId,
+            List<HomeCurationType> featuredCurations
+    ) {
+        return featuredCurations.stream()
+                .map(curationType -> {
+                    List<ActivityHomeActivityCardResponse> activities = curationActivities(userId, curationType);
+                    String thumbnailUrl = activities.stream()
+                            .findFirst()
+                            .map(ActivityHomeActivityCardResponse::thumbnailUrl)
+                            .orElse(null);
+                    if (thumbnailUrl == null || thumbnailUrl.isBlank()) {
+                        thumbnailUrl = curationType.getThumbnailUrl();
+                    }
+                    return new ActivityHomeCurationCardResponse(
+                            curationType.getTitle(),
+                            thumbnailUrl,
+                            curationType.getDisplayHashtags()
+                    );
+                })
+                .toList();
     }
 
     private List<Activity> personalizedActivities(
@@ -264,7 +348,8 @@ public class PageServiceImpl implements PageService {
     }
 
     private List<ActivityCardResponse> cards(Long userId, List<Activity> activities, int limit, int hashtagLimit) {
-        List<Activity> distinctActivities = distinct(activities).stream()
+        List<Activity> enrichedActivities = enrichActivities(activities);
+        List<Activity> distinctActivities = distinct(enrichedActivities).stream()
                 .limit(limit)
                 .toList();
         Set<Long> likedActivityIds = likedActivityIds(userId, distinctActivities);
@@ -278,6 +363,76 @@ public class PageServiceImpl implements PageService {
                         today,
                         hashtagLimit
                 ))
+                .toList();
+    }
+
+    private List<HomeCurationType> featuredCurations(List<UserOnboardingTag> onboardingTags, int limit) {
+        Set<String> preferenceTagNames = preferenceTags(onboardingTags).stream()
+                .map(userOnboardingTag -> userOnboardingTag.getTag().getName())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        return Arrays.stream(HomeCurationType.values())
+                .sorted(Comparator
+                        .comparingInt((HomeCurationType curationType) -> -scoreCuration(curationType, preferenceTagNames))
+                        .thenComparingInt(Enum::ordinal))
+                .limit(limit)
+                .toList();
+    }
+
+    private int scoreCuration(HomeCurationType curationType, Set<String> preferenceTagNames) {
+        if (preferenceTagNames.isEmpty()) {
+            return 0;
+        }
+
+        return (int) curationType.getMatchTagNames().stream()
+                .filter(preferenceTagNames::contains)
+                .count();
+    }
+
+    private List<ActivityHomeActivityCardResponse> curationActivities(Long userId, HomeCurationType curationType) {
+        List<Long> tagIds = resolveCurationTagIds(curationType);
+        if (tagIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Activity> activities = activityRepository.findActiveActivitiesByTagIds(
+                tagIds,
+                PUBLIC_STATUS,
+                LocalDateTime.now(SEOUL)
+        );
+        return homeActivityCards(userId, activities, HOME_CURATION_DETAIL_LIMIT, 2);
+    }
+
+    private List<Long> resolveCurationTagIds(HomeCurationType curationType) {
+        return curationType.getMatchTagNames().stream()
+                .map(tagName -> tagRepository.findByNameAndType(tagName, TagType.PREFERENCE_TAG)
+                        .map(Tag::getId)
+                        .orElse(null))
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    private List<Activity> enrichActivities(List<Activity> activities) {
+        List<Long> activityIds = distinct(activities).stream()
+                .map(Activity::getId)
+                .toList();
+        if (activityIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Activity> enrichedActivities = activityRepository.findAllByIdInWithSummaryAssociations(activityIds);
+        return orderActivitiesByIds(enrichedActivities, activityIds);
+    }
+
+    private List<Activity> orderActivitiesByIds(List<Activity> activities, List<Long> activityIds) {
+        Map<Long, Integer> orderByActivityId = new HashMap<>();
+        for (int i = 0; i < activityIds.size(); i++) {
+            orderByActivityId.put(activityIds.get(i), i);
+        }
+
+        return activities.stream()
+                .sorted(Comparator.comparing(activity -> orderByActivityId.getOrDefault(activity.getId(), Integer.MAX_VALUE)))
                 .toList();
     }
 

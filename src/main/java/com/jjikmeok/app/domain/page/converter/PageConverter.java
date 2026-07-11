@@ -4,9 +4,12 @@ import com.jjikmeok.app.domain.activity.entity.Activity;
 import com.jjikmeok.app.domain.activity.entity.ActivityTag;
 import com.jjikmeok.app.domain.activity.enums.PreferenceTag;
 import com.jjikmeok.app.domain.image.entity.Image;
+import com.jjikmeok.app.domain.page.dto.response.ActivityHomeActivityCardResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityHomeCurationCardResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCardResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ImageItemResponse;
+import com.jjikmeok.app.domain.page.model.HomeCurationType;
 import com.jjikmeok.app.domain.tag.entity.TagGroupType;
 
 import java.time.LocalDate;
@@ -29,6 +32,41 @@ public final class PageConverter {
 
     public static ActivityCardResponse toCard(Activity activity, boolean liked, boolean isAd, LocalDate today) {
         return toCard(activity, liked, isAd, today, CARD_TAG_LIMIT);
+    }
+
+    public static ActivityHomeActivityCardResponse toHomeActivityCard(
+            Activity activity,
+            boolean liked,
+            LocalDate today
+    ) {
+        return toHomeActivityCard(activity, liked, today, CARD_TAG_LIMIT);
+    }
+
+    public static ActivityHomeActivityCardResponse toHomeActivityCard(
+            Activity activity,
+            boolean liked,
+            LocalDate today,
+            int hashtagLimit
+    ) {
+        Deadline deadline = deadline(activity.getRecruitEndAt(), today);
+
+        return new ActivityHomeActivityCardResponse(
+                activity.getId(),
+                activity.getTitle(),
+                activity.getThumbnailUrl(),
+                activity.getActivityType() != null ? activity.getActivityType().getLabel() : null,
+                deadline.daysUntilRecruitEnd(),
+                randomHashtags(activity, hashtagLimit),
+                liked
+        );
+    }
+
+    public static ActivityHomeCurationCardResponse toHomeCurationCard(HomeCurationType curationType) {
+        return new ActivityHomeCurationCardResponse(
+                curationType.getTitle(),
+                curationType.getThumbnailUrl(),
+                curationType.getDisplayHashtags()
+        );
     }
 
     public static ActivityCardResponse toCard(

@@ -1,4 +1,4 @@
-package com.jjikmeok.app.domain.user.dto.response;
+package com.jjikmeok.app.domain.onboarding.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

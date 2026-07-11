@@ -1,6 +1,6 @@
-package com.jjikmeok.app.domain.user.repository;
+package com.jjikmeok.app.domain.onboarding.repository.command;
 
-import com.jjikmeok.app.domain.user.entity.UserOnboarding;
+import com.jjikmeok.app.domain.onboarding.entity.UserOnboarding;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

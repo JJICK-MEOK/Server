@@ -28,8 +28,8 @@ import com.jjikmeok.app.domain.page.model.HomeCurationType;
 import com.jjikmeok.app.domain.tag.entity.Tag;
 import com.jjikmeok.app.domain.tag.entity.TagType;
 import com.jjikmeok.app.domain.tag.repository.TagRepository;
-import com.jjikmeok.app.domain.user.entity.UserOnboardingTag;
-import com.jjikmeok.app.domain.user.repository.UserOnboardingTagRepository;
+import com.jjikmeok.app.domain.onboarding.entity.UserOnboardingTag;
+import com.jjikmeok.app.domain.onboarding.repository.query.UserOnboardingTagQueryRepository;
 import com.jjikmeok.app.domain.user.repository.UserProfileRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
@@ -74,7 +74,7 @@ public class PageServiceImpl implements PageService {
     private final ImageRepository imageRepository;
     private final TagRepository tagRepository;
     private final UserProfileRepository userProfileRepository;
-    private final UserOnboardingTagRepository userOnboardingTagRepository;
+    private final UserOnboardingTagQueryRepository userOnboardingTagQueryRepository;
 
     @Override
     public ActivityHomePageResponse getHomePage(Long userId) {
@@ -529,7 +529,7 @@ public class PageServiceImpl implements PageService {
         if (userId == null) {
             return List.of();
         }
-        return userOnboardingTagRepository.findAllByUserIdWithTag(userId);
+        return userOnboardingTagQueryRepository.findAllByUserIdWithTag(userId);
     }
 
     private List<UserOnboardingTag> preferenceTags(List<UserOnboardingTag> onboardingTags) {

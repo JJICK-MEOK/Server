@@ -1,5 +1,6 @@
-package com.jjikmeok.app.domain.user.entity;
+package com.jjikmeok.app.domain.onboarding.entity;
 
+import com.jjikmeok.app.domain.user.entity.User;
 import com.jjikmeok.app.global.common.BaseEntity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

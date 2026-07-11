@@ -1,4 +1,4 @@
-package com.jjikmeok.app.domain.user.dto.request;
+package com.jjikmeok.app.domain.onboarding.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
@@ -12,7 +12,7 @@ public record OnboardingReq(
         @NotEmpty(message = "topicTagIds는 비어 있을 수 없습니다.")
         List<@NotNull(message = "topicTagIds에는 null이 포함될 수 없습니다.") Long> topicTagIds,
 
-        @Schema(description = "활동 지역 ID 목록", example = "[10, 11]")
+        @Schema(description = "활동 지역 ID 목록", example = "[2, 3]")
         @NotEmpty(message = "regionIds는 비어 있을 수 없습니다.")
         List<@NotNull(message = "regionIds에는 null이 포함될 수 없습니다.") Long> regionIds,
 

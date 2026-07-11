@@ -23,10 +23,10 @@ import com.jjikmeok.app.domain.tag.repository.TagRepository;
 import com.jjikmeok.app.domain.user.entity.ProfileGender;
 import com.jjikmeok.app.domain.user.entity.ProfileStatus;
 import com.jjikmeok.app.domain.user.entity.User;
-import com.jjikmeok.app.domain.user.entity.UserOnboarding;
-import com.jjikmeok.app.domain.user.entity.UserOnboardingTag;
+import com.jjikmeok.app.domain.onboarding.entity.UserOnboarding;
+import com.jjikmeok.app.domain.onboarding.entity.UserOnboardingTag;
 import com.jjikmeok.app.domain.user.entity.UserProfile;
-import com.jjikmeok.app.domain.user.repository.UserOnboardingTagRepository;
+import com.jjikmeok.app.domain.onboarding.repository.query.UserOnboardingTagQueryRepository;
 import com.jjikmeok.app.domain.user.repository.UserProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -73,7 +73,7 @@ class PageServiceImplTest {
     private UserProfileRepository userProfileRepository;
 
     @Mock
-    private UserOnboardingTagRepository userOnboardingTagRepository;
+    private UserOnboardingTagQueryRepository userOnboardingTagRepository;
 
     private PageServiceImpl pageService;
 

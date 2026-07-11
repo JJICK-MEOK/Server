@@ -1,4 +1,4 @@
-package com.jjikmeok.app.domain.user.entity;
+package com.jjikmeok.app.domain.onboarding.entity;
 
 import com.jjikmeok.app.domain.region.entity.Region;
 import com.jjikmeok.app.global.common.BaseEntity;

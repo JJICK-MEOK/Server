@@ -1,7 +1,7 @@
 package com.jjikmeok.app.domain.personalization.repository;
 
 import com.jjikmeok.app.domain.personalization.dto.ActivityRecommendationProjection;
-import com.jjikmeok.app.domain.user.entity.UserOnboardingTag;
+import com.jjikmeok.app.domain.onboarding.entity.UserOnboardingTag;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

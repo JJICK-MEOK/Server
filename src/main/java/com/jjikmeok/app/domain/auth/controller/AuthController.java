@@ -5,6 +5,7 @@ import com.jjikmeok.app.domain.auth.dto.request.LoginReq;
 import com.jjikmeok.app.domain.auth.dto.request.ReissueReq;
 import com.jjikmeok.app.domain.auth.dto.request.SignupReq;
 import com.jjikmeok.app.domain.auth.dto.response.LoginRes;
+import com.jjikmeok.app.domain.auth.dto.response.LogoutRes;
 import com.jjikmeok.app.domain.auth.dto.response.ReissueRes;
 import com.jjikmeok.app.domain.auth.dto.response.SignupRes;
 import com.jjikmeok.app.domain.auth.service.AuthService;
@@ -13,6 +14,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -53,6 +55,16 @@ public class AuthController {
     @PostMapping("/reissue")
     public ApiResponse<ReissueRes> reissue(@Valid @RequestBody final ReissueReq request) {
         final ReissueRes response = authService.reissue(request);
+        return ApiResponse.success(response);
+    }
+
+    @Operation(
+            summary = "로그아웃",
+            description = "인증된 사용자의 서버 저장 리프레시 토큰을 삭제하여 토큰 재발급을 차단합니다."
+    )
+    @PostMapping("/logout")
+    public ApiResponse<LogoutRes> logout(@AuthenticationPrincipal final Long userId) {
+        final LogoutRes response = authService.logout(userId);
         return ApiResponse.success(response);
     }
 

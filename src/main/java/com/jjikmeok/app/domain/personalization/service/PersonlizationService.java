@@ -1,10 +1,15 @@
 package com.jjikmeok.app.domain.personalization.service;
 
+import com.jjikmeok.app.domain.personalization.dto.ActivityPersonalizationScoreProjection;
 import com.jjikmeok.app.domain.personalization.dto.ActivityRecommendationProjection;
 import com.jjikmeok.app.domain.personalization.dto.ActivityRecommendationResponse;
 import com.jjikmeok.app.domain.personalization.dto.PersonalizationResponse;
+import com.jjikmeok.app.domain.personalization.repository.ActivityPreferenceVectorRepository;
 import com.jjikmeok.app.domain.personalization.repository.PersonalizationRepository;
+import com.jjikmeok.app.domain.personalization.repository.UserPreferenceVectorRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,11 +26,14 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PersonlizationService {
 
     private static final int DISPLAY_TAG_LIMIT = 4;
 
     private final PersonalizationRepository personalizationRepository;
+    private final UserPreferenceVectorRepository userPreferenceVectorRepository;
+    private final ActivityPreferenceVectorRepository activityPreferenceVectorRepository;
 
     public List<String> findTags(Long userId) {
         return personalizationRepository.findTagNamesByUserId(userId);
@@ -85,6 +93,7 @@ public class PersonlizationService {
 
     @Transactional(readOnly = true)
     public List<ActivityRecommendationResponse> getRecommendedActivities(Long userId) {
+        boolean hasUserVector = hasUserPreferenceVector(userId);
         Map<Long, ActivityRecommendationAccumulator> recommendations = new LinkedHashMap<>();
 
         for (ActivityRecommendationProjection projection : personalizationRepository.findRecommendedActivitiesByUserId(userId)) {
@@ -95,10 +104,56 @@ public class PersonlizationService {
             accumulator.addTag(projection.getTagName());
         }
 
+        if (hasUserVector && !recommendations.isEmpty()) {
+            Map<Long, Integer> scoresByActivityId = findPersonalizationScores(
+                    userId,
+                    new ArrayList<>(recommendations.keySet())
+            );
+
+            recommendations.forEach((activityId, accumulator) ->
+                    accumulator.setPersonalizationScore(scoresByActivityId.get(activityId))
+            );
+        }
+
         return recommendations.values()
                 .stream()
                 .map(ActivityRecommendationAccumulator::toResponse)
                 .toList();
+    }
+
+    private boolean hasUserPreferenceVector(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+
+        try {
+            return userPreferenceVectorRepository.findByUserId(userId).isPresent();
+        } catch (DataAccessException e) {
+            log.warn("User preference vector lookup failed. userId={}, returning recommendations without scores", userId, e);
+            return false;
+        }
+    }
+
+    private Map<Long, Integer> findPersonalizationScores(Long userId, List<Long> activityIds) {
+        Map<Long, Integer> scoresByActivityId = new LinkedHashMap<>();
+
+        try {
+            for (ActivityPersonalizationScoreProjection score : activityPreferenceVectorRepository.findPersonalizationScores(
+                    userId,
+                    activityIds
+            )) {
+                scoresByActivityId.put(score.getActivityId(), score.getPersonalizationScore());
+            }
+        } catch (DataAccessException e) {
+            log.warn(
+                    "Activity personalization score query failed. userId={}, activityIds={}, returning null scores",
+                    userId,
+                    activityIds,
+                    e
+            );
+        }
+
+        return scoresByActivityId;
     }
 
     private static class ActivityRecommendationAccumulator {
@@ -108,6 +163,7 @@ public class PersonlizationService {
         private final LocalDateTime recruitEndAt;
         private final Long activityFavoriteId;
         private final Set<String> tags = new LinkedHashSet<>();
+        private Integer personalizationScore;
 
         private ActivityRecommendationAccumulator(ActivityRecommendationProjection projection) {
             this.id = projection.getActivityId();
@@ -124,6 +180,10 @@ public class PersonlizationService {
             tags.add(tagName);
         }
 
+        private void setPersonalizationScore(Integer personalizationScore) {
+            this.personalizationScore = personalizationScore;
+        }
+
         private ActivityRecommendationResponse toResponse() {
             return new ActivityRecommendationResponse(
                     id,
@@ -131,6 +191,7 @@ public class PersonlizationService {
                     thumbnailUrl,
                     recruitEndAt,
                     activityFavoriteId,
+                    personalizationScore,
                     tags.toArray(String[]::new)
             );
         }

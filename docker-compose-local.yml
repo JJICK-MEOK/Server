@@ -1,43 +1,102 @@
 services:
   mysql:
-    image: mysql:8.0.41
-    container_name: jickmeok-mysql
+    image: mysql:8.4
+    container_name: jjikmeok-mysql
     restart: unless-stopped
+    cpus: 0.5
+    mem_limit: 512m
+
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-jjikmeok_db}
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME:-jjikmeok_db}
+      MYSQL_USER: ${DB_USERNAME:-jjikmeok}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-jjikmeok-local-root}
       MYSQL_ROOT_HOST: "%"
       TZ: Asia/Seoul
-    ports:
-      - "${MYSQL_PORT:-3307}:3306"
-    volumes:
-      - mysql-data:/var/lib/mysql
+
     command:
-      - mysqld
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_0900_ai_ci
+
+    ports:
+      - "${MYSQL_PORT:-3307}:3306"
+
+    volumes:
+      - mysql-data:/var/lib/mysql
+
     healthcheck:
-      test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent" ]
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"
+        ]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
+
+  spring:
+    build: .
+    container_name: jjikmeok-backend-local
+    restart: unless-stopped
+    cpus: 1.3
+    mem_limit: 512m
+
+    env_file:
+      - .env
+
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx384m"
+
+      DB_URL: "jdbc:mysql://mysql:3306/${DB_NAME:-jjikmeok_db}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useUnicode=true&useSSL=false&allowPublicKeyRetrieval=true"
+      DB_USERNAME: ${DB_USERNAME:-jjikmeok}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      STORAGE_TYPE: local
+      STORAGE_LOCAL_DIRECTORY: /app/data/uploads
+      STORAGE_LOCAL_PUBLIC_BASE_URL: ${STORAGE_LOCAL_PUBLIC_BASE_URL:-http://localhost:8080/uploads}
+
+    ports:
+      - "8080:8080"
+
+    volumes:
+      - local-uploads:/app/data/uploads
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   redis:
     image: redis:7-alpine
-    container_name: jickmeck-redis
+    container_name: jjikmeok-redis-local
     restart: unless-stopped
+    cpus: 0.2
+    mem_limit: 128m
+
     ports:
       - "${REDIS_PORT:-6379}:6379"
+
     volumes:
       - redis-data:/data
-    command: [ "redis-server", "--appendonly", "yes" ]
+
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-
 
 volumes:
   mysql-data:
   redis-data:
+  local-uploads:

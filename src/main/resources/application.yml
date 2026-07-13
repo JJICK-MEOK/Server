@@ -1,9 +1,12 @@
 server:
+  port: ${SERVER_PORT:8080}
   forward-headers-strategy: framework
 
 spring:
   config:
-    import: optional:file:.env[.properties]
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:./Server/.env[.properties]
 
   datasource:
     url: ${DB_URL}
@@ -12,19 +15,20 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   flyway:
-    enabled: true
-    baseline-on-migrate: true
-    baseline-version: 20260713_0001
-    locations: classpath:db/migration/{vendor}
+    enabled: ${FLYWAY_ENABLED:true}
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:true}
+    baseline-version: ${FLYWAY_BASELINE_VERSION:20260713_0001}
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration/mysql}
 
   jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: validate
-    show-sql: true
-    open-in-view: false
+      ddl-auto: ${JPA_DDL_AUTO:validate}
+    show-sql: ${JPA_SHOW_SQL:true}
+    open-in-view: ${JPA_OPEN_IN_VIEW:false}
     properties:
       hibernate:
-        format_sql: true
+        format_sql: ${HIBERNATE_FORMAT_SQL:true}
 
   data:
     redis:
@@ -49,55 +53,59 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: 50MB
-      max-request-size: 50MB
+      max-file-size: ${MAX_FILE_SIZE:50MB}
+      max-request-size: ${MAX_REQUEST_SIZE:50MB}
 
-  cloud:
-    aws:
-      s3:
-        bucket: ${AWS_S3_BUCKET}
-      region:
-        static: ap-northeast-2
-      credentials:
-        access-key: ${AWS_ACCESS_KEY:${AWS_ACCESS_KEY_ID:}}
-        secret-key: ${AWS_SECRET_KEY:${AWS_SECRET_ACCESS_KEY:}}
+storage:
+  type: ${STORAGE_TYPE:local}
+
+  local:
+    directory: ${STORAGE_LOCAL_DIRECTORY:./data/uploads}
+    public-base-url: ${STORAGE_LOCAL_PUBLIC_BASE_URL:${APP_BASE_URL:http://localhost:8080}/uploads}
+
+  oci:
+    region: ${OCI_REGION:}
+    namespace: ${OCI_OBJECT_STORAGE_NAMESPACE:}
+    bucket: ${OCI_OBJECT_STORAGE_BUCKET:}
+    public-base-url: ${OCI_OBJECT_STORAGE_PUBLIC_BASE_URL:}
+    auth-type: ${OCI_AUTH_TYPE:INSTANCE_PRINCIPAL}
 
 oauth2:
   kakao:
     client-id: ${KAKAO_CLIENT_ID}
     redirect-uri: ${KAKAO_REDIRECT_URI}
-    authorization-uri: ${KAKAO_AUTHORIZATION_URI}
-    token-uri: ${KAKAO_TOKEN_URI}
-    user-info-uri: ${KAKAO_USERINFO_URI}
-    app-deep-link-uri: ${KAKAO_APP_DEEPLINK_URI}
+    authorization-uri: ${KAKAO_AUTHORIZATION_URI:https://kauth.kakao.com/oauth/authorize}
+    token-uri: ${KAKAO_TOKEN_URI:https://kauth.kakao.com/oauth/token}
+    user-info-uri: ${KAKAO_USERINFO_URI:https://kapi.kakao.com/v2/user/me}
+    app-deep-link-uri: ${KAKAO_APP_DEEPLINK_URI:http://localhost:3000/oauth/kakao/callback}
 
   google:
     client-id: ${GOOGLE_CLIENT_ID}
     client-secret: ${GOOGLE_CLIENT_SECRET}
     redirect-uri: ${GOOGLE_REDIRECT_URI}
-    authorization-uri: ${GOOGLE_AUTHORIZATION_URI}
-    token-uri: ${GOOGLE_TOKEN_URI}
-    user-info-uri: ${GOOGLE_USERINFO_URI}
-    app-deep-link-uri: ${GOOGLE_APP_DEEPLINK_URI}
+    authorization-uri: ${GOOGLE_AUTHORIZATION_URI:https://accounts.google.com/o/oauth2/v2/auth}
+    token-uri: ${GOOGLE_TOKEN_URI:https://oauth2.googleapis.com/token}
+    user-info-uri: ${GOOGLE_USERINFO_URI:https://www.googleapis.com/oauth2/v3/userinfo}
+    app-deep-link-uri: ${GOOGLE_APP_DEEPLINK_URI:http://localhost:3000/oauth/google/callback}
 
   naver:
     client-id: ${NAVER_CLIENT_ID}
     client-secret: ${NAVER_CLIENT_SECRET}
     redirect-uri: ${NAVER_REDIRECT_URI}
-    authorization-uri: ${NAVER_AUTHORIZATION_URI}
-    token-uri: ${NAVER_TOKEN_URI}
-    user-info-uri: ${NAVER_USERINFO_URI}
-    app-deep-link-uri: ${NAVER_APP_DEEPLINK_URI}
+    authorization-uri: ${NAVER_AUTHORIZATION_URI:https://nid.naver.com/oauth2.0/authorize}
+    token-uri: ${NAVER_TOKEN_URI:https://nid.naver.com/oauth2.0/token}
+    user-info-uri: ${NAVER_USERINFO_URI:https://openapi.naver.com/v1/nid/me}
+    app-deep-link-uri: ${NAVER_APP_DEEPLINK_URI:http://localhost:3000/oauth/naver/callback}
 
 jwt:
-  secret: ${JWT_SECRET_KEY}
-  access-token-expiration-ms: 3600000
-  refresh-token-expiration-ms: 1209600000
+  secret: ${JWT_SECRET_KEY:${JWT_SECRET:}}
+  access-token-expiration-ms: ${JWT_ACCESS_TOKEN_EXPIRATION_MS:3600000}
+  refresh-token-expiration-ms: ${JWT_REFRESH_TOKEN_EXPIRATION_MS:1209600000}
 
 app:
   cors:
     allowed-origins:
-      - http://localhost:3000
+      - ${CORS_ALLOWED_ORIGIN:http://localhost:3000}
     allowed-methods:
       - GET
       - POST
@@ -134,19 +142,20 @@ app:
 
   discovery:
     search:
-      provider: serper
+      provider: ${DISCOVERY_SEARCH_PROVIDER:serper}
+
       serper:
-        base-url: https://google.serper.dev/search
+        base-url: ${SERPER_BASE_URL:https://google.serper.dev/search}
         api-key: ${SERPER_API_KEY:}
-        gl: kr
-        hl: ko
+        gl: ${SERPER_GL:kr}
+        hl: ${SERPER_HL:ko}
 
     publish:
-      fixed-delay-ms: 300000
+      fixed-delay-ms: ${DISCOVERY_PUBLISH_FIXED_DELAY_MS:300000}
 
     sheets:
-      enabled: ${GOOGLE_SHEETS_ENABLED:true}
+      enabled: ${GOOGLE_SHEETS_ENABLED:false}
       spreadsheet-id: ${GOOGLE_SHEETS_SPREADSHEET_ID:}
-      sheet-name: 찍먹활동DB
+      sheet-name: ${GOOGLE_SHEETS_SHEET_NAME:Discovery}
       credentials-path: ${GOOGLE_SHEETS_CREDENTIALS_PATH:}
       credentials-json: ${GOOGLE_SHEETS_CREDENTIALS_JSON:}

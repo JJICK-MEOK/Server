@@ -44,13 +44,13 @@ jobs:
       - name: Prepare SSH key
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key
-          chmod 600 ~/.ssh/ec2_key
-          ssh-keyscan -p "${{ secrets.EC2_PORT }}" -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+          printf '%s\n' "${{ secrets.OCI_SSH_KEY }}" > ~/.ssh/oci_key
+          chmod 600 ~/.ssh/oci_key
+          ssh-keyscan -p "${{ secrets.OCI_PORT }}" -H "${{ secrets.OCI_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Deploy to EC2
+      - name: Deploy to OCI Compute
         run: |
-          ssh -i ~/.ssh/ec2_key \
-              -p "${{ secrets.EC2_PORT }}" \
-              "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" \
-              "if docker info >/dev/null 2>&1; then bash /opt/jjikmeok/deploy.sh; else sudo -n bash /opt/jjikmeok/deploy.sh; fi"
+          ssh -i ~/.ssh/oci_key \
+              -p "${{ secrets.OCI_PORT }}" \
+              "${{ secrets.OCI_USER }}@${{ secrets.OCI_HOST }}" \
+              "cd /opt/jjikmeok && if docker info >/dev/null 2>&1; then docker compose pull backend && docker compose up -d --remove-orphans; else sudo -n docker compose pull backend && sudo -n docker compose up -d --remove-orphans; fi"

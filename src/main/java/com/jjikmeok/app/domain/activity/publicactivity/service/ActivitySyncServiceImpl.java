@@ -17,7 +17,6 @@ import com.jjikmeok.app.global.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,7 +64,6 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
     private final ActivityTagAutoAttachService activityTagAutoAttachService;
     private final ActivitySyncUtils utils;
     private final AiActivityParser aiActivityParser;
-    private final VectorStore vectorStore;
 
     @Value("${app.activity-sync.default-region-id:1}") private Long defaultRegionId;
     @Value("${app.activity-sync.default-max-pages:1}") private Integer defaultMaxPages;

@@ -9,16 +9,22 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
-    driver-class-name: org.postgresql.Driver
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 20260713_0001
+    locations: classpath:db/migration/{vendor}
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
+    open-in-view: false
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
 
   data:
     redis:
@@ -41,8 +47,6 @@ spring:
     openai:
       api-key: ${SPRING_AI_OPENAI_API_KEY:${OPENAI_API_KEY:}}
 
-  # 파일 업로드 용량 설정 (테스트 영상 업로드용 50MB)
-  # 실제 운영 환경에선 500MB로 늘릴 예정
   servlet:
     multipart:
       max-file-size: 50MB
@@ -60,12 +64,13 @@ spring:
 
 oauth2:
   kakao:
-    client-id: ${KAKAO_CLIENT_ID}          # REST API 키
+    client-id: ${KAKAO_CLIENT_ID}
     redirect-uri: ${KAKAO_REDIRECT_URI}
     authorization-uri: ${KAKAO_AUTHORIZATION_URI}
     token-uri: ${KAKAO_TOKEN_URI}
     user-info-uri: ${KAKAO_USERINFO_URI}
     app-deep-link-uri: ${KAKAO_APP_DEEPLINK_URI}
+
   google:
     client-id: ${GOOGLE_CLIENT_ID}
     client-secret: ${GOOGLE_CLIENT_SECRET}
@@ -74,6 +79,7 @@ oauth2:
     token-uri: ${GOOGLE_TOKEN_URI}
     user-info-uri: ${GOOGLE_USERINFO_URI}
     app-deep-link-uri: ${GOOGLE_APP_DEEPLINK_URI}
+
   naver:
     client-id: ${NAVER_CLIENT_ID}
     client-secret: ${NAVER_CLIENT_SECRET}
@@ -107,17 +113,21 @@ app:
     default-region-id: ${ACTIVITY_SYNC_DEFAULT_REGION_ID:1}
     default-max-pages: ${ACTIVITY_SYNC_DEFAULT_MAX_PAGES:1}
     months-ahead: ${ACTIVITY_SYNC_MONTHS_AHEAD:1}
+
     kopis:
       base-url: ${KOPIS_BASE_URL:${KOPIS_API_BASE_URL:https://www.kopis.or.kr/openApi/restful/pblprfr}}
       service-key: ${KOPIS_SERVICE_KEY:${KOPIS_API_SERVICE_KEY:}}
       max-pages: ${KOPIS_MAX_PAGES:1}
+
     exhibition:
       base-url: ${EXHIBITION_BASE_URL:${EXHIBITION_API_BASE_URL:https://api.kcisa.kr/openapi/API_CCA_145/request}}
       service-key: ${EXHIBITION_SERVICE_KEY:${EXHIBITION_API_SERVICE_KEY:}}
       max-pages: ${EXHIBITION_MAX_PAGES:1}
+
     seoul-culture:
       base-url: ${SEOUL_CULTURE_BASE_URL:${SEOUL_CULTURE_API_BASE_URL:}}
       max-pages: ${SEOUL_CULTURE_MAX_PAGES:1}
+
     seoul-reservation:
       base-url: ${SEOUL_RESERVATION_BASE_URL:${SEOUL_RESERVATION_API_BASE_URL:}}
       max-pages: ${SEOUL_RESERVATION_MAX_PAGES:1}
@@ -130,8 +140,10 @@ app:
         api-key: ${SERPER_API_KEY:}
         gl: kr
         hl: ko
+
     publish:
       fixed-delay-ms: 300000
+
     sheets:
       enabled: ${GOOGLE_SHEETS_ENABLED:true}
       spreadsheet-id: ${GOOGLE_SHEETS_SPREADSHEET_ID:}

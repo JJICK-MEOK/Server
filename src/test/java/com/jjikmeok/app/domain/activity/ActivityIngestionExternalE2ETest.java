@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(properties = {
         "spring.autoconfigure.exclude=org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAutoConfiguration",
+        "spring.cloud.aws.region.static=ap-northeast-2",
         "app.discovery.scheduler.enabled=false",
         "app.discovery.analysis.max-ai-analysis-per-run=3",
         "app.activity-sync.default-max-pages=1",

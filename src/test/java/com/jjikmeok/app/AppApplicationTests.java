@@ -18,6 +18,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 		"spring.autoconfigure.exclude=org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAutoConfiguration",
 		"spring.ai.openai.api-key=test-openai-key",
 		"spring.cloud.aws.s3.bucket=test-bucket",
+		"spring.cloud.aws.region.static=ap-northeast-2",
 		"spring.cloud.aws.credentials.access-key=test-access-key",
 		"spring.cloud.aws.credentials.secret-key=test-secret-key",
 		"oauth2.kakao.client-id=test-kakao-client-id",

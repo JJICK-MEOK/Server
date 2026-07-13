@@ -6,6 +6,9 @@ services:
     env_file:
       - .env
     environment:
+      SPRING_PROFILES_ACTIVE: prod
+      STORAGE_TYPE: oci
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms512m -Xmx1024m}
       REDIS_HOST: redis
       REDIS_PORT: 6379
     depends_on:
@@ -13,8 +16,6 @@ services:
         condition: service_healthy
     ports:
       - "8080:8080"
-    volumes:
-      - ./certs/global-bundle.pem:/app/certs/global-bundle.pem:ro
     networks:
       - jjikmeok-net
 

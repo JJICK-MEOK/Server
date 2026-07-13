@@ -27,6 +27,7 @@ repositories {
 ext {
     set('snippetsDir', file("build/generated-snippets"))
     set('springAiVersion', "1.0.3")
+    set('ociSdkVersion', "3.90.0")
 }
 
 dependencyManagement {
@@ -37,7 +38,9 @@ dependencyManagement {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+    implementation 'org.flywaydb:flyway-core'
+    runtimeOnly 'org.flywaydb:flyway-mysql'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
@@ -50,11 +53,10 @@ dependencies {
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
-    implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:3.1.0'
+    implementation "com.oracle.oci.sdk:oci-java-sdk-objectstorage:${ociSdkVersion}"
+    implementation "com.oracle.oci.sdk:oci-java-sdk-common-httpclient-jersey3:${ociSdkVersion}"
 
     implementation 'org.springframework.ai:spring-ai-starter-model-openai'
-    implementation 'org.springframework.ai:spring-ai-starter-vector-store-pgvector'
-    implementation 'org.hibernate.orm:hibernate-vector:6.6.39.Final'
     implementation 'com.google.auth:google-auth-library-oauth2-http:1.23.0'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

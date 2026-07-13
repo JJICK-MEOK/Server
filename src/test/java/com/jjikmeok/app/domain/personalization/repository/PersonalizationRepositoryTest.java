@@ -13,8 +13,8 @@ import com.jjikmeok.app.domain.region.enums.RegionDepth;
 import com.jjikmeok.app.domain.tag.entity.Tag;
 import com.jjikmeok.app.domain.tag.entity.TagType;
 import com.jjikmeok.app.domain.user.entity.User;
-import com.jjikmeok.app.domain.user.entity.UserOnboarding;
-import com.jjikmeok.app.domain.user.entity.UserOnboardingTag;
+import com.jjikmeok.app.domain.onboarding.entity.UserOnboarding;
+import com.jjikmeok.app.domain.onboarding.entity.UserOnboardingTag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -27,7 +27,12 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
+@DataJpaTest(properties = {
+        "spring.datasource.url=jdbc:h2:mem:personalization;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1",
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+        "spring.flyway.enabled=false"
+})
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 class PersonalizationRepositoryTest {
 

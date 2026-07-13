@@ -5,6 +5,7 @@ import com.jjikmeok.app.domain.personalization.entity.PreferenceVectorConstants;
 import com.jjikmeok.app.domain.personalization.entity.PreferenceVectorValidator;
 import com.jjikmeok.app.domain.user.entity.User;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
@@ -18,9 +19,6 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.Array;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(
@@ -51,12 +49,11 @@ public class UserPreferenceVector extends BaseTimeEntity {
     )
     private User user;
 
-    @JdbcTypeCode(SqlTypes.VECTOR)
-    @Array(length = PreferenceVectorConstants.DIMENSION)
+    @Convert(converter = FloatArrayJsonConverter.class)
     @Column(
             name = "embedding",
             nullable = false,
-            columnDefinition = "vector(14)"
+            columnDefinition = "JSON"
     )
     @Getter(AccessLevel.NONE)
     private float[] embedding;

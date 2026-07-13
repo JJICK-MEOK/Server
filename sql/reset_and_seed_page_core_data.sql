@@ -1,19 +1,40 @@
-BEGIN;
+SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE TABLE activity_preference_vectors;
+TRUNCATE TABLE user_preference_vectors;
+TRUNCATE TABLE tag_preference_vectors;
+TRUNCATE TABLE activity_reviews;
+TRUNCATE TABLE activity_favorites;
+TRUNCATE TABLE activity_images;
+TRUNCATE TABLE activity_tags;
+TRUNCATE TABLE user_onboarding_tags;
+TRUNCATE TABLE user_onboarding_regions;
+TRUNCATE TABLE user_onboardings;
+TRUNCATE TABLE user_profiles;
+TRUNCATE TABLE activities;
+TRUNCATE TABLE raw_activities;
+TRUNCATE TABLE advertisements;
+TRUNCATE TABLE tags;
+TRUNCATE TABLE users;
+TRUNCATE TABLE regions;
 
-TRUNCATE TABLE
-    activity_reviews,
-    activity_favorites,
-    activity_images,
-    activity_tags,
-    user_onboarding_tags,
-    user_onboarding_regions,
-    user_onboardings,
-    user_profiles,
-    activities,
-    tags,
-    users,
-    regions
-RESTART IDENTITY CASCADE;
+ALTER TABLE activity_preference_vectors AUTO_INCREMENT = 1;
+ALTER TABLE user_preference_vectors AUTO_INCREMENT = 1;
+ALTER TABLE tag_preference_vectors AUTO_INCREMENT = 1;
+ALTER TABLE activity_reviews AUTO_INCREMENT = 1;
+ALTER TABLE activity_favorites AUTO_INCREMENT = 1;
+ALTER TABLE activity_images AUTO_INCREMENT = 1;
+ALTER TABLE activity_tags AUTO_INCREMENT = 1;
+ALTER TABLE user_onboarding_tags AUTO_INCREMENT = 1;
+ALTER TABLE user_onboarding_regions AUTO_INCREMENT = 1;
+ALTER TABLE user_onboardings AUTO_INCREMENT = 1;
+ALTER TABLE user_profiles AUTO_INCREMENT = 1;
+ALTER TABLE activities AUTO_INCREMENT = 1;
+ALTER TABLE raw_activities AUTO_INCREMENT = 1;
+ALTER TABLE advertisements AUTO_INCREMENT = 1;
+ALTER TABLE tags AUTO_INCREMENT = 1;
+ALTER TABLE users AUTO_INCREMENT = 1;
+ALTER TABLE regions AUTO_INCREMENT = 1;
+SET FOREIGN_KEY_CHECKS = 1;
 
 INSERT INTO regions (id, created_at, updated_at, parent_id, name, depth) VALUES
     (1, '2026-06-20 09:00:00', '2026-06-20 09:00:00', NULL, '서울특별시', 'PROVINCE'),
@@ -244,18 +265,3 @@ INSERT INTO activity_reviews (id, created_at, updated_at, user_id, activity_id, 
     (6, '2026-06-29 10:25:00', '2026-06-29 10:25:00', 1, 7, 4, '퇴근 후 가볍게 참여하기 좋았고 결과물도 만족스러웠어요.', 0),
     (7, '2026-06-29 10:30:00', '2026-06-29 10:30:00', 2, 8, 5, '발제 자료가 좋아서 대화가 깊게 이어졌습니다.', 2),
     (8, '2026-06-29 10:35:00', '2026-06-29 10:35:00', 3, 10, 5, '강연과 네트워킹 균형이 좋아서 실질적으로 도움이 됐어요.', 4);
-
-SELECT setval(pg_get_serial_sequence('regions', 'id'), COALESCE((SELECT MAX(id) FROM regions), 1), TRUE);
-SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(id) FROM users), 1), TRUE);
-SELECT setval(pg_get_serial_sequence('user_profiles', 'id'), COALESCE((SELECT MAX(id) FROM user_profiles), 1), TRUE);
-SELECT setval(pg_get_serial_sequence('user_onboardings', 'id'), COALESCE((SELECT MAX(id) FROM user_onboardings), 1), TRUE);
-SELECT setval(pg_get_serial_sequence('tags', 'id'), COALESCE((SELECT MAX(id) FROM tags), 1), TRUE);
-SELECT setval(pg_get_serial_sequence('user_onboarding_regions', 'id'), COALESCE((SELECT MAX(id) FROM user_onboarding_regions), 1), TRUE);
-SELECT setval(pg_get_serial_sequence('user_onboarding_tags', 'id'), COALESCE((SELECT MAX(id) FROM user_onboarding_tags), 1), TRUE);
-SELECT setval(pg_get_serial_sequence('activities', 'id'), COALESCE((SELECT MAX(id) FROM activities), 1), TRUE);
-SELECT setval(pg_get_serial_sequence('activity_tags', 'id'), COALESCE((SELECT MAX(id) FROM activity_tags), 1), TRUE);
-SELECT setval(pg_get_serial_sequence('activity_images', 'id'), COALESCE((SELECT MAX(id) FROM activity_images), 1), TRUE);
-SELECT setval(pg_get_serial_sequence('activity_favorites', 'id'), COALESCE((SELECT MAX(id) FROM activity_favorites), 1), TRUE);
-SELECT setval(pg_get_serial_sequence('activity_reviews', 'id'), COALESCE((SELECT MAX(id) FROM activity_reviews), 1), TRUE);
-
-COMMIT;

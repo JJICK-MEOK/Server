@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.ai.vectorstore.VectorStore;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -33,7 +32,6 @@ class ActivitySyncServiceImplTest {
     @Mock private ActivityTagAutoAttachService activityTagAutoAttachService;
     @Mock private ActivitySyncUtils utils;
     @Mock private AiActivityParser aiActivityParser;
-    @Mock private VectorStore vectorStore;
 
     private ActivitySyncServiceImpl activitySyncService;
 
@@ -51,8 +49,7 @@ class ActivitySyncServiceImplTest {
                 activityDetailEnricher,
                 activityTagAutoAttachService,
                 utils,
-                aiActivityParser,
-                vectorStore
+                aiActivityParser
         );
     }
 

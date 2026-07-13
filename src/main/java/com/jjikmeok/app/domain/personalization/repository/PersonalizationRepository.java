@@ -68,12 +68,12 @@ public interface PersonalizationRepository extends JpaRepository<UserOnboardingT
                 GROUP BY a.id
             )
             SELECT
-                a.id AS "activityId",
-                a.title AS "title",
-                a.thumbnail_url AS "thumbnailUrl",
-                a.recruit_end_at AS "recruitEndAt",
-                af.id AS "activityFavoriteId",
-                tag.name AS "tagName"
+                a.id AS activityId,
+                a.title AS title,
+                a.thumbnail_url AS thumbnailUrl,
+                a.recruit_end_at AS recruitEndAt,
+                af.id AS activityFavoriteId,
+                tag.name AS tagName
             FROM onboarding_tag_scores ots
             JOIN activities a
                 ON a.id = ots.activity_id

@@ -14,18 +14,21 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:true}
+    baseline-version: ${FLYWAY_BASELINE_VERSION:20260713_0001}
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration/mysql}
+
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:validate}
     show-sql: ${JPA_SHOW_SQL:true}
+    open-in-view: ${JPA_OPEN_IN_VIEW:false}
     properties:
       hibernate:
         format_sql: ${HIBERNATE_FORMAT_SQL:true}
-
-  flyway:
-    enabled: ${FLYWAY_ENABLED:true}
-    locations: classpath:db/migration/mysql
 
   data:
     redis:
@@ -55,9 +58,11 @@ spring:
 
 storage:
   type: ${STORAGE_TYPE:local}
+
   local:
     directory: ${STORAGE_LOCAL_DIRECTORY:./data/uploads}
     public-base-url: ${STORAGE_LOCAL_PUBLIC_BASE_URL:${APP_BASE_URL:http://localhost:8080}/uploads}
+
   oci:
     region: ${OCI_REGION:}
     namespace: ${OCI_OBJECT_STORAGE_NAMESPACE:}
@@ -112,16 +117,42 @@ app:
       - "*"
     allow-credentials: true
 
+  activity-sync:
+    default-region-id: ${ACTIVITY_SYNC_DEFAULT_REGION_ID:1}
+    default-max-pages: ${ACTIVITY_SYNC_DEFAULT_MAX_PAGES:1}
+    months-ahead: ${ACTIVITY_SYNC_MONTHS_AHEAD:1}
+
+    kopis:
+      base-url: ${KOPIS_BASE_URL:${KOPIS_API_BASE_URL:https://www.kopis.or.kr/openApi/restful/pblprfr}}
+      service-key: ${KOPIS_SERVICE_KEY:${KOPIS_API_SERVICE_KEY:}}
+      max-pages: ${KOPIS_MAX_PAGES:1}
+
+    exhibition:
+      base-url: ${EXHIBITION_BASE_URL:${EXHIBITION_API_BASE_URL:https://api.kcisa.kr/openapi/API_CCA_145/request}}
+      service-key: ${EXHIBITION_SERVICE_KEY:${EXHIBITION_API_SERVICE_KEY:}}
+      max-pages: ${EXHIBITION_MAX_PAGES:1}
+
+    seoul-culture:
+      base-url: ${SEOUL_CULTURE_BASE_URL:${SEOUL_CULTURE_API_BASE_URL:}}
+      max-pages: ${SEOUL_CULTURE_MAX_PAGES:1}
+
+    seoul-reservation:
+      base-url: ${SEOUL_RESERVATION_BASE_URL:${SEOUL_RESERVATION_API_BASE_URL:}}
+      max-pages: ${SEOUL_RESERVATION_MAX_PAGES:1}
+
   discovery:
     search:
       provider: ${DISCOVERY_SEARCH_PROVIDER:serper}
+
       serper:
         base-url: ${SERPER_BASE_URL:https://google.serper.dev/search}
         api-key: ${SERPER_API_KEY:}
         gl: ${SERPER_GL:kr}
         hl: ${SERPER_HL:ko}
+
     publish:
       fixed-delay-ms: ${DISCOVERY_PUBLISH_FIXED_DELAY_MS:300000}
+
     sheets:
       enabled: ${GOOGLE_SHEETS_ENABLED:false}
       spreadsheet-id: ${GOOGLE_SHEETS_SPREADSHEET_ID:}

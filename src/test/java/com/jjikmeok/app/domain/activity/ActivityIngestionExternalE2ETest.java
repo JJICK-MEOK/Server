@@ -10,12 +10,12 @@ import com.jjikmeok.app.domain.activity.privateactivity.sheets.GoogleSheetsServi
 import com.jjikmeok.app.domain.activity.publicactivity.dto.ActivitySyncResponse;
 import com.jjikmeok.app.domain.activity.publicactivity.service.ActivitySyncService;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -26,16 +26,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(properties = {
         "app.discovery.scheduler.enabled=false",
         "app.discovery.analysis.max-ai-analysis-per-run=3",
+
         "app.activity-sync.default-max-pages=1",
         "app.activity-sync.kopis.max-pages=1",
         "app.activity-sync.exhibition.max-pages=1",
         "app.activity-sync.seoul-culture.max-pages=1",
         "app.activity-sync.seoul-reservation.max-pages=1",
+
         "app.discovery.sheets.enabled=true"
 })
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@EnabledIfEnvironmentVariable(named = "JJIKMEOK_EXTERNAL_E2E", matches = "true")
+@EnabledIfEnvironmentVariable(
+        named = "JJIKMEOK_EXTERNAL_E2E",
+        matches = "true"
+)
 class ActivityIngestionExternalE2ETest {
 
     @Autowired
@@ -57,12 +62,17 @@ class ActivityIngestionExternalE2ETest {
     @Order(1)
     void publicFourSourcesSyncToDbAndSheets() {
         for (SourceType sourceType : SourceType.publicApiSources()) {
-            ActivitySyncResponse response = activitySyncService.sync(sourceType, null, 1);
+            ActivitySyncResponse response =
+                    activitySyncService.sync(sourceType, null, 1);
 
             assertThat(response.getRawSavedCount())
                     .as(sourceType + " raw payload should be archived")
                     .isPositive();
-            assertThat(response.getActivitySavedCount() + response.getDuplicatedCount())
+
+            assertThat(
+                    response.getActivitySavedCount()
+                            + response.getDuplicatedCount()
+            )
                     .as(sourceType + " should create or match at least one activity")
                     .isPositive();
         }
@@ -72,35 +82,55 @@ class ActivityIngestionExternalE2ETest {
     @Order(2)
     void discoveryCollectsAnalyzesWritesSheetAndPublishesReadyRow() {
         assertThat(googleSheetsService.findReadyRows())
-                .as("Publish test is isolated only when the sheet has no pre-existing READY rows")
+                .as(
+                        "Publish test is isolated only when the sheet "
+                                + "has no pre-existing READY rows"
+                )
                 .isEmpty();
 
         long beforeActivityCount = activityRepository.count();
-        List<DiscoverySheetRowDto> rows = discoveryCollectorService.run(ActivityCategory.CULTURE, 1, 3);
+
+        List<DiscoverySheetRowDto> rows =
+                discoveryCollectorService.run(
+                        ActivityCategory.CULTURE,
+                        1,
+                        3
+                );
 
         assertThat(rows)
-                .as("Discovery should collect at least one candidate from 3 search results")
+                .as(
+                        "Discovery should collect at least one candidate "
+                                + "from 3 search results"
+                )
                 .isNotEmpty();
 
         DiscoverySheetRowDto row = rows.stream()
-                .filter(candidate -> candidate.sourceUrl() != null && !candidate.sourceUrl().isBlank())
+                .filter(candidate ->
+                        candidate.sourceUrl() != null
+                                && !candidate.sourceUrl().isBlank()
+                )
                 .findFirst()
                 .orElseThrow();
 
         assertThat(row.activityType())
                 .as("AI analysis should fill activityType")
                 .isNotNull();
+
         assertThat(row.category())
                 .as("AI analysis should fill category")
                 .isNotNull();
 
-        googleSheetsService.updateRow(row.withStatus(DiscoverySheetStatus.READY, null));
+        googleSheetsService.updateRow(
+                row.withStatus(DiscoverySheetStatus.READY, null)
+        );
 
-        int publishedCount = discoveryPublishService.publishReadyRows();
+        int publishedCount =
+                discoveryPublishService.publishReadyRows();
 
         assertThat(publishedCount)
                 .as("At least the test-created READY row should be published")
                 .isPositive();
+
         assertThat(activityRepository.count())
                 .as("Publishing should create a DB activity")
                 .isGreaterThan(beforeActivityCount);

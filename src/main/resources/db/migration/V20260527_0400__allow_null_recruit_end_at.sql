@@ -1,1 +1,0 @@
-ALTER TABLE activities ALTER COLUMN recruit_end_at DROP NOT NULL;

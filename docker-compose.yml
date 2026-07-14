@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ghcr.io/jjick-meok/server:latest
+    image: ${BACKEND_IMAGE}
     container_name: jjikmeok-backend
     restart: unless-stopped
     env_file:

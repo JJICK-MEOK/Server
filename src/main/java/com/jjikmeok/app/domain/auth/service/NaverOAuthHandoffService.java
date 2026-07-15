@@ -22,15 +22,18 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Transactional(readOnly = true)
 public class NaverOAuthHandoffService {
 
+    private static final String PLATFORM_WEB = "web";
+    private static final String PLATFORM_APP = "app";
+
     private final NaverOAuthClient naverOAuthClient;
     private final NaverOAuthProperties naverOAuthProperties;
     private final OAuthStateStore oAuthStateStore;
     private final SecureTokenGenerator secureTokenGenerator;
     private final OAuthHandoffCommonService oAuthHandoffCommonService;
 
-    public URI createNaverLoginUri() {
+    public URI createNaverLoginUri(final String platform) {
         final String state = secureTokenGenerator.generateUrlSafeToken(naverOAuthProperties.getStateTokenBytes());
-        oAuthStateStore.save(state, naverOAuthProperties.getStateTtl());
+        oAuthStateStore.save(state, normalizePlatform(platform), naverOAuthProperties.getStateTtl());
 
         log.debug("네이버 OAuth 로그인 URL 생성 완료.");
         return UriComponentsBuilder.fromUriString(naverOAuthProperties.getAuthorizationUri())
@@ -45,7 +48,7 @@ public class NaverOAuthHandoffService {
 
     @Transactional
     public URI handleNaverCallback(final String code, final String state, final String error) {
-        validateState(state);
+        final String platform = validateState(state);
         validateCallbackError(error);
         validateCode(code);
 
@@ -60,7 +63,14 @@ public class NaverOAuthHandoffService {
 
         log.debug("네이버 OAuth 콜백 처리 완료. userId={}, newMember={}",
                 userResult.user().getId(), userResult.newMember());
-        return createAppDeepLinkUri(handoffToken);
+        return createRedirectUri(handoffToken, platform);
+    }
+
+    private String normalizePlatform(final String platform) {
+        if (platform != null && PLATFORM_WEB.equalsIgnoreCase(platform.trim())) {
+            return PLATFORM_WEB;
+        }
+        return PLATFORM_APP;
     }
 
     private void validateCallbackError(final String error) {
@@ -71,11 +81,18 @@ public class NaverOAuthHandoffService {
         throw new CustomException(ErrorCode.AUTH_NAVER_CALLBACK_FAILED);
     }
 
-    private void validateState(final String state) {
-        if (state == null || state.isBlank() || !oAuthStateStore.consume(state)) {
+    private String validateState(final String state) {
+        if (state == null || state.isBlank()) {
             log.warn("네이버 OAuth 콜백 실패 - 유효하지 않은 state입니다.");
             throw new CustomException(ErrorCode.AUTH_INVALID_OAUTH_STATE);
         }
+
+        final String platform = oAuthStateStore.consumeAndGet(state);
+        if (platform == null) {
+            log.warn("네이버 OAuth 콜백 실패 - 유효하지 않은 state입니다.");
+            throw new CustomException(ErrorCode.AUTH_INVALID_OAUTH_STATE);
+        }
+        return platform;
     }
 
     private void validateCode(final String code) {
@@ -94,8 +111,13 @@ public class NaverOAuthHandoffService {
         );
     }
 
-    private URI createAppDeepLinkUri(final String handoffToken) {
-        return UriComponentsBuilder.fromUriString(naverOAuthProperties.getAppDeepLinkUri())
+    private URI createRedirectUri(final String handoffToken, final String platform) {
+        String baseUri = naverOAuthProperties.getAppDeepLinkUri();
+        if (PLATFORM_WEB.equals(platform)) {
+            baseUri = naverOAuthProperties.getWebRedirectUri();
+        }
+
+        return UriComponentsBuilder.fromUriString(baseUri)
                 .queryParam("handoffToken", handoffToken)
                 .build()
                 .encode()

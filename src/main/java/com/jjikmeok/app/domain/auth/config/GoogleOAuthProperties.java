@@ -45,6 +45,9 @@ public class GoogleOAuthProperties {
     @NotBlank
     private String appDeepLinkUri;
 
+    @NotBlank
+    private String webRedirectUri;
+
     @Positive
     private int stateTokenBytes = 32;
 

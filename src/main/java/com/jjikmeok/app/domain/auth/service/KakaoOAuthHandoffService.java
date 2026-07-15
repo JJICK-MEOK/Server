@@ -23,15 +23,18 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Transactional(readOnly = true)
 public class KakaoOAuthHandoffService {
 
+    private static final String PLATFORM_WEB = "web";
+    private static final String PLATFORM_APP = "app";
+
     private final KakaoOAuthClient kakaoOAuthClient;
     private final KakaoOAuthProperties kakaoOAuthProperties;
     private final OAuthStateStore oAuthStateStore;
     private final SecureTokenGenerator secureTokenGenerator;
     private final OAuthHandoffCommonService oAuthHandoffCommonService;
 
-    public URI createKakaoLoginUri() {
+    public URI createKakaoLoginUri(final String platform) {
         final String state = secureTokenGenerator.generateUrlSafeToken(kakaoOAuthProperties.getStateTokenBytes());
-        oAuthStateStore.save(state, kakaoOAuthProperties.getStateTtl());
+        oAuthStateStore.save(state, normalizePlatform(platform), kakaoOAuthProperties.getStateTtl());
 
         log.debug("카카오 OAuth 로그인 URL 생성 완료.");
         return UriComponentsBuilder.fromUriString(kakaoOAuthProperties.getAuthorizationUri())
@@ -47,7 +50,7 @@ public class KakaoOAuthHandoffService {
 
     @Transactional
     public URI handleKakaoCallback(final String code, final String state, final String error) {
-        validateState(state);
+        final String platform = validateState(state);
         validateCallbackError(error);
         validateCode(code);
 
@@ -62,7 +65,14 @@ public class KakaoOAuthHandoffService {
 
         log.debug("카카오 OAuth 콜백 처리 완료. userId={}, newMember={}",
                 userResult.user().getId(), userResult.newMember());
-        return createAppDeepLinkUri(handoffToken);
+        return createRedirectUri(handoffToken, platform);
+    }
+
+    private String normalizePlatform(final String platform) {
+        if (platform != null && PLATFORM_WEB.equalsIgnoreCase(platform.trim())) {
+            return PLATFORM_WEB;
+        }
+        return PLATFORM_APP;
     }
 
     private String createScopeValue() {
@@ -79,11 +89,18 @@ public class KakaoOAuthHandoffService {
         throw new CustomException(ErrorCode.BAD_REQUEST);
     }
 
-    private void validateState(final String state) {
-        if (state == null || state.isBlank() || !oAuthStateStore.consume(state)) {
+    private String validateState(final String state) {
+        if (state == null || state.isBlank()) {
             log.warn("카카오 OAuth 콜백 실패 - 유효하지 않은 state입니다.");
             throw new CustomException(ErrorCode.AUTH_INVALID_OAUTH_STATE);
         }
+
+        final String platform = oAuthStateStore.consumeAndGet(state);
+        if (platform == null) {
+            log.warn("카카오 OAuth 콜백 실패 - 유효하지 않은 state입니다.");
+            throw new CustomException(ErrorCode.AUTH_INVALID_OAUTH_STATE);
+        }
+        return platform;
     }
 
     private void validateCode(final String code) {
@@ -108,8 +125,13 @@ public class KakaoOAuthHandoffService {
         return userInfo.kakaoAccount().email();
     }
 
-    private URI createAppDeepLinkUri(final String handoffToken) {
-        return UriComponentsBuilder.fromUriString(kakaoOAuthProperties.getAppDeepLinkUri())
+    private URI createRedirectUri(final String handoffToken, final String platform) {
+        String baseUri = kakaoOAuthProperties.getAppDeepLinkUri();
+        if (PLATFORM_WEB.equals(platform)) {
+            baseUri = kakaoOAuthProperties.getWebRedirectUri();
+        }
+
+        return UriComponentsBuilder.fromUriString(baseUri)
                 .queryParam("handoffToken", handoffToken)
                 .build()
                 .encode()

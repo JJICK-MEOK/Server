@@ -17,6 +17,8 @@ import com.jjikmeok.app.domain.page.dto.response.ActivityHomeActivityCardRespons
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomeActivitySectionResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomeCurationCardResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomeCurationSectionResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityHomePopularActivityCardResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityHomePopularActivitySectionResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCategoryPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCustomPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
@@ -65,7 +67,7 @@ public class PageServiceImpl implements PageService {
     private static final int HOME_CURATION_LIMIT = 4;
     private static final int HOME_POPULAR_LIMIT = 9;
     private static final int HOME_EXPANDED_LIMIT = 8;
-    private static final int HOME_CURATION_DETAIL_LIMIT = 4;
+    private static final int DEFAULT_CURATION_DETAIL_LIMIT = 20;
     private static final int HOME_RECOMMENDATION_FETCH_LIMIT = 50;
     private static final ApprovalStatus PUBLIC_STATUS = ApprovalStatus.APPROVED;
 
@@ -84,10 +86,10 @@ public class PageServiceImpl implements PageService {
         return new ActivityHomePageResponse(
                 homeUser(userId),
                 new ActivityHomeCurationSectionResponse(
-                        featuredCurationCards(userId, featuredCurations)
+                        featuredCurationCards(featuredCurations)
                 ),
-                new ActivityHomeActivitySectionResponse(
-                        homeActivityCards(userId, popularActivities(HOME_POPULAR_LIMIT), HOME_POPULAR_LIMIT, 2)
+                new ActivityHomePopularActivitySectionResponse(
+                        homePopularActivityCards(userId, popularActivities(HOME_POPULAR_LIMIT), HOME_POPULAR_LIMIT)
                 ),
                 new ActivityHomeActivitySectionResponse(
                         homeActivityCards(userId, expandedRecommendationActivities(userId, onboardingTags), HOME_EXPANDED_LIMIT, 2)
@@ -193,13 +195,13 @@ public class PageServiceImpl implements PageService {
     }
 
     @Override
-    public ActivityCurationDetailPageResponse getHomeCurationDetailPage(Long userId, String curationKey) {
+    public ActivityCurationDetailPageResponse getHomeCurationDetailPage(Long userId, String curationKey, Integer page, Integer limit) {
         HomeCurationType curationType = HomeCurationType.fromKey(curationKey);
         if (curationType == null) {
             throw new CustomException(ErrorCode.ACTIVITY_NOT_FOUND);
         }
 
-        List<ActivityHomeActivityCardResponse> activities = curationActivities(userId, curationType);
+        List<ActivityHomeActivityCardResponse> activities = curationActivities(userId, curationType, page, limit);
         return new ActivityCurationDetailPageResponse(
                 curationType.getTitle(),
                 curationType.getSubtitle(),
@@ -223,7 +225,20 @@ public class PageServiceImpl implements PageService {
             int limit,
             int hashtagLimit
     ) {
-        List<Activity> enrichedActivities = enrichActivities(activities);
+        return homeActivityCardsFromEnriched(
+                userId,
+                enrichActivities(activities),
+                limit,
+                hashtagLimit
+        );
+    }
+
+    private List<ActivityHomeActivityCardResponse> homeActivityCardsFromEnriched(
+            Long userId,
+            List<Activity> enrichedActivities,
+            int limit,
+            int hashtagLimit
+    ) {
         List<Activity> distinctActivities = distinct(enrichedActivities).stream()
                 .limit(limit)
                 .toList();
@@ -240,26 +255,32 @@ public class PageServiceImpl implements PageService {
                 .toList();
     }
 
-    private List<ActivityHomeCurationCardResponse> featuredCurationCards(
+    private List<ActivityHomePopularActivityCardResponse> homePopularActivityCards(
             Long userId,
+            List<Activity> activities,
+            int limit
+    ) {
+        List<Activity> enrichedActivities = enrichActivities(activities);
+        List<Activity> distinctActivities = distinct(enrichedActivities).stream()
+                .limit(limit)
+                .toList();
+        Set<Long> likedActivityIds = likedActivityIds(userId, distinctActivities);
+        LocalDate today = LocalDate.now(SEOUL);
+
+        return distinctActivities.stream()
+                .map(activity -> PageConverter.toHomePopularActivityCard(
+                        activity,
+                        likedActivityIds.contains(activity.getId()),
+                        today
+                ))
+                .toList();
+    }
+
+    private List<ActivityHomeCurationCardResponse> featuredCurationCards(
             List<HomeCurationType> featuredCurations
     ) {
         return featuredCurations.stream()
-                .map(curationType -> {
-                    List<ActivityHomeActivityCardResponse> activities = curationActivities(userId, curationType);
-                    String thumbnailUrl = activities.stream()
-                            .findFirst()
-                            .map(ActivityHomeActivityCardResponse::thumbnailUrl)
-                            .orElse(null);
-                    if (thumbnailUrl == null || thumbnailUrl.isBlank()) {
-                        thumbnailUrl = curationType.getThumbnailUrl();
-                    }
-                    return new ActivityHomeCurationCardResponse(
-                            curationType.getTitle(),
-                            thumbnailUrl,
-                            curationType.getDisplayHashtags()
-                    );
-                })
+                .map(PageConverter::toHomeCurationCard)
                 .toList();
     }
 
@@ -389,18 +410,29 @@ public class PageServiceImpl implements PageService {
                 .count();
     }
 
-    private List<ActivityHomeActivityCardResponse> curationActivities(Long userId, HomeCurationType curationType) {
+    private List<ActivityHomeActivityCardResponse> curationActivities(
+            Long userId,
+            HomeCurationType curationType,
+            Integer page,
+            Integer limit
+    ) {
         List<Long> tagIds = resolveCurationTagIds(curationType);
         if (tagIds.isEmpty()) {
             return List.of();
         }
 
-        List<Activity> activities = activityRepository.findActiveActivitiesByTagIds(
+        int size = limit(limit, DEFAULT_CURATION_DETAIL_LIMIT);
+        int pageNumber = Math.max(page == null ? 0 : page, 0);
+        List<Long> activityIds = activityRepository.findActiveActivityIdsByTagIds(
                 tagIds,
                 PUBLIC_STATUS,
-                LocalDateTime.now(SEOUL)
+                LocalDateTime.now(SEOUL),
+                PageRequest.of(pageNumber, size)
         );
-        return homeActivityCards(userId, activities, HOME_CURATION_DETAIL_LIMIT, 2);
+        List<Activity> activities = activityIds.isEmpty()
+                ? List.of()
+                : activityRepository.findAllByIdInWithSummaryAssociations(activityIds);
+        return homeActivityCardsFromEnriched(userId, orderActivitiesByIds(activities, activityIds), size, 2);
     }
 
     private List<Long> resolveCurationTagIds(HomeCurationType curationType) {

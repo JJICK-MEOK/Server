@@ -3,7 +3,7 @@ package com.jjikmeok.app.domain.page.dto.response;
 public record ActivityHomePageResponse(
         UserResponse user,
         ActivityHomeCurationSectionResponse featured,
-        ActivityHomeActivitySectionResponse popular,
+        ActivityHomePopularActivitySectionResponse popular,
         ActivityHomeActivitySectionResponse expandedRecommendation
 ) {
     public record UserResponse(

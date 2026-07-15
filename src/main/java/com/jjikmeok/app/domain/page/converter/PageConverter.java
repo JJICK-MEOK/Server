@@ -6,6 +6,7 @@ import com.jjikmeok.app.domain.activity.enums.PreferenceTag;
 import com.jjikmeok.app.domain.image.entity.Image;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomeActivityCardResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomeCurationCardResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityHomePopularActivityCardResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCardResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityDetailPageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ImageItemResponse;
@@ -57,6 +58,23 @@ public final class PageConverter {
                 activity.getActivityType() != null ? activity.getActivityType().getLabel() : null,
                 deadline.daysUntilRecruitEnd(),
                 randomHashtags(activity, hashtagLimit),
+                liked
+        );
+    }
+
+    public static ActivityHomePopularActivityCardResponse toHomePopularActivityCard(
+            Activity activity,
+            boolean liked,
+            LocalDate today
+    ) {
+        Deadline deadline = deadline(activity.getRecruitEndAt(), today);
+
+        return new ActivityHomePopularActivityCardResponse(
+                activity.getId(),
+                activity.getTitle(),
+                activity.getThumbnailUrl(),
+                activity.getActivityType() != null ? activity.getActivityType().getLabel() : null,
+                deadline.daysUntilRecruitEnd(),
                 liked
         );
     }

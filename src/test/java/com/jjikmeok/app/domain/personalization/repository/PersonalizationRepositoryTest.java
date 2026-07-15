@@ -59,6 +59,24 @@ class PersonalizationRepositoryTest {
     }
 
     @Test
+    void preferenceTagIdQueries_useDatabaseIdOrderAndExcludeOtherTagTypes() {
+        User user = entityManager.persist(User.createForSignup("vector-order@example.com", "password"));
+        UserOnboarding onboarding = entityManager.persist(UserOnboarding.create(user));
+        entityManager.persist(Tag.create("culture", TagType.TOPIC_CATEGORY));
+        Tag healing = entityManager.persist(Tag.create("healing", TagType.PREFERENCE_TAG));
+        Tag calm = entityManager.persist(Tag.create("calm", TagType.PREFERENCE_TAG));
+        entityManager.persist(UserOnboardingTag.create(onboarding, calm));
+        entityManager.persist(UserOnboardingTag.create(onboarding, healing));
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(personalizationRepository.findPreferenceTagIdsOrderById())
+                .containsExactly(healing.getId(), calm.getId());
+        assertThat(personalizationRepository.findPreferenceTagIdsByUserId(user.getId()))
+                .containsExactly(healing.getId(), calm.getId());
+    }
+
+    @Test
     void findRecommendedActivitiesByUserId_returnsProjectionWithoutNativeSqlError() {
         User user = entityManager.persist(User.createForSignup("recommended@example.com", "password"));
         UserOnboarding onboarding = entityManager.persist(UserOnboarding.create(user));
@@ -87,6 +105,8 @@ class PersonalizationRepositoryTest {
         assertThat(recommendation.getActivityId()).isEqualTo(activity.getId());
         assertThat(recommendation.getTitle()).isEqualTo("Recommended");
         assertThat(recommendation.getActivityFavoriteId()).isEqualTo(favorite.getId());
+        assertThat(recommendation.getTagId()).isEqualTo(healing.getId());
+        assertThat(recommendation.getTagType()).isEqualTo(TagType.PREFERENCE_TAG.name());
         assertThat(recommendations)
                 .extracting(ActivityRecommendationProjection::getTagName)
                 .containsExactly("healing", "rest");

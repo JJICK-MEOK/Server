@@ -11,6 +11,33 @@ import java.util.List;
 public interface PersonalizationRepository extends JpaRepository<UserOnboardingTag, Long> {
     @Query(
             value = """
+                    SELECT t.id
+                    FROM tags t
+                    WHERE t.type = 'PREFERENCE_TAG'
+                    ORDER BY t.id ASC
+                    """,
+            nativeQuery = true
+    )
+    List<Long> findPreferenceTagIdsOrderById();
+
+    @Query(
+            value = """
+                    SELECT DISTINCT t.id
+                    FROM user_onboardings uo
+                    JOIN user_onboarding_tags uot
+                        ON uot.user_onboarding_id = uo.id
+                    JOIN tags t
+                        ON t.id = uot.tag_id
+                    WHERE uo.user_id = :userId
+                      AND t.type = 'PREFERENCE_TAG'
+                    ORDER BY t.id ASC
+                    """,
+            nativeQuery = true
+    )
+    List<Long> findPreferenceTagIdsByUserId(@Param("userId") Long userId);
+
+    @Query(
+            value = """
                     SELECT t.name
                     FROM user_onboardings uo
                     JOIN user_onboarding_tags uot
@@ -73,6 +100,8 @@ public interface PersonalizationRepository extends JpaRepository<UserOnboardingT
                 a.thumbnail_url AS thumbnailUrl,
                 a.recruit_end_at AS recruitEndAt,
                 af.id AS activityFavoriteId,
+                tag.id AS tagId,
+                tag.type AS tagType,
                 tag.name AS tagName
             FROM onboarding_tag_scores ots
             JOIN activities a

@@ -57,7 +57,7 @@ public class PersonlizationController {
 
     @Operation(
             summary = "개인화 추천 활동 조회",
-            description = "로그인한 사용자의 온보딩 태그 기준으로 활동을 추천합니다. 온보딩 태그 매칭 수, 태그명 매칭 수, 좋아요 수 순서로 내림차순 정렬하며 활동 ID, 제목, 썸네일 URL, 모집 마감일, 찜 ID, 개인화 추천 점수, 태그명 목록을 반환합니다."
+            description = "로그인한 사용자의 온보딩 태그 기준으로 활동을 추천합니다. DB의 취향 태그 ID 오름차순으로 사용자와 활동의 int[] 벡터를 만들고 코사인 유사도로 개인화 점수를 계산합니다. 활동 ID, 제목, 썸네일 URL, 모집 마감일, 찜 ID, 개인화 추천 점수, 태그명 목록을 반환합니다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

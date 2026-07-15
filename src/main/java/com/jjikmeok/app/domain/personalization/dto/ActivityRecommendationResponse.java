@@ -22,7 +22,7 @@ public record ActivityRecommendationResponse(
         @Schema(description = "로그인한 사용자의 해당 활동 찜 ID. 찜하지 않았으면 null", example = "10", nullable = true)
         Long activityFavoriteId,
 
-        @Schema(description = "사용자 선호 벡터와 활동 선호 벡터의 코사인 유사도를 0~100점으로 변환한 개인화 추천 점수. 사용자 또는 활동 벡터가 없으면 null", example = "90", nullable = true)
+        @Schema(description = "DB의 취향 태그 ID 오름차순으로 만든 사용자/활동 int[] 벡터의 코사인 유사도를 0~100점으로 변환한 값. 사용자 또는 활동에 취향 태그가 없으면 null", example = "90", nullable = true)
         Integer personalizationScore,
 
         @ArraySchema(

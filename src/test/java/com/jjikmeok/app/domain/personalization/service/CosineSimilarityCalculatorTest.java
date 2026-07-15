@@ -7,6 +7,29 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CosineSimilarityCalculatorTest {
 
     @Test
+    void scoreCalculatesCosineSimilarityForIntVectors() {
+        assertThat(CosineSimilarityCalculator.score(
+                new int[]{1, 1, 0, 0},
+                new int[]{1, 1, 0, 0}
+        )).isEqualTo(100);
+        assertThat(CosineSimilarityCalculator.score(
+                new int[]{1, 1, 0, 0},
+                new int[]{1, 0, 1, 0}
+        )).isEqualTo(50);
+        assertThat(CosineSimilarityCalculator.score(
+                new int[]{1, 0},
+                new int[]{0, 1}
+        )).isZero();
+    }
+
+    @Test
+    void scoreRejectsInvalidIntVectors() {
+        assertThat(CosineSimilarityCalculator.score(new int[]{0, 0}, new int[]{1, 0})).isNull();
+        assertThat(CosineSimilarityCalculator.score(new int[0], new int[0])).isNull();
+        assertThat(CosineSimilarityCalculator.score(new int[]{1}, new int[]{1, 0})).isNull();
+    }
+
+    @Test
     void scoreCalculatesAndClampsCosineSimilarity() {
         assertThat(CosineSimilarityCalculator.score(vector(1, 0), vector(1, 0))).isEqualTo(100);
         assertThat(CosineSimilarityCalculator.score(vector(1, 0), vector(0, 1))).isZero();

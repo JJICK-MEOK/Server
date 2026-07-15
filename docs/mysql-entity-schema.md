@@ -9,6 +9,7 @@
 - 개인화 벡터 엔티티 공통 컬럼: `created_at DATETIME(6) NOT NULL`, `updated_at DATETIME(6) NOT NULL` (`BaseTimeEntity`).
 - enum 매핑: JPA `EnumType.STRING`, DB는 대부분 `VARCHAR`. DB `CHECK`는 `source_type` 일부만 강제.
 - 벡터 매핑: pgvector 없음. `embedding JSON NOT NULL`, Java `float[]`, `FloatArrayJsonConverter`가 14차원/null/NaN/Infinity 검증.
+- 개인화 활동 추천 API는 위 저장 벡터를 사용하지 않는다. `PREFERENCE_TAG`를 `tags.id ASC`로 정렬해 요청 시 사용자/활동 `int[]` 이진 벡터를 만들고 Java에서 코사인 유사도를 계산한다. 기존 벡터 테이블은 레거시 호환용이다.
 
 ## Entity/Table Map
 

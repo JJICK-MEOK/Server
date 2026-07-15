@@ -14,5 +14,9 @@ public interface ActivityRecommendationProjection {
 
     Long getActivityFavoriteId();
 
+    Long getTagId();
+
     String getTagName();
+
+    String getTagType();
 }

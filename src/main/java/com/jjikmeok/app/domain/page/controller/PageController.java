@@ -89,9 +89,13 @@ public class PageController {
     public ApiResponse<ActivityCurationDetailPageResponse> getHomeCurationDetailPage(
             @AuthenticationPrincipal Long userId,
             @Parameter(description = "큐레이션 키", example = "SOLO_CULTURE")
-            @PathVariable String curationKey
+            @PathVariable String curationKey,
+            @Parameter(description = "페이지 번호", example = "0")
+            @RequestParam(value = "page", required = false, defaultValue = "0") Integer page,
+            @Parameter(description = "페이지 크기", example = "20")
+            @RequestParam(value = "limit", required = false, defaultValue = "20") Integer limit
     ) {
         return ApiResponse.success("홈 큐레이션 상세 조회 성공",
-                pageService.getHomeCurationDetailPage(userId, curationKey));
+                pageService.getHomeCurationDetailPage(userId, curationKey, page, limit));
     }
 }

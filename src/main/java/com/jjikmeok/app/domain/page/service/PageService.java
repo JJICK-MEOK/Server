@@ -27,6 +27,6 @@ public interface PageService {
 
     ActivityDetailPageResponse getDetailPage(Long userId, Long activityId);
 
-    ActivityCurationDetailPageResponse getHomeCurationDetailPage(Long userId, String curationKey);
+    ActivityCurationDetailPageResponse getHomeCurationDetailPage(Long userId, String curationKey, Integer page, Integer limit);
 }
 

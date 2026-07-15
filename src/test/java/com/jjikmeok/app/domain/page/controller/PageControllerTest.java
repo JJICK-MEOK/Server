@@ -18,6 +18,8 @@ import com.jjikmeok.app.domain.page.dto.response.ActivityHomeActivityCardRespons
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomeActivitySectionResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomeCurationCardResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomeCurationSectionResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityHomePopularActivityCardResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityHomePopularActivitySectionResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomePageResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivitySectionResponse;
 import com.jjikmeok.app.domain.page.dto.response.ImageItemResponse;
@@ -78,6 +80,7 @@ class PageControllerTest {
                 .andExpect(jsonPath("$.data.featured.activities[0].hashtags.length()").value(2))
                 .andExpect(jsonPath("$.data.popular.activities.length()").value(9))
                 .andExpect(jsonPath("$.data.popular.activities[0].thumbnailUrl").value("https://example.com/thumb.png"))
+                .andExpect(jsonPath("$.data.popular.activities[0].hashtags").doesNotExist())
                 .andExpect(jsonPath("$.data.expandedRecommendation.activities.length()").value(8));
 
         verify(pageService).getHomePage(null);
@@ -140,15 +143,21 @@ class PageControllerTest {
 
     @Test
     void getHomeCurationDetailPage_returnsThemeDetails() throws Exception {
-        when(pageService.getHomeCurationDetailPage(null, "SOLO_CULTURE")).thenReturn(homeCurationDetailResponse());
+        when(pageService.getHomeCurationDetailPage(null, "SOLO_CULTURE", 0, 20)).thenReturn(homeCurationDetailResponse());
 
-        mockMvc.perform(get("/api/v1/pages/home/curations/{curationKey}", "SOLO_CULTURE"))
+        mockMvc.perform(get("/api/v1/pages/home/curations/{curationKey}", "SOLO_CULTURE")
+                        .param("page", "0")
+                        .param("limit", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.title").value(HomeCurationType.SOLO_CULTURE.getTitle()))
                 .andExpect(jsonPath("$.data.activities[0].title").value("서울 도예 원데이 클래스"))
-                .andExpect(jsonPath("$.data.activities[0].hashtags.length()").value(2));
+                .andExpect(jsonPath("$.data.activities[0].hashtags.length()").value(2))
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.limit").value(20))
+                .andExpect(jsonPath("$.data.hasNext").value(true))
+                .andExpect(jsonPath("$.data.nextPage").value(1));
 
-        verify(pageService).getHomeCurationDetailPage(null, "SOLO_CULTURE");
+        verify(pageService).getHomeCurationDetailPage(null, "SOLO_CULTURE", 0, 20);
     }
 
     private ActivityHomePageResponse homePageResponse() {
@@ -176,9 +185,16 @@ class PageControllerTest {
                                 List.of("#힐링", "#휴식")
                         )
                 )),
-                new ActivityHomeActivitySectionResponse(List.of(
-                        homeActivityCard(), homeActivityCard(), homeActivityCard(), homeActivityCard(), homeActivityCard(),
-                        homeActivityCard(), homeActivityCard(), homeActivityCard(), homeActivityCard()
+                new ActivityHomePopularActivitySectionResponse(List.of(
+                        new ActivityHomePopularActivityCardResponse(1L, "서울 도예 원데이 클래스", "https://example.com/thumb.png", "프로그램", 3, false),
+                        new ActivityHomePopularActivityCardResponse(1L, "서울 도예 원데이 클래스", "https://example.com/thumb.png", "프로그램", 3, false),
+                        new ActivityHomePopularActivityCardResponse(1L, "서울 도예 원데이 클래스", "https://example.com/thumb.png", "프로그램", 3, false),
+                        new ActivityHomePopularActivityCardResponse(1L, "서울 도예 원데이 클래스", "https://example.com/thumb.png", "프로그램", 3, false),
+                        new ActivityHomePopularActivityCardResponse(1L, "서울 도예 원데이 클래스", "https://example.com/thumb.png", "프로그램", 3, false),
+                        new ActivityHomePopularActivityCardResponse(1L, "서울 도예 원데이 클래스", "https://example.com/thumb.png", "프로그램", 3, false),
+                        new ActivityHomePopularActivityCardResponse(1L, "서울 도예 원데이 클래스", "https://example.com/thumb.png", "프로그램", 3, false),
+                        new ActivityHomePopularActivityCardResponse(1L, "서울 도예 원데이 클래스", "https://example.com/thumb.png", "프로그램", 3, false),
+                        new ActivityHomePopularActivityCardResponse(1L, "서울 도예 원데이 클래스", "https://example.com/thumb.png", "프로그램", 3, false)
                 )),
                 new ActivityHomeActivitySectionResponse(List.of(
                         homeActivityCard(), homeActivityCard(), homeActivityCard(), homeActivityCard(),
@@ -276,7 +292,11 @@ class PageControllerTest {
                 HomeCurationType.SOLO_CULTURE.getTitle(),
                 "혼자서도 부담 없이 즐길 수 있는 활동을 모아봤어요",
                 List.of("#감성적", "#소규모"),
-                List.of(homeActivityCard())
+                List.of(homeActivityCard()),
+                0,
+                20,
+                true,
+                1
         );
     }
 

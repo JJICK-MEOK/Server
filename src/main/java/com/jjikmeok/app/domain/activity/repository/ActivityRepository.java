@@ -268,6 +268,37 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             @Param("now") LocalDateTime now);
 
     @Query("""
+            SELECT a.id
+            FROM ActivityTag at
+            JOIN at.activity a
+            WHERE at.tag.id IN :tagIds
+              AND a.isActive = true
+              AND a.approvalStatus = :approvalStatus
+              AND (a.recruitEndAt IS NULL OR a.recruitEndAt >= :now)
+            GROUP BY a.id, a.createdAt
+            ORDER BY COUNT(DISTINCT at.tag.id) DESC, a.createdAt DESC
+            """)
+    List<Long> findActiveActivityIdsByTagIds(
+            @Param("tagIds") List<Long> tagIds,
+            @Param("approvalStatus") ApprovalStatus approvalStatus,
+            @Param("now") LocalDateTime now,
+            Pageable pageable);
+
+    @Query("""
+            SELECT COUNT(DISTINCT a.id)
+            FROM ActivityTag at
+            JOIN at.activity a
+            WHERE at.tag.id IN :tagIds
+              AND a.isActive = true
+              AND a.approvalStatus = :approvalStatus
+              AND (a.recruitEndAt IS NULL OR a.recruitEndAt >= :now)
+            """)
+    long countActiveActivityIdsByTagIds(
+            @Param("tagIds") List<Long> tagIds,
+            @Param("approvalStatus") ApprovalStatus approvalStatus,
+            @Param("now") LocalDateTime now);
+
+    @Query("""
             SELECT new com.jjikmeok.app.domain.activity.dto.response.ActivityRecommendationCandidateResponse(
                 a.id,
                 CASE WHEN COUNT(f.id) > 0 THEN true ELSE false END

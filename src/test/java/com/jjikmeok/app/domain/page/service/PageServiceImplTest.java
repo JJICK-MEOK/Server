@@ -15,6 +15,8 @@ import com.jjikmeok.app.domain.page.dto.response.ActivityHomeActivityCardRespons
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomeActivitySectionResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomeCurationCardResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityHomeCurationSectionResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityHomePopularActivityCardResponse;
+import com.jjikmeok.app.domain.page.dto.response.ActivityHomePopularActivitySectionResponse;
 import com.jjikmeok.app.domain.page.dto.response.ActivityCustomPageResponse;
 import com.jjikmeok.app.domain.page.model.HomeCurationType;
 import com.jjikmeok.app.domain.tag.entity.Tag;
@@ -93,13 +95,6 @@ class PageServiceImplTest {
     void getHomePage_buildsSectionedResponse() {
         when(userProfileRepository.findByUserId(1L)).thenReturn(Optional.of(userProfile()));
         when(userOnboardingTagRepository.findAllByUserIdWithTag(1L)).thenReturn(onboardingTags());
-        when(tagRepository.findByNameAndType(anyString(), eq(TagType.PREFERENCE_TAG)))
-                .thenReturn(Optional.of(tag(999L, "dummy")));
-        when(activityRepository.findActiveActivitiesByTagIds(
-                anyList(),
-                eq(ApprovalStatus.APPROVED),
-                any(LocalDateTime.class)
-        )).thenReturn(List.of(activity(1L, ActivityCategory.CULTURE, 120, 20)));
         List<ActivityRecommendationResponse> recommended = recommendedActivities();
         List<Activity> popular = popularActivities();
         List<Activity> expanded = expandedActivities();
@@ -156,9 +151,10 @@ class PageServiceImplTest {
         assertThat(response.featured().activities().getFirst().title())
                 .isEqualTo(HomeCurationType.SOLO_CULTURE.getTitle());
         assertThat(response.featured().activities().getFirst().thumbnailUrl())
-                .isEqualTo("https://example.com/thumb-1.png");
+                .isEqualTo(HomeCurationType.SOLO_CULTURE.getThumbnailUrl());
         assertThat(response.featured().activities().getFirst().hashtags()).hasSize(2);
         assertThat(response.popular().activities()).hasSize(9);
+        assertThat(response.popular().activities().getFirst().thumbnailUrl()).isEqualTo("https://example.com/thumb-11.png");
         assertThat(response.expandedRecommendation().activities()).hasSize(8);
         assertThat(response.expandedRecommendation().activities())
                 .allSatisfy(card -> assertThat(card.hashtags()).hasSize(2));
@@ -194,8 +190,15 @@ class PageServiceImplTest {
     }
 
     @Test
-    void getHomeCurationDetailPage_returnsThemeCards() {
-        Activity activity = activity(1L, ActivityCategory.CULTURE, 100, 10);
+    void getHomeCurationDetailPage_returnsPagedThemeCards() {
+        List<Activity> activities = List.of(
+                activity(1L, ActivityCategory.CULTURE, 100, 10),
+                activity(2L, ActivityCategory.CULTURE, 99, 9),
+                activity(3L, ActivityCategory.CULTURE, 98, 8),
+                activity(4L, ActivityCategory.CULTURE, 97, 7),
+                activity(5L, ActivityCategory.CULTURE, 96, 6),
+                activity(6L, ActivityCategory.CULTURE, 95, 5)
+        );
         when(tagRepository.findByNameAndType("#감성적", TagType.PREFERENCE_TAG))
                 .thenReturn(Optional.of(tag(1L, "#감성적")));
         when(tagRepository.findByNameAndType("#소규모", TagType.PREFERENCE_TAG))
@@ -206,20 +209,45 @@ class PageServiceImplTest {
                 .thenReturn(Optional.of(tag(4L, "#휴식")));
         when(tagRepository.findByNameAndType("#가볍게", TagType.PREFERENCE_TAG))
                 .thenReturn(Optional.of(tag(5L, "#가볍게")));
-        when(activityRepository.findActiveActivitiesByTagIds(
+        when(activityRepository.findActiveActivityIdsByTagIds(
+                anyList(),
+                eq(ApprovalStatus.APPROVED),
+                any(LocalDateTime.class),
+                any(Pageable.class)
+        )).thenAnswer(invocation -> {
+            Pageable pageable = invocation.getArgument(3);
+            List<Long> ids = activities.stream()
+                    .map(Activity::getId)
+                    .toList();
+            int fromIndex = (int) pageable.getOffset();
+            int toIndex = Math.min(fromIndex + pageable.getPageSize(), ids.size());
+            return ids.subList(fromIndex, toIndex);
+        });
+        when(activityRepository.countActiveActivityIdsByTagIds(
                 anyList(),
                 eq(ApprovalStatus.APPROVED),
                 any(LocalDateTime.class)
-        )).thenReturn(List.of(activity));
+        )).thenReturn((long) activities.size());
         when(favoriteRepository.findActivityIdsByUserIdAndActivityIdIn(eq(1L), anyList()))
                 .thenReturn(List.of());
-        stubSummaryAssociations(List.of(activity));
+        stubSummaryAssociations(activities);
 
-        var response = pageService.getHomeCurationDetailPage(1L, HomeCurationType.SOLO_CULTURE.getKey());
+        var firstPage = pageService.getHomeCurationDetailPage(1L, HomeCurationType.SOLO_CULTURE.getKey(), 0, 5);
+        var secondPage = pageService.getHomeCurationDetailPage(1L, HomeCurationType.SOLO_CULTURE.getKey(), 1, 5);
 
-        assertThat(response.title()).isEqualTo(HomeCurationType.SOLO_CULTURE.getTitle());
-        assertThat(response.activities()).hasSize(1);
-        assertThat(response.activities().getFirst().hashtags()).hasSize(2);
+        assertThat(firstPage.title()).isEqualTo(HomeCurationType.SOLO_CULTURE.getTitle());
+        assertThat(firstPage.page()).isEqualTo(0);
+        assertThat(firstPage.limit()).isEqualTo(5);
+        assertThat(firstPage.activities()).hasSize(5);
+        assertThat(firstPage.hasNext()).isTrue();
+        assertThat(firstPage.nextPage()).isEqualTo(1);
+        assertThat(firstPage.activities().getFirst().hashtags()).hasSize(2);
+
+        assertThat(secondPage.page()).isEqualTo(1);
+        assertThat(secondPage.limit()).isEqualTo(5);
+        assertThat(secondPage.activities()).hasSize(1);
+        assertThat(secondPage.hasNext()).isFalse();
+        assertThat(secondPage.nextPage()).isNull();
     }
 
     private UserProfile userProfile() {

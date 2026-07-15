@@ -6,6 +6,10 @@ public record ActivityCurationDetailPageResponse(
         String title,
         String subtitle,
         List<String> hashtags,
-        List<ActivityHomeActivityCardResponse> activities
+        List<ActivityHomeActivityCardResponse> activities,
+        Integer page,
+        Integer limit,
+        Boolean hasNext,
+        Integer nextPage
 ) {
 }

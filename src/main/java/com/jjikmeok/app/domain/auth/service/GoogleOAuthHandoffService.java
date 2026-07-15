@@ -23,15 +23,18 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Transactional(readOnly = true)
 public class GoogleOAuthHandoffService {
 
+    private static final String PLATFORM_WEB = "web";
+    private static final String PLATFORM_APP = "app";
+
     private final GoogleOAuthClient googleOAuthClient;
     private final GoogleOAuthProperties googleOAuthProperties;
     private final OAuthStateStore oAuthStateStore;
     private final SecureTokenGenerator secureTokenGenerator;
     private final OAuthHandoffCommonService oAuthHandoffCommonService;
 
-    public URI createGoogleLoginUri() {
+    public URI createGoogleLoginUri(final String platform) {
         final String state = secureTokenGenerator.generateUrlSafeToken(googleOAuthProperties.getStateTokenBytes());
-        oAuthStateStore.save(state, googleOAuthProperties.getStateTtl());
+        oAuthStateStore.save(state, normalizePlatform(platform), googleOAuthProperties.getStateTtl());
 
         log.debug("구글 OAuth 로그인 URL 생성 완료.");
         return UriComponentsBuilder.fromUriString(googleOAuthProperties.getAuthorizationUri())
@@ -49,7 +52,7 @@ public class GoogleOAuthHandoffService {
 
     @Transactional
     public URI handleGoogleCallback(final String code, final String state, final String error) {
-        validateState(state);
+        final String platform = validateState(state);
         validateCallbackError(error);
         validateCode(code);
 
@@ -64,7 +67,14 @@ public class GoogleOAuthHandoffService {
 
         log.debug("구글 OAuth 콜백 처리 완료. userId={}, newMember={}",
                 userResult.user().getId(), userResult.newMember());
-        return createAppDeepLinkUri(handoffToken);
+        return createRedirectUri(handoffToken, platform);
+    }
+
+    private String normalizePlatform(final String platform) {
+        if (platform != null && PLATFORM_WEB.equalsIgnoreCase(platform.trim())) {
+            return PLATFORM_WEB;
+        }
+        return PLATFORM_APP;
     }
 
     private String createScopeValue() {
@@ -85,11 +95,18 @@ public class GoogleOAuthHandoffService {
         throw new CustomException(ErrorCode.AUTH_GOOGLE_CALLBACK_FAILED);
     }
 
-    private void validateState(final String state) {
-        if (state == null || state.isBlank() || !oAuthStateStore.consume(state)) {
+    private String validateState(final String state) {
+        if (state == null || state.isBlank()) {
             log.warn("구글 OAuth 콜백 실패 - 유효하지 않은 state입니다.");
             throw new CustomException(ErrorCode.AUTH_INVALID_OAUTH_STATE);
         }
+
+        final String platform = oAuthStateStore.consumeAndGet(state);
+        if (platform == null) {
+            log.warn("구글 OAuth 콜백 실패 - 유효하지 않은 state입니다.");
+            throw new CustomException(ErrorCode.AUTH_INVALID_OAUTH_STATE);
+        }
+        return platform;
     }
 
     private void validateCode(final String code) {
@@ -107,8 +124,13 @@ public class GoogleOAuthHandoffService {
         );
     }
 
-    private URI createAppDeepLinkUri(final String handoffToken) {
-        return UriComponentsBuilder.fromUriString(googleOAuthProperties.getAppDeepLinkUri())
+    private URI createRedirectUri(final String handoffToken, final String platform) {
+        String baseUri = googleOAuthProperties.getAppDeepLinkUri();
+        if (PLATFORM_WEB.equals(platform)) {
+            baseUri = googleOAuthProperties.getWebRedirectUri();
+        }
+
+        return UriComponentsBuilder.fromUriString(baseUri)
                 .queryParam("handoffToken", handoffToken)
                 .build()
                 .encode()

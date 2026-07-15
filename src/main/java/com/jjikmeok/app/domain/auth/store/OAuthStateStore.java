@@ -7,7 +7,7 @@ import java.time.Duration;
  */
 public interface OAuthStateStore {
 
-    void save(String state, Duration ttl);
+    void save(String state, String value, Duration ttl);
 
-    boolean consume(String state);
+    String consumeAndGet(String state);
 }

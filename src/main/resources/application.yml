@@ -77,7 +77,8 @@ oauth2:
     authorization-uri: ${KAKAO_AUTHORIZATION_URI:https://kauth.kakao.com/oauth/authorize}
     token-uri: ${KAKAO_TOKEN_URI:https://kauth.kakao.com/oauth/token}
     user-info-uri: ${KAKAO_USERINFO_URI:https://kapi.kakao.com/v2/user/me}
-    app-deep-link-uri: ${KAKAO_APP_DEEPLINK_URI:http://localhost:3000/oauth/kakao/callback}
+    app-deep-link-uri: ${KAKAO_APP_DEEPLINK_URI:jjikmeok://oauth/kakao}
+    web-redirect-uri: ${KAKAO_WEB_REDIRECT_URI:https://jjick-meok.vercel.app/oauth/kakao}
 
   google:
     client-id: ${GOOGLE_CLIENT_ID}
@@ -86,7 +87,8 @@ oauth2:
     authorization-uri: ${GOOGLE_AUTHORIZATION_URI:https://accounts.google.com/o/oauth2/v2/auth}
     token-uri: ${GOOGLE_TOKEN_URI:https://oauth2.googleapis.com/token}
     user-info-uri: ${GOOGLE_USERINFO_URI:https://www.googleapis.com/oauth2/v3/userinfo}
-    app-deep-link-uri: ${GOOGLE_APP_DEEPLINK_URI:http://localhost:3000/oauth/google/callback}
+    app-deep-link-uri: ${GOOGLE_APP_DEEPLINK_URI:jjikmeok://oauth/google}
+    web-redirect-uri: ${GOOGLE_WEB_REDIRECT_URI:https://jjick-meok.vercel.app/oauth/google}
 
   naver:
     client-id: ${NAVER_CLIENT_ID}
@@ -95,7 +97,8 @@ oauth2:
     authorization-uri: ${NAVER_AUTHORIZATION_URI:https://nid.naver.com/oauth2.0/authorize}
     token-uri: ${NAVER_TOKEN_URI:https://nid.naver.com/oauth2.0/token}
     user-info-uri: ${NAVER_USERINFO_URI:https://openapi.naver.com/v1/nid/me}
-    app-deep-link-uri: ${NAVER_APP_DEEPLINK_URI:http://localhost:3000/oauth/naver/callback}
+    app-deep-link-uri: ${NAVER_APP_DEEPLINK_URI:jjikmeok://oauth/naver}
+    web-redirect-uri: ${NAVER_WEB_REDIRECT_URI:https://jjick-meok.vercel.app/oauth/naver}
 
 jwt:
   secret: ${JWT_SECRET_KEY:${JWT_SECRET:}}

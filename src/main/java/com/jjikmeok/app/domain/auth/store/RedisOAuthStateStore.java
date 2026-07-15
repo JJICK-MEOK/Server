@@ -18,13 +18,13 @@ public class RedisOAuthStateStore implements OAuthStateStore {
     private final StringRedisTemplate stringRedisTemplate;
 
     @Override
-    public void save(final String state, final Duration ttl) {
-        stringRedisTemplate.opsForValue().set(generateKey(state), "1", ttl);
+    public void save(final String state, final String value, final Duration ttl) {
+        stringRedisTemplate.opsForValue().set(generateKey(state), value, ttl);
     }
 
     @Override
-    public boolean consume(final String state) {
-        return stringRedisTemplate.opsForValue().getAndDelete(generateKey(state)) != null;
+    public String consumeAndGet(final String state) {
+        return stringRedisTemplate.opsForValue().getAndDelete(generateKey(state));
     }
 
     private String generateKey(final String state) {

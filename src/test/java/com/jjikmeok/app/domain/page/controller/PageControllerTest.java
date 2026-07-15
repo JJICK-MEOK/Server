@@ -151,7 +151,11 @@ class PageControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.title").value(HomeCurationType.SOLO_CULTURE.getTitle()))
                 .andExpect(jsonPath("$.data.activities[0].title").value("서울 도예 원데이 클래스"))
-                .andExpect(jsonPath("$.data.activities[0].hashtags.length()").value(2));
+                .andExpect(jsonPath("$.data.activities[0].hashtags.length()").value(2))
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.limit").value(20))
+                .andExpect(jsonPath("$.data.hasNext").value(true))
+                .andExpect(jsonPath("$.data.nextPage").value(1));
 
         verify(pageService).getHomeCurationDetailPage(null, "SOLO_CULTURE", 0, 20);
     }
@@ -288,7 +292,11 @@ class PageControllerTest {
                 HomeCurationType.SOLO_CULTURE.getTitle(),
                 "혼자서도 부담 없이 즐길 수 있는 활동을 모아봤어요",
                 List.of("#감성적", "#소규모"),
-                List.of(homeActivityCard())
+                List.of(homeActivityCard()),
+                0,
+                20,
+                true,
+                1
         );
     }
 

@@ -223,15 +223,31 @@ class PageServiceImplTest {
             int toIndex = Math.min(fromIndex + pageable.getPageSize(), ids.size());
             return ids.subList(fromIndex, toIndex);
         });
+        when(activityRepository.countActiveActivityIdsByTagIds(
+                anyList(),
+                eq(ApprovalStatus.APPROVED),
+                any(LocalDateTime.class)
+        )).thenReturn((long) activities.size());
         when(favoriteRepository.findActivityIdsByUserIdAndActivityIdIn(eq(1L), anyList()))
                 .thenReturn(List.of());
         stubSummaryAssociations(activities);
 
-        var response = pageService.getHomeCurationDetailPage(1L, HomeCurationType.SOLO_CULTURE.getKey(), 0, 5);
+        var firstPage = pageService.getHomeCurationDetailPage(1L, HomeCurationType.SOLO_CULTURE.getKey(), 0, 5);
+        var secondPage = pageService.getHomeCurationDetailPage(1L, HomeCurationType.SOLO_CULTURE.getKey(), 1, 5);
 
-        assertThat(response.title()).isEqualTo(HomeCurationType.SOLO_CULTURE.getTitle());
-        assertThat(response.activities()).hasSize(5);
-        assertThat(response.activities().getFirst().hashtags()).hasSize(2);
+        assertThat(firstPage.title()).isEqualTo(HomeCurationType.SOLO_CULTURE.getTitle());
+        assertThat(firstPage.page()).isEqualTo(0);
+        assertThat(firstPage.limit()).isEqualTo(5);
+        assertThat(firstPage.activities()).hasSize(5);
+        assertThat(firstPage.hasNext()).isTrue();
+        assertThat(firstPage.nextPage()).isEqualTo(1);
+        assertThat(firstPage.activities().getFirst().hashtags()).hasSize(2);
+
+        assertThat(secondPage.page()).isEqualTo(1);
+        assertThat(secondPage.limit()).isEqualTo(5);
+        assertThat(secondPage.activities()).hasSize(1);
+        assertThat(secondPage.hasNext()).isFalse();
+        assertThat(secondPage.nextPage()).isNull();
     }
 
     private UserProfile userProfile() {

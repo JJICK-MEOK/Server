@@ -285,6 +285,20 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             Pageable pageable);
 
     @Query("""
+            SELECT COUNT(DISTINCT a.id)
+            FROM ActivityTag at
+            JOIN at.activity a
+            WHERE at.tag.id IN :tagIds
+              AND a.isActive = true
+              AND a.approvalStatus = :approvalStatus
+              AND (a.recruitEndAt IS NULL OR a.recruitEndAt >= :now)
+            """)
+    long countActiveActivityIdsByTagIds(
+            @Param("tagIds") List<Long> tagIds,
+            @Param("approvalStatus") ApprovalStatus approvalStatus,
+            @Param("now") LocalDateTime now);
+
+    @Query("""
             SELECT new com.jjikmeok.app.domain.activity.dto.response.ActivityRecommendationCandidateResponse(
                 a.id,
                 CASE WHEN COUNT(f.id) > 0 THEN true ELSE false END

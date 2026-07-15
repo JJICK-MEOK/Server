@@ -201,13 +201,7 @@ public class PageServiceImpl implements PageService {
             throw new CustomException(ErrorCode.ACTIVITY_NOT_FOUND);
         }
 
-        List<ActivityHomeActivityCardResponse> activities = curationActivities(userId, curationType, page, limit);
-        return new ActivityCurationDetailPageResponse(
-                curationType.getTitle(),
-                curationType.getSubtitle(),
-                curationType.getDisplayHashtags(),
-                activities
-        );
+        return curationActivities(userId, curationType, page, limit);
     }
 
     private ActivitySectionResponse section(
@@ -410,29 +404,56 @@ public class PageServiceImpl implements PageService {
                 .count();
     }
 
-    private List<ActivityHomeActivityCardResponse> curationActivities(
+    private ActivityCurationDetailPageResponse curationActivities(
             Long userId,
             HomeCurationType curationType,
             Integer page,
             Integer limit
     ) {
-        List<Long> tagIds = resolveCurationTagIds(curationType);
-        if (tagIds.isEmpty()) {
-            return List.of();
-        }
-
         int size = limit(limit, DEFAULT_CURATION_DETAIL_LIMIT);
         int pageNumber = Math.max(page == null ? 0 : page, 0);
+        List<Long> tagIds = resolveCurationTagIds(curationType);
+        if (tagIds.isEmpty()) {
+            return new ActivityCurationDetailPageResponse(
+                    curationType.getTitle(),
+                    curationType.getSubtitle(),
+                    curationType.getDisplayHashtags(),
+                    List.of(),
+                    pageNumber,
+                    size,
+                    false,
+                    null
+            );
+        }
+
+        LocalDateTime now = LocalDateTime.now(SEOUL);
+        long totalCount = activityRepository.countActiveActivityIdsByTagIds(
+                tagIds,
+                PUBLIC_STATUS,
+                now
+        );
         List<Long> activityIds = activityRepository.findActiveActivityIdsByTagIds(
                 tagIds,
                 PUBLIC_STATUS,
-                LocalDateTime.now(SEOUL),
+                now,
                 PageRequest.of(pageNumber, size)
         );
         List<Activity> activities = activityIds.isEmpty()
                 ? List.of()
                 : activityRepository.findAllByIdInWithSummaryAssociations(activityIds);
-        return homeActivityCardsFromEnriched(userId, orderActivitiesByIds(activities, activityIds), size, 2);
+        boolean hasNext = ((long) (pageNumber + 1) * size) < totalCount;
+        Integer nextPage = hasNext ? pageNumber + 1 : null;
+
+        return new ActivityCurationDetailPageResponse(
+                curationType.getTitle(),
+                curationType.getSubtitle(),
+                curationType.getDisplayHashtags(),
+                homeActivityCardsFromEnriched(userId, orderActivitiesByIds(activities, activityIds), size, 2),
+                pageNumber,
+                size,
+                hasNext,
+                nextPage
+        );
     }
 
     private List<Long> resolveCurationTagIds(HomeCurationType curationType) {

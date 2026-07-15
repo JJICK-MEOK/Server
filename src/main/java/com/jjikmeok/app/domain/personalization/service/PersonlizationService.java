@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 public class PersonlizationService {
 
     private static final int DISPLAY_TAG_LIMIT = 4;
-    private static final int MIN_PERSONALIZATION_SCORE_EXCLUSIVE = 60;
+    private static final int MIN_PERSONALIZATION_SCORE_EXCLUSIVE = 10;
 
     private final PersonalizationRepository personalizationRepository;
     private final UserPreferenceVectorRepository userPreferenceVectorRepository;

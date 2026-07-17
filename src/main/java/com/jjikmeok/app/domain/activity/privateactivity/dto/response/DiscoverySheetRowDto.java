@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public record DiscoverySheetRowDto(
         int rowNumber,
@@ -262,20 +263,30 @@ public record DiscoverySheetRowDto(
         );
     }
 
+    public boolean isPublicApiActivity() {
+        if (keyword == null || keyword.isBlank()) {
+            return false;
+        }
+        try {
+            return SourceType.valueOf(keyword.trim().toUpperCase(Locale.ROOT)).isPublicApiSource();
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
     public List<Object> toSheetRow() {
         List<Object> values = new ArrayList<>();
         values.add(rowNumber);
-        values.add(reviewer);
-        values.add(enumLabel(status == null ? DiscoverySheetStatus.PENDING : status));
         values.add(format(createdAt));
         values.add(format(publishedAt));
-        values.add(keyword);
-        values.add(sourceName);
+        values.add(reviewer);
+        values.add(enumLabel(status == null ? DiscoverySheetStatus.PENDING : status));
+        values.add(enumLabel(category));
+        values.add(enumLabel(activityType));
         values.add(title);
+        values.add(sourceName);
         values.add(sourceUrl);
         values.add(thumbnailUrl);
-        values.add(enumLabel(activityType));
-        values.add(enumLabel(category));
         values.add(format(startAt));
         values.add(format(endAt));
         values.add(format(recruitStartAt));
@@ -292,61 +303,68 @@ public record DiscoverySheetRowDto(
         values.add(enumLabel(purpose));
         values.add(enumLabel(duration));
         values.add(enumLabel(groupSize));
+        values.add(sheetOrigin());
         values.add(confidenceScore);
-        values.add(searchSnippet);
         return values;
     }
 
-    public static DiscoverySheetRowDto fromSheetRow(int rowNumber, List<Object> values) {
+    private String sheetOrigin() {
+        if (isPublicApiActivity()) {
+            return keyword.trim().toUpperCase(Locale.ROOT);
+        }
+        return SourceType.DISCOVERY.name();
+    }
+
+    public static DiscoverySheetRowDto fromSheetRow(int sheetRowNumber, List<Object> values) {
+        Integer number = parseInteger(text(values, 0));
         return new DiscoverySheetRowDto(
-                rowNumber,
-                text(values, 1),
-                parseStatus(text(values, 2)),
-                parseDate(text(values, 3)),
-                parseDate(text(values, 4)),
-                text(values, 5),
-                displayOrganizer(text(values, 6), null, text(values, 7)),
+                number == null ? sheetRowNumber : number,
+                text(values, 3),
+                parseStatus(text(values, 4)),
+                parseDate(text(values, 1)),
+                parseDate(text(values, 2)),
+                text(values, 27),
+                displayOrganizer(text(values, 8), null, text(values, 7)),
                 text(values, 7),
-                text(values, 8),
                 text(values, 9),
-                parseEnum(text(values, 10), ActivityType.class),
-                parseActivityCategory(text(values, 11)),
+                text(values, 10),
+                parseEnum(text(values, 6), ActivityType.class),
+                parseActivityCategory(text(values, 5)),
+                parseDate(text(values, 11)),
                 parseDate(text(values, 12)),
                 parseDate(text(values, 13)),
                 parseDate(text(values, 14)),
-                parseDate(text(values, 15)),
-                text(values, 16),
-                parseInteger(text(values, 17)),
+                text(values, 15),
+                parseInteger(text(values, 16)),
+                text(values, 17),
                 text(values, 18),
+                text(values, 8),
                 text(values, 19),
-                text(values, 6),
                 text(values, 20),
-                text(values, 21),
+                parseEnum(text(values, 21), DiscoveryMood.class),
                 parseEnum(text(values, 22), DiscoveryMood.class),
-                parseEnum(text(values, 23), DiscoveryMood.class),
-                parseEnum(text(values, 24), DiscoveryIntensity.class),
-                parseEnum(text(values, 25), DiscoveryPurpose.class),
-                parseEnum(text(values, 26), DiscoveryDuration.class),
-                parseEnum(text(values, 27), DiscoveryGroupSize.class),
+                parseEnum(text(values, 23), DiscoveryIntensity.class),
+                parseEnum(text(values, 24), DiscoveryPurpose.class),
+                parseEnum(text(values, 25), DiscoveryDuration.class),
+                parseEnum(text(values, 26), DiscoveryGroupSize.class),
                 parseDouble(text(values, 28)),
-                text(values, 29)
+                null
         );
     }
 
     public static String[] sheetHeaders() {
         return new String[] {
                 "번호",
-                "검수자",
-                "상태",
                 "수집 일시",
                 "발행 일시",
-                "수집 키워드",
-                "운영처",
+                "검수자",
+                "상태",
+                "주제 카테고리",
+                "활동 분야",
                 "활동명",
+                "운영처",
                 "링크 URL",
                 "썸네일 URL",
-                "활동 분야",
-                "주제 카테고리",
                 "활동 기간 시작",
                 "활동 기간 종료",
                 "모집 기간 시작",
@@ -363,8 +381,8 @@ public record DiscoverySheetRowDto(
                 "목적 태그",
                 "기간 태그",
                 "규모 태그",
-                "신뢰도",
-                "검색 스니펫"
+                "원본",
+                "신뢰도"
         };
     }
 

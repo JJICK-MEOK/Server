@@ -35,11 +35,14 @@ public class GoogleSheetsService {
 
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
     private static final List<String> SCOPES = List.of("https://www.googleapis.com/auth/spreadsheets");
+    private static final String HEADER_RANGE = "A1:AC1";
+    private static final String DATA_RANGE = "A2:AC";
+    private static final int FIRST_DATA_SHEET_ROW = 2;
 
     private final ActivityRegionResolver activityRegionResolver;
     private final RestClient restClient = RestClient.create();
     private final List<DiscoverySheetRowDto> memoryRows = new CopyOnWriteArrayList<>();
-    private final AtomicInteger memorySequence = new AtomicInteger(1);
+    private final AtomicInteger memorySequence = new AtomicInteger();
 
     @Value("${app.discovery.sheets.enabled:false}")
     private boolean enabled;
@@ -112,7 +115,7 @@ public class GoogleSheetsService {
 
     public List<DiscoverySheetRowDto> snapshot() {
         if (useSheet()) {
-            return readRowsFromSheet("A2:AD");
+            return readRowsFromSheet(DATA_RANGE);
         }
         return List.copyOf(memoryRows);
     }
@@ -144,7 +147,7 @@ public class GoogleSheetsService {
             return;
         }
         memoryRows.clear();
-        memorySequence.set(1);
+        memorySequence.set(0);
     }
 
     private DiscoverySheetRowDto appendToMemory(DiscoveryAnalysisDto analysis) {
@@ -163,19 +166,29 @@ public class GoogleSheetsService {
         return row;
     }
 
-    private DiscoverySheetRowDto appendToSheet(DiscoveryAnalysisDto analysis) {
-        int rowNumber = nextRowNumber();
-        DiscoverySheetRowDto row = DiscoverySheetRowDto.from(analysis, rowNumber, LocalDate.now(SEOUL), resolveRegionName(analysis.title(), analysis.address()));
-        putRowValues(rowRange(rowNumber), row.toSheetRow());
+    private synchronized DiscoverySheetRowDto appendToSheet(DiscoveryAnalysisDto analysis) {
+        SheetAppendPosition position = nextSheetAppendPosition();
+        DiscoverySheetRowDto row = DiscoverySheetRowDto.from(
+                analysis,
+                position.itemNumber(),
+                LocalDate.now(SEOUL),
+                resolveRegionName(analysis.title(), analysis.address())
+        );
+        putRowValues(rowRange(position.sheetRowNumber()), row.toSheetRow());
         replaceMemoryRow(row);
         log.info("[시트] 활동을 시트에 저장했습니다. row={}, title={}", row.rowNumber(), row.title());
         return row;
     }
 
-    private DiscoverySheetRowDto appendCandidateToSheet(DiscoveryCandidateDto candidate) {
-        int rowNumber = nextRowNumber();
-        DiscoverySheetRowDto row = DiscoverySheetRowDto.fromCandidate(candidate, rowNumber, LocalDate.now(SEOUL), resolveRegionName(candidate.title(), candidate.address()));
-        putRowValues(rowRange(rowNumber), row.toSheetRow());
+    private synchronized DiscoverySheetRowDto appendCandidateToSheet(DiscoveryCandidateDto candidate) {
+        SheetAppendPosition position = nextSheetAppendPosition();
+        DiscoverySheetRowDto row = DiscoverySheetRowDto.fromCandidate(
+                candidate,
+                position.itemNumber(),
+                LocalDate.now(SEOUL),
+                resolveRegionName(candidate.title(), candidate.address())
+        );
+        putRowValues(rowRange(position.sheetRowNumber()), row.toSheetRow());
         replaceMemoryRow(row);
         log.info("[시트] 후보를 시트에 저장했습니다. row={}, title={}", row.rowNumber(), row.title());
         return row;
@@ -189,10 +202,15 @@ public class GoogleSheetsService {
         return row;
     }
 
-    private DiscoverySheetRowDto appendPublicActivityToSheet(NormalizedActivity activity) {
-        int rowNumber = nextRowNumber();
-        DiscoverySheetRowDto row = DiscoverySheetRowDto.fromPublicActivity(activity, rowNumber, LocalDate.now(SEOUL), resolveRegionName(activity.title(), activity.address()));
-        putRowValues(rowRange(rowNumber), row.toSheetRow());
+    private synchronized DiscoverySheetRowDto appendPublicActivityToSheet(NormalizedActivity activity) {
+        SheetAppendPosition position = nextSheetAppendPosition();
+        DiscoverySheetRowDto row = DiscoverySheetRowDto.fromPublicActivity(
+                activity,
+                position.itemNumber(),
+                LocalDate.now(SEOUL),
+                resolveRegionName(activity.title(), activity.address())
+        );
+        putRowValues(rowRange(position.sheetRowNumber()), row.toSheetRow());
         replaceMemoryRow(row);
         log.info("[공개] 활동을 시트에 추가했습니다. row={}, title={}", row.rowNumber(), row.title());
         return row;
@@ -206,30 +224,24 @@ public class GoogleSheetsService {
         }
 
         List<DiscoverySheetRowDto> rows = new ArrayList<>();
-        int rowNumber = 2;
+        int sheetRowNumber = FIRST_DATA_SHEET_ROW;
         for (JsonNode valueRow : values) {
-            rows.add(DiscoverySheetRowDto.fromSheetRow(rowNumber++, asValueList(valueRow)));
+            if (!isEmptyRow(valueRow)) {
+                rows.add(DiscoverySheetRowDto.fromSheetRow(sheetRowNumber, asValueList(valueRow)));
+            }
+            sheetRowNumber++;
         }
         return rows;
     }
 
     private List<DiscoverySheetRowDto> readReadyRowsFromSheet() {
-        return readRowsFromSheet("A2:AD").stream()
+        return readRowsFromSheet(DATA_RANGE).stream()
                 .filter(row -> row != null && row.status() == DiscoverySheetStatus.READY)
                 .toList();
     }
 
-    private DiscoverySheetRowDto readRowFromSheet(int rowNumber) {
-        JsonNode root = getSheetValues(rowRange(rowNumber));
-        JsonNode values = root == null ? null : root.path("values");
-        if (values != null && values.isArray() && !values.isEmpty()) {
-            return DiscoverySheetRowDto.fromSheetRow(rowNumber, asValueList(values.get(0)));
-        }
-        return null;
-    }
-
     private void writeRowToSheet(DiscoverySheetRowDto row) {
-        putRowValues(rowRange(row.rowNumber()), row.toSheetRow());
+        putRowValues(rowRange(findSheetRowNumber(row.rowNumber())), row.toSheetRow());
     }
 
     private void clearSheetRows() {
@@ -239,7 +251,7 @@ public class GoogleSheetsService {
                             .scheme("https")
                             .host("sheets.googleapis.com")
                             .path("/v4/spreadsheets/{spreadsheetId}/values/{range}:clear")
-                            .build(spreadsheetId, sheetRange("A2:AD")))
+                            .build(spreadsheetId, sheetRange(DATA_RANGE)))
                     .headers(headers -> headers.setBearerAuth(accessToken()))
                     .retrieve()
                     .toBodilessEntity();
@@ -266,7 +278,7 @@ public class GoogleSheetsService {
 
     private void ensureHeaders() {
         try {
-            JsonNode root = getSheetValues("A1:AD1");
+            JsonNode root = getSheetValues(HEADER_RANGE);
             JsonNode values = root == null ? null : root.path("values");
             if (values != null && values.isArray() && !values.isEmpty()) {
                 List<Object> current = asValueList(values.get(0));
@@ -274,7 +286,7 @@ public class GoogleSheetsService {
                     return;
                 }
             }
-            putRowValues("A1:AD1", new ArrayList<>(Arrays.asList(DiscoverySheetRowDto.sheetHeaders())));
+            putRowValues(HEADER_RANGE, new ArrayList<>(Arrays.asList(DiscoverySheetRowDto.sheetHeaders())));
         } catch (Exception e) {
             log.warn("[시트] 헤더 검증에 실패했습니다. reason={}", e.getMessage());
         }
@@ -298,32 +310,55 @@ public class GoogleSheetsService {
         }
     }
 
-    private int nextRowNumber() {
-        if (useSheet()) {
-            return firstEmptySheetRowNumber();
-        }
-        return snapshot().stream()
-                .mapToInt(DiscoverySheetRowDto::rowNumber)
-                .max()
-                .orElse(1) + 1;
-    }
-
-    private int firstEmptySheetRowNumber() {
-        for (int rowNumber = 2; rowNumber <= 2000; rowNumber++) {
-            if (isSheetRowEmpty(rowNumber)) {
-                return rowNumber;
-            }
-        }
-        return 2001;
-    }
-
-    private boolean isSheetRowEmpty(int rowNumber) {
-        JsonNode root = getSheetValues(rowRange(rowNumber));
+    private SheetAppendPosition nextSheetAppendPosition() {
+        JsonNode root = getSheetValues(DATA_RANGE);
         JsonNode values = root == null ? null : root.path("values");
         if (values == null || !values.isArray() || values.isEmpty()) {
-            return true;
+            return new SheetAppendPosition(FIRST_DATA_SHEET_ROW, 1);
         }
-        return isEmptyRow(values.get(0));
+
+        List<List<Object>> rows = new ArrayList<>();
+        values.forEach(valueRow -> rows.add(asValueList(valueRow)));
+        return calculateNextAppendPosition(rows);
+    }
+
+    static SheetAppendPosition calculateNextAppendPosition(List<List<Object>> rows) {
+        int lastDataSheetRow = FIRST_DATA_SHEET_ROW - 1;
+        int lastItemNumber = 0;
+        int nonEmptyRowCount = 0;
+
+        if (rows != null) {
+            for (int index = 0; index < rows.size(); index++) {
+                List<Object> row = rows.get(index);
+                if (isEmptyValues(row)) {
+                    continue;
+                }
+
+                nonEmptyRowCount++;
+                lastDataSheetRow = FIRST_DATA_SHEET_ROW + index;
+                Integer itemNumber = parsePositiveInteger(value(row, 0));
+                if (itemNumber != null) {
+                    lastItemNumber = itemNumber;
+                }
+            }
+        }
+
+        int nextItemNumber = lastItemNumber > 0 ? lastItemNumber + 1 : nonEmptyRowCount + 1;
+        return new SheetAppendPosition(lastDataSheetRow + 1, nextItemNumber);
+    }
+
+    private int findSheetRowNumber(int itemNumber) {
+        JsonNode root = getSheetValues("A2:A");
+        JsonNode values = root == null ? null : root.path("values");
+        if (values != null && values.isArray()) {
+            for (int index = 0; index < values.size(); index++) {
+                Integer currentItemNumber = parsePositiveInteger(text(values.get(index), 0));
+                if (currentItemNumber != null && currentItemNumber == itemNumber) {
+                    return FIRST_DATA_SHEET_ROW + index;
+                }
+            }
+        }
+        throw new IllegalStateException("Google Sheets row not found. number=" + itemNumber);
     }
 
     private void replaceMemoryRow(DiscoverySheetRowDto row) {
@@ -371,26 +406,23 @@ public class GoogleSheetsService {
         return row;
     }
 
-    private DiscoverySheetRowDto appendPublicActivityToSheet(SourceType sourceType, NormalizedActivity activity) {
-        int rowNumber = nextRowNumber();
+    private synchronized DiscoverySheetRowDto appendPublicActivityToSheet(SourceType sourceType, NormalizedActivity activity) {
+        SheetAppendPosition position = nextSheetAppendPosition();
         DiscoverySheetRowDto row = DiscoverySheetRowDto.fromPublicActivity(
                 activity,
-                rowNumber,
+                position.itemNumber(),
                 LocalDate.now(SEOUL),
                 resolveRegionName(activity.title(), activity.address()),
                 sourceType
         );
-        putRowValues(rowRange(rowNumber), row.toSheetRow());
+        putRowValues(rowRange(position.sheetRowNumber()), row.toSheetRow());
         replaceMemoryRow(row);
         log.info("[공공] 공공 활동을 시트에 저장했습니다. row={}, title={}", row.rowNumber(), row.title());
         return row;
     }
 
     private DiscoverySheetRowDto copyPublicRow(DiscoverySheetRowDto existing, NormalizedActivity activity, SourceType sourceType) {
-        String keyword = existing.keyword();
-        if (keyword == null || keyword.isBlank()) {
-            keyword = sourceType == null ? null : sourceType.name();
-        }
+        String keyword = sourceType == null ? existing.keyword() : sourceType.name();
 
         return new DiscoverySheetRowDto(
                 existing.rowNumber(),
@@ -521,7 +553,7 @@ public class GoogleSheetsService {
     }
 
     private String rowRange(int rowNumber) {
-        return "A" + rowNumber + ":AD" + rowNumber;
+        return "A" + rowNumber + ":AC" + rowNumber;
     }
 
     private String sheetRange(String range) {
@@ -560,6 +592,32 @@ public class GoogleSheetsService {
             }
         }
         return true;
+    }
+
+    private static boolean isEmptyValues(List<Object> values) {
+        if (values == null || values.isEmpty()) {
+            return true;
+        }
+        return values.stream().allMatch(value -> value == null || value.toString().isBlank());
+    }
+
+    private static Object value(List<Object> values, int index) {
+        return values == null || index < 0 || index >= values.size() ? null : values.get(index);
+    }
+
+    private static Integer parsePositiveInteger(Object value) {
+        if (value == null || value.toString().isBlank()) {
+            return null;
+        }
+        try {
+            int parsed = Integer.parseInt(value.toString().trim());
+            return parsed > 0 ? parsed : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    record SheetAppendPosition(int sheetRowNumber, int itemNumber) {
     }
 
     private boolean equalsNullable(Object left, Object right) {

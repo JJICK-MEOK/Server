@@ -13,6 +13,10 @@ import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
 import com.jjikmeok.app.domain.region.entity.Region;
 import com.jjikmeok.app.domain.region.enums.RegionDepth;
 import com.jjikmeok.app.domain.region.repository.RegionRepository;
+import com.jjikmeok.app.domain.tag.repository.TagRepository;
+import com.jjikmeok.app.domain.tag.entity.Tag;
+import com.jjikmeok.app.domain.tag.entity.TagGroupType;
+import com.jjikmeok.app.domain.tag.entity.TagType;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,11 +56,14 @@ class ActivityServiceImplTest {
     @Mock
     private ActivityTagAutoAttachService activityTagAutoAttachService;
 
+    @Mock
+    private TagRepository tagRepository;
+
     private ActivityServiceImpl activityService;
 
     @BeforeEach
     void setUp() {
-        activityService = new ActivityServiceImpl(activityRepository, regionRepository, activityTagAutoAttachService);
+        activityService = new ActivityServiceImpl(activityRepository, regionRepository, activityTagAutoAttachService, tagRepository);
     }
 
     @Test
@@ -182,6 +189,40 @@ class ActivityServiceImplTest {
         ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
         verify(activityRepository).save(activityCaptor.capture());
         assertThat(activityCaptor.getValue().getPrice()).isZero();
+    }
+
+    @Test
+    void createActivityWithTags_replacesAutomaticTagsWithSixResolvedTagIds() {
+        Region region = region(10L, "서울", RegionDepth.PROVINCE, null);
+        ActivityRequest request = activityRequest(0);
+        List<Long> tagIds = List.of(1L, 2L, 8L, 12L, 18L, 19L);
+        List<Tag> tags = List.of(
+                tag(1L, "#편안한", TagGroupType.MOOD),
+                tag(2L, "#힐링", TagGroupType.MOOD),
+                tag(8L, "#가볍게", TagGroupType.INTENSITY),
+                tag(12L, "#취미", TagGroupType.PURPOSE),
+                tag(18L, "#1년이상", TagGroupType.DURATION),
+                tag(19L, "#소규모", TagGroupType.SIZE)
+        );
+        when(regionRepository.findById(10L)).thenReturn(Optional.of(region));
+        when(activityRepository.save(any(Activity.class))).thenAnswer(invocation -> {
+            Activity savedActivity = invocation.getArgument(0);
+            setId(savedActivity, 1L);
+            return savedActivity;
+        });
+        when(tagRepository.findAllByIdInAndType(tagIds, TagType.PREFERENCE_TAG)).thenReturn(tags);
+
+        ActivityDetailResponse response = activityService.createActivityWithTags(request, tagIds);
+
+        assertThat(response.tags()).containsExactly(
+                "#편안한", "#힐링", "#가볍게", "#취미", "#1년이상", "#소규모"
+        );
+        ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
+        verify(activityRepository).save(activityCaptor.capture());
+        assertThat(activityCaptor.getValue().getTags())
+                .extracting(activityTag -> activityTag.getTag().getId())
+                .containsExactlyElementsOf(tagIds);
+        verify(activityTagAutoAttachService, never()).refresh(any());
     }
 
     @Test
@@ -399,6 +440,12 @@ class ActivityServiceImplTest {
                 .build();
         setId(region, id);
         return region;
+    }
+
+    private Tag tag(Long id, String name, TagGroupType groupType) {
+        Tag tag = Tag.create(name, TagType.PREFERENCE_TAG, groupType);
+        setId(tag, id);
+        return tag;
     }
 
     private void setId(Object target, Long id) {

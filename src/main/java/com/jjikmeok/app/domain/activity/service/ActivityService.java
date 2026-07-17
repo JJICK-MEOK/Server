@@ -14,6 +14,7 @@ public interface ActivityService {
     List<ActivitySummaryResponse> getRecommendedActivities(Long userId);
     ActivityDetailResponse getActivity(Long activityId);
     ActivityDetailResponse createActivity(ActivityRequest request);
+    ActivityDetailResponse createActivityWithTags(ActivityRequest request, List<Long> tagIds);
     ActivityDetailResponse updateActivity(Long id, ActivityRequest request);
 
     void deleteActivity(Long id);

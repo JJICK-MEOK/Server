@@ -11,6 +11,9 @@ import com.jjikmeok.app.domain.activity.enums.ApprovalStatus;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
 import com.jjikmeok.app.domain.region.entity.Region;
 import com.jjikmeok.app.domain.region.repository.RegionRepository;
+import com.jjikmeok.app.domain.tag.entity.Tag;
+import com.jjikmeok.app.domain.tag.entity.TagType;
+import com.jjikmeok.app.domain.tag.repository.TagRepository;
 import com.jjikmeok.app.global.common.exception.CustomException;
 import com.jjikmeok.app.global.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +27,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +43,7 @@ public class ActivityServiceImpl implements ActivityService {
     private final ActivityRepository activityRepository;
     private final RegionRepository regionRepository;
     private final ActivityTagAutoAttachService activityTagAutoAttachService;
+    private final TagRepository tagRepository;
 
     @Override
     public List<ActivitySummaryResponse> getActivities(Long regionId, ActivityCategory category, ActivityType type, String keyword) {
@@ -98,15 +105,17 @@ public class ActivityServiceImpl implements ActivityService {
     @Override
     @Transactional
     public ActivityDetailResponse createActivity(ActivityRequest request) {
-        validateActivityRequest(request);
-
-        Region region = regionRepository.findById(request.regionId())
-                .orElseThrow(() -> new CustomException(ErrorCode.REGION_NOT_FOUND));
-
-        Activity activity = ActivityConverter.toEntity(request, region);
-        Activity savedActivity = activityRepository.save(activity);
+        Activity savedActivity = createAndSaveActivity(request);
         activityTagAutoAttachService.refresh(savedActivity);
 
+        return ActivityConverter.toDetailResponse(savedActivity);
+    }
+
+    @Override
+    @Transactional
+    public ActivityDetailResponse createActivityWithTags(ActivityRequest request, List<Long> tagIds) {
+        Activity savedActivity = createAndSaveActivity(request);
+        savedActivity.replaceTags(resolvePreferenceTags(tagIds));
         return ActivityConverter.toDetailResponse(savedActivity);
     }
 
@@ -165,6 +174,33 @@ public class ActivityServiceImpl implements ActivityService {
         LinkedHashSet<Long> uniqueTagIds = new LinkedHashSet<>(tagIds);
         uniqueTagIds.remove(null);
         return List.copyOf(uniqueTagIds);
+    }
+
+    private Activity createAndSaveActivity(ActivityRequest request) {
+        validateActivityRequest(request);
+
+        Region region = regionRepository.findById(request.regionId())
+                .orElseThrow(() -> new CustomException(ErrorCode.REGION_NOT_FOUND));
+
+        Activity activity = ActivityConverter.toEntity(request, region);
+        return activityRepository.save(activity);
+    }
+
+    private List<Tag> resolvePreferenceTags(List<Long> tagIds) {
+        List<Long> normalizedTagIds = normalizeTagIds(tagIds);
+        if (normalizedTagIds.size() != 6) {
+            throw new IllegalArgumentException("시트 활동은 서로 다른 6개의 태그가 필요합니다.");
+        }
+
+        Map<Long, Tag> tagsById = tagRepository.findAllByIdInAndType(normalizedTagIds, TagType.PREFERENCE_TAG).stream()
+                .collect(Collectors.toMap(Tag::getId, Function.identity()));
+        if (tagsById.size() != normalizedTagIds.size()) {
+            throw new CustomException(ErrorCode.TAG_NOT_FOUND);
+        }
+
+        return normalizedTagIds.stream()
+                .map(tagsById::get)
+                .toList();
     }
 
     private void validateActivityRequest(ActivityRequest request) {

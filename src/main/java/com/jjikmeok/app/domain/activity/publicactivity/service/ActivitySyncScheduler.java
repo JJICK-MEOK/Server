@@ -3,17 +3,19 @@ package com.jjikmeok.app.domain.activity.publicactivity.service;
 import com.jjikmeok.app.domain.activity.enums.SourceType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "app.activity-sync.scheduler.enabled", havingValue = "true", matchIfMissing = false)
 public class ActivitySyncScheduler {
 
     private final ActivitySyncService activitySyncService;
 
-    @Scheduled(cron = "0 0 3 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "${app.activity-sync.scheduler.cron:0 0 3 * * *}", zone = "Asia/Seoul")
     public void syncDailySources() {
         log.info("[ActivitySync] 공공 API 일일 동기화를 시작합니다.");
         long startTime = System.currentTimeMillis();

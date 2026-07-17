@@ -126,6 +126,14 @@ app:
     default-max-pages: ${ACTIVITY_SYNC_DEFAULT_MAX_PAGES:1}
     months-ahead: ${ACTIVITY_SYNC_MONTHS_AHEAD:1}
 
+    scheduler:
+      enabled: ${ACTIVITY_SYNC_SCHEDULER_ENABLED:false}
+      cron: ${ACTIVITY_SYNC_SCHEDULER_CRON:0 0 3 * * *}
+
+    publish:
+      enabled: ${PUBLIC_ACTIVITY_PUBLISH_SCHEDULER_ENABLED:true}
+      fixed-delay-ms: ${PUBLIC_ACTIVITY_PUBLISH_FIXED_DELAY_MS:300000}
+
     kopis:
       base-url: ${KOPIS_BASE_URL:${KOPIS_API_BASE_URL:https://www.kopis.or.kr/openApi/restful/pblprfr}}
       service-key: ${KOPIS_SERVICE_KEY:${KOPIS_API_SERVICE_KEY:}}
@@ -155,6 +163,7 @@ app:
         hl: ${SERPER_HL:ko}
 
     publish:
+      enabled: ${DISCOVERY_PUBLISH_SCHEDULER_ENABLED:true}
       fixed-delay-ms: ${DISCOVERY_PUBLISH_FIXED_DELAY_MS:300000}
 
     sheets:

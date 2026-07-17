@@ -14,6 +14,7 @@ import com.jjikmeok.app.domain.activity.publicactivity.service.ActivityRegionRes
 import com.jjikmeok.app.domain.activity.publicactivity.service.ActivitySyncUtils;
 import com.jjikmeok.app.domain.activity.repository.ActivityRepository;
 import com.jjikmeok.app.domain.activity.service.ActivityService;
+import com.jjikmeok.app.domain.activity.service.SheetActivityTagResolver;
 import com.jjikmeok.app.domain.region.entity.Region;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,17 +41,17 @@ public class PublicActivityPublishService {
     private final ActivityService activityService;
     private final ActivityRegionResolver activityRegionResolver;
     private final ActivitySyncUtils utils;
+    private final SheetActivityTagResolver sheetActivityTagResolver;
 
     @Value("${app.activity-sync.default-region-id:1}")
     private Long defaultRegionId;
 
     public int publishReadyRows() {
         int publishedCount = 0;
-        List<DiscoverySheetRowDto> readyRows = googleSheetsService.findReadyRows();
+        List<DiscoverySheetRowDto> readyRows = googleSheetsService.findReadyRows().stream()
+                .filter(row -> row != null && row.isPublicApiActivity())
+                .toList();
         for (DiscoverySheetRowDto row : readyRows) {
-            if (row == null) {
-                continue;
-            }
             if (process(row)) {
                 publishedCount++;
             }
@@ -78,7 +79,8 @@ public class PublicActivityPublishService {
             SourceType sourceType = resolveSourceType(reviewing);
             Region region = activityRegionResolver.resolve(reviewing.regionName(), reviewing.title(), reviewing.address(), defaultRegionId);
             ActivityRequest request = toActivityRequest(reviewing, region.getId(), sourceType);
-            ActivityDetailResponse response = activityService.createActivity(request);
+            List<Long> tagIds = sheetActivityTagResolver.resolveTagIds(reviewing);
+            ActivityDetailResponse response = activityService.createActivityWithTags(request, tagIds);
             if (response == null) {
                 throw new IllegalStateException("활동 생성 응답이 비어 있습니다.");
             }
@@ -106,8 +108,8 @@ public class PublicActivityPublishService {
         String target = row.target();
         String address = row.address();
         Integer price = row.price() == null ? 0 : row.price();
-        ActivityCategory category = row.category() == null ? ActivityCategory.CULTURE : row.category();
-        ActivityType activityType = row.activityType() == null ? ActivityType.EVENT : row.activityType();
+        ActivityCategory category = requireCategory(row.category());
+        ActivityType activityType = requireActivityType(row.activityType());
         LocalDateTime startAt = atStartOfDay(row.startAt());
         LocalDateTime endAt = atEndOfDay(row.endAt());
         LocalDateTime recruitStartAt = atStartOfDay(row.recruitStartAt());
@@ -137,6 +139,20 @@ public class PublicActivityPublishService {
                 ApprovalStatus.APPROVED,
                 true
         );
+    }
+
+    private ActivityCategory requireCategory(ActivityCategory category) {
+        if (category == null) {
+            throw new IllegalArgumentException("주제 카테고리를 올바르게 입력해야 합니다.");
+        }
+        return category;
+    }
+
+    private ActivityType requireActivityType(ActivityType activityType) {
+        if (activityType == null) {
+            throw new IllegalArgumentException("활동 분야를 올바르게 입력해야 합니다.");
+        }
+        return activityType;
     }
 
     private java.util.Optional<String> findDuplicateReason(DiscoverySheetRowDto row) {

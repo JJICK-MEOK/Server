@@ -6,6 +6,7 @@ import com.jjikmeok.app.domain.activity.enums.ActivityCategory;
 import com.jjikmeok.app.domain.activity.enums.ActivityType;
 import com.jjikmeok.app.domain.activity.enums.SourceType;
 import com.jjikmeok.app.domain.activity.privateactivity.dto.response.DiscoverySheetRowDto;
+import com.jjikmeok.app.domain.activity.privateactivity.enums.DiscoverySheetStatus;
 import com.jjikmeok.app.domain.activity.privateactivity.sheets.GoogleSheetsService;
 import com.jjikmeok.app.domain.activity.publicactivity.service.ActivityRegionResolver;
 import com.jjikmeok.app.domain.activity.publicactivity.service.ActivitySyncUtils;
@@ -26,6 +27,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,16 +46,21 @@ class PublicActivityPublishServiceTest {
         );
         when(sheetsService.findReadyRows()).thenReturn(List.of(
                 row(217, "KOPIS"),
-                row(218, "문화 행사 검색어")
+                row(218, "문화 행사 검색어"),
+                row(219, "EXHIBITION")
         ));
         doThrow(new IllegalStateException("stop after routing check"))
-                .when(sheetsService).updateRow(any());
+                .when(sheetsService).updateRows(any());
 
         service.publishReadyRows();
 
-        ArgumentCaptor<DiscoverySheetRowDto> captor = ArgumentCaptor.forClass(DiscoverySheetRowDto.class);
-        verify(sheetsService).updateRow(captor.capture());
-        assertThat(captor.getValue().rowNumber()).isEqualTo(217);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<DiscoverySheetRowDto>> captor = ArgumentCaptor.forClass(List.class);
+        verify(sheetsService).updateRows(captor.capture());
+        assertThat(captor.getValue()).extracting(DiscoverySheetRowDto::rowNumber)
+                .containsExactly(217, 219);
+        assertThat(captor.getValue()).extracting(DiscoverySheetRowDto::status)
+                .containsOnly(DiscoverySheetStatus.REVIEWING);
     }
 
     @Test
@@ -91,6 +98,8 @@ class PublicActivityPublishServiceTest {
         assertThat(requestCaptor.getValue().activityType()).isEqualTo(ActivityType.EVENT);
         assertThat(requestCaptor.getValue().sourceType()).isEqualTo(SourceType.KOPIS);
         verify(activityService, never()).createActivity(any());
+        verify(sheetsService, times(2)).updateRows(any());
+        verify(sheetsService, never()).updateRow(any());
     }
 
     private DiscoverySheetRowDto row(int number, String origin) {

@@ -11,6 +11,8 @@ import com.jjikmeok.app.domain.activity.privateactivity.enums.DiscoverySheetStat
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -122,5 +124,26 @@ class DiscoverySheetRowDtoTest {
         DiscoverySheetRowDto discovery = DiscoverySheetRowDto.fromSheetRow(300, values);
         assertThat(discovery.isPublicApiActivity()).isFalse();
         assertThat(discovery.toSheetRow().get(27)).isEqualTo("DISCOVERY");
+    }
+
+    @Test
+    void fromSheetRow_parsesActualKoreanDropdownTagLabels() {
+        List<Object> values = new ArrayList<>(Collections.nCopies(29, null));
+        values.set(0, 233);
+        values.set(21, "감성적");
+        values.set(22, "창의적");
+        values.set(23, "입문");
+        values.set(24, "배움");
+        values.set(25, "한달");
+        values.set(26, "소규모");
+
+        DiscoverySheetRowDto row = DiscoverySheetRowDto.fromSheetRow(234, values);
+
+        assertThat(row.moodTag1()).isEqualTo(DiscoveryMood.EMOTIONAL);
+        assertThat(row.moodTag2()).isEqualTo(DiscoveryMood.CREATIVE);
+        assertThat(row.intensity()).isEqualTo(DiscoveryIntensity.BEGINNER);
+        assertThat(row.purpose()).isEqualTo(DiscoveryPurpose.LEARNING);
+        assertThat(row.duration()).isEqualTo(DiscoveryDuration.ONE_MONTH);
+        assertThat(row.groupSize()).isEqualTo(DiscoveryGroupSize.SMALL);
     }
 }

@@ -1,9 +1,13 @@
 package com.jjikmeok.app.domain.activity.privateactivity.sheets;
 
+import com.jjikmeok.app.domain.activity.privateactivity.dto.response.DiscoverySheetRowDto;
+import com.jjikmeok.app.domain.activity.privateactivity.enums.DiscoverySheetStatus;
 import com.jjikmeok.app.domain.activity.publicactivity.service.ActivityRegionResolver;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,5 +47,30 @@ class GoogleSheetsServiceTest {
 
         assertThat(position.sheetRowNumber()).isEqualTo(2);
         assertThat(position.itemNumber()).isEqualTo(1);
+    }
+
+    @Test
+    void updateRows_updatesMultipleRowsTogetherInMemoryMode() {
+        GoogleSheetsService service = new GoogleSheetsService(mock(ActivityRegionResolver.class));
+        DiscoverySheetRowDto first = row(246, "발행대기");
+        DiscoverySheetRowDto second = row(247, "발행대기");
+
+        service.updateRows(List.of(first, second));
+        service.updateRows(List.of(
+                first.withStatus(DiscoverySheetStatus.REVIEWING, null),
+                second.withStatus(DiscoverySheetStatus.REVIEWING, null)
+        ));
+
+        assertThat(service.snapshot()).extracting(DiscoverySheetRowDto::rowNumber)
+                .containsExactly(246, 247);
+        assertThat(service.snapshot()).extracting(DiscoverySheetRowDto::status)
+                .containsOnly(DiscoverySheetStatus.REVIEWING);
+    }
+
+    private DiscoverySheetRowDto row(int number, String status) {
+        List<Object> values = new ArrayList<>(Collections.nCopies(29, null));
+        values.set(0, number);
+        values.set(4, status);
+        return DiscoverySheetRowDto.fromSheetRow(number + 1, values);
     }
 }

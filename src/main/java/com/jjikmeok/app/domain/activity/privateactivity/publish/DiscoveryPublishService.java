@@ -25,6 +25,7 @@ import java.security.MessageDigest;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -45,38 +46,51 @@ public class DiscoveryPublishService {
     private Long defaultRegionId;
 
     public int publishReadyRows() {
-        int publishedCount = 0;
         List<DiscoverySheetRowDto> readyRows = googleSheetsService.findReadyRows().stream()
                 .filter(row -> row != null && !row.isPublicApiActivity())
                 .toList();
-        for (DiscoverySheetRowDto row : readyRows) {
-            if (process(row)) {
+        if (readyRows.isEmpty()) {
+            return 0;
+        }
+
+        List<DiscoverySheetRowDto> reviewingRows = readyRows.stream()
+                .map(row -> row.withStatus(DiscoverySheetStatus.REVIEWING, null))
+                .toList();
+        try {
+            googleSheetsService.updateRows(reviewingRows);
+        } catch (Exception e) {
+            log.warn("[발행] 시트 상태 일괄 변경에 실패했습니다. rows={}, reason={}",
+                    reviewingRows.stream().map(DiscoverySheetRowDto::rowNumber).toList(), e.getMessage(), e);
+            return 0;
+        }
+
+        int publishedCount = 0;
+        List<DiscoverySheetRowDto> completedRows = new ArrayList<>(reviewingRows.size());
+        for (DiscoverySheetRowDto reviewing : reviewingRows) {
+            PublishResult result = process(reviewing);
+            completedRows.add(result.row());
+            if (result.published()) {
                 publishedCount++;
             }
+        }
+
+        try {
+            googleSheetsService.updateRows(completedRows);
+        } catch (Exception e) {
+            log.error("[발행] 최종 시트 상태 일괄 변경에 실패했습니다. rows={}, reason={}",
+                    completedRows.stream().map(DiscoverySheetRowDto::rowNumber).toList(), e.getMessage(), e);
         }
         return publishedCount;
     }
 
-    private boolean process(DiscoverySheetRowDto row) {
-        DiscoverySheetRowDto reviewing = row.withStatus(DiscoverySheetStatus.REVIEWING, null);
-        try {
-            googleSheetsService.updateRow(reviewing);
-        } catch (Exception e) {
-            log.warn("[발행] 시트 상태를 검토 중으로 변경하지 못했습니다. row={}, reason={}", row.rowNumber(), e.getMessage(), e);
-            return false;
-        }
-
+    private PublishResult process(DiscoverySheetRowDto reviewing) {
         try {
             String duplicateReason = deduplicationService.findDuplicateReason(
-                    reviewing.sourceUrl(),
-                    reviewing.title(),
-                    reviewing.organizer()
-            ).orElse(null);
+                    reviewing.sourceUrl(), reviewing.title(), reviewing.organizer()).orElse(null);
 
             if (duplicateReason != null) {
-                googleSheetsService.updateRow(reviewing.withStatus(DiscoverySheetStatus.DUPLICATE, null));
-                log.info("[발행] 중복으로 판단되어 발행하지 않았습니다. row={}, reason={}", row.rowNumber(), duplicateReason);
-                return false;
+                log.info("[발행] 중복으로 판단되어 발행하지 않았습니다. row={}, reason={}", reviewing.rowNumber(), duplicateReason);
+                return new PublishResult(reviewing.withStatus(DiscoverySheetStatus.DUPLICATE, null), false);
             }
 
             Region region = activityRegionResolver.resolve(reviewing.regionName(), reviewing.title(), reviewing.address(), defaultRegionId);
@@ -87,21 +101,18 @@ public class DiscoveryPublishService {
                 throw new IllegalStateException("활동 생성 응답이 비어 있습니다.");
             }
 
-            googleSheetsService.updateRow(reviewing.withStatus(
-                    DiscoverySheetStatus.PUBLISHED,
-                    LocalDate.now(SEOUL)
-            ));
-            log.info("[발행] 활동 발행을 완료했습니다. row={}, activityId={}", row.rowNumber(), response.id());
-            return true;
+            log.info("[발행] 활동 발행을 완료했습니다. row={}, activityId={}", reviewing.rowNumber(), response.id());
+            return new PublishResult(
+                    reviewing.withStatus(DiscoverySheetStatus.PUBLISHED, LocalDate.now(SEOUL)),
+                    true
+            );
         } catch (Exception e) {
-            try {
-                googleSheetsService.updateRow(reviewing.withStatus(DiscoverySheetStatus.ERROR, null));
-            } catch (Exception updateError) {
-                log.error("[발행] 오류 상태 갱신에 실패했습니다. row={}, reason={}", row.rowNumber(), updateError.getMessage(), updateError);
-            }
-            log.warn("[발행] 활동 발행에 실패했습니다. row={}, reason={}", row.rowNumber(), e.getMessage(), e);
-            return false;
+            log.warn("[발행] 활동 발행에 실패했습니다. row={}, reason={}", reviewing.rowNumber(), e.getMessage(), e);
+            return new PublishResult(reviewing.withStatus(DiscoverySheetStatus.ERROR, null), false);
         }
+    }
+
+    private record PublishResult(DiscoverySheetRowDto row, boolean published) {
     }
 
     private ActivityRequest toActivityRequest(DiscoverySheetRowDto row, Long regionId) {

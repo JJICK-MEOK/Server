@@ -24,7 +24,11 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -130,15 +134,30 @@ public class GoogleSheetsService {
     }
 
     public void updateRow(DiscoverySheetRowDto row) {
-        if (row == null) {
+        updateRows(row == null ? List.of() : List.of(row));
+    }
+
+    public void updateRows(List<DiscoverySheetRowDto> rows) {
+        if (rows == null || rows.isEmpty()) {
             return;
         }
 
-        if (useSheet()) {
-            writeRowToSheet(row);
+        Map<Integer, DiscoverySheetRowDto> uniqueRows = new LinkedHashMap<>();
+        for (DiscoverySheetRowDto row : rows) {
+            if (row != null) {
+                uniqueRows.put(row.rowNumber(), row);
+            }
+        }
+        if (uniqueRows.isEmpty()) {
             return;
         }
-        replaceMemoryRow(row);
+
+        List<DiscoverySheetRowDto> normalizedRows = List.copyOf(uniqueRows.values());
+        if (useSheet()) {
+            writeRowsToSheet(normalizedRows);
+            return;
+        }
+        normalizedRows.forEach(this::replaceMemoryRow);
     }
 
     public void clear() {
@@ -240,8 +259,17 @@ public class GoogleSheetsService {
                 .toList();
     }
 
-    private void writeRowToSheet(DiscoverySheetRowDto row) {
-        putRowValues(rowRange(findSheetRowNumber(row.rowNumber())), row.toSheetRow());
+    private void writeRowsToSheet(List<DiscoverySheetRowDto> rows) {
+        Map<Integer, Integer> sheetRowNumbers = findSheetRowNumbers(rows);
+        List<Map<String, Object>> data = new ArrayList<>(rows.size());
+        for (DiscoverySheetRowDto row : rows) {
+            Map<String, Object> valueRange = new LinkedHashMap<>();
+            valueRange.put("range", sheetRange(rowRange(sheetRowNumbers.get(row.rowNumber()))));
+            valueRange.put("majorDimension", "ROWS");
+            valueRange.put("values", List.of(row.toSheetRow()));
+            data.add(valueRange);
+        }
+        putBatchRowValues(data);
     }
 
     private void clearSheetRows() {
@@ -347,18 +375,30 @@ public class GoogleSheetsService {
         return new SheetAppendPosition(lastDataSheetRow + 1, nextItemNumber);
     }
 
-    private int findSheetRowNumber(int itemNumber) {
+    private Map<Integer, Integer> findSheetRowNumbers(List<DiscoverySheetRowDto> rows) {
+        Set<Integer> targetItemNumbers = new LinkedHashSet<>();
+        for (DiscoverySheetRowDto row : rows) {
+            targetItemNumbers.add(row.rowNumber());
+        }
+
+        Map<Integer, Integer> sheetRowNumbers = new LinkedHashMap<>();
         JsonNode root = getSheetValues("A2:A");
         JsonNode values = root == null ? null : root.path("values");
         if (values != null && values.isArray()) {
             for (int index = 0; index < values.size(); index++) {
                 Integer currentItemNumber = parsePositiveInteger(text(values.get(index), 0));
-                if (currentItemNumber != null && currentItemNumber == itemNumber) {
-                    return FIRST_DATA_SHEET_ROW + index;
+                if (currentItemNumber != null && targetItemNumbers.contains(currentItemNumber)) {
+                    sheetRowNumbers.put(currentItemNumber, FIRST_DATA_SHEET_ROW + index);
                 }
             }
         }
-        throw new IllegalStateException("Google Sheets row not found. number=" + itemNumber);
+
+        if (sheetRowNumbers.size() != targetItemNumbers.size()) {
+            Set<Integer> missingItemNumbers = new LinkedHashSet<>(targetItemNumbers);
+            missingItemNumbers.removeAll(sheetRowNumbers.keySet());
+            throw new IllegalStateException("Google Sheets rows not found. numbers=" + missingItemNumbers);
+        }
+        return sheetRowNumbers;
     }
 
     private void replaceMemoryRow(DiscoverySheetRowDto row) {
@@ -614,6 +654,31 @@ public class GoogleSheetsService {
             return parsed > 0 ? parsed : null;
         } catch (NumberFormatException e) {
             return null;
+        }
+    }
+
+    private void putBatchRowValues(List<Map<String, Object>> data) {
+        if (data == null || data.isEmpty()) {
+            return;
+        }
+
+        try {
+            restClient.post()
+                    .uri(builder -> builder
+                            .scheme("https")
+                            .host("sheets.googleapis.com")
+                            .path("/v4/spreadsheets/{spreadsheetId}/values:batchUpdate")
+                            .build(spreadsheetId))
+                    .headers(headers -> headers.setBearerAuth(accessToken()))
+                    .body(Map.of(
+                            "valueInputOption", "RAW",
+                            "data", data
+                    ))
+                    .retrieve()
+                    .toBodilessEntity();
+            log.info("[시트] 행 상태를 일괄 업데이트했습니다. count={}", data.size());
+        } catch (Exception e) {
+            throw new IllegalStateException("Google Sheets batch update failed: " + e.getMessage(), e);
         }
     }
 

@@ -1,0 +1,245 @@
+// 현재 JPA entity 및 src/main/resources/db/migration/mysql/V1__init_mysql_schema.sql 기준
+// BaseEntity의 created_at/updated_at은 애플리케이션 감사(auditing)로 채워지지만 DB 컬럼 자체는 NULL 허용이다.
+
+Table regions {
+  id bigint [pk, increment, note: '지역 PK']
+  created_at datetime(6) [note: '생성 일시 (DB NULL 허용)']
+  updated_at datetime(6) [note: '수정 일시 (DB NULL 허용)']
+  parent_id bigint [note: '상위 지역 FK. 최상위 지역은 NULL']
+  name varchar(50) [not null, note: '지역명']
+  depth varchar(255) [not null, note: 'RegionDepth: PROVINCE, DISTRICT']
+}
+
+Table users {
+  id bigint [pk, increment, note: '사용자 PK']
+  created_at datetime(6) [note: '생성 일시 (DB NULL 허용)']
+  updated_at datetime(6) [note: '수정 일시 (DB NULL 허용)']
+  email varchar(150) [unique, note: '사용자 이메일. NULL 허용']
+  password_hash varchar(200) [note: '일반 로그인 비밀번호 해시. 소셜 로그인은 NULL']
+  auth_provider varchar(20) [not null, note: 'LOCAL, KAKAO, GOOGLE, NAVER']
+  provider_id varchar(50) [note: '소셜 로그인 제공자의 사용자 ID. LOCAL은 NULL']
+  role varchar(20) [not null, note: 'USER, ADMIN. 애플리케이션 생성 기본값 USER']
+  registration_status varchar(30) [not null, note: 'NOT_STARTED, PROFILE_COMPLETED, ONBOARDING_COMPLETED. 애플리케이션 생성 기본값 NOT_STARTED']
+
+  indexes {
+    (auth_provider, provider_id) [unique, name: 'uk_users_provider']
+  }
+}
+
+Table user_profiles {
+  id bigint [pk, increment, note: '사용자 프로필 PK']
+  created_at datetime(6) [note: '생성 일시 (DB NULL 허용)']
+  updated_at datetime(6) [note: '수정 일시 (DB NULL 허용)']
+  user_id bigint [not null, unique, note: '사용자 FK. 사용자당 프로필 1개']
+  nickname varchar(10) [not null, unique, note: '중복 불가 닉네임']
+  birth_date date [not null]
+  gender varchar(20) [not null, note: 'MALE, FEMALE, NONE']
+  status varchar(20) [not null, note: 'STUDENT, WORKER, JOB_SEEKER, FREELANCER, ETC']
+  profile_image_url varchar(500) [note: '프로필 이미지 URL. DB NULL 허용; 현재 애플리케이션 기본값은 빈 문자열']
+  service_terms_agreed boolean [not null]
+  privacy_policy_agreed boolean [not null]
+  marketing_agreed boolean [not null, note: '애플리케이션 생성 기본값 false']
+}
+
+Table user_onboardings {
+  id bigint [pk, increment, note: '사용자 온보딩 PK']
+  created_at datetime(6) [note: '생성 일시 (DB NULL 허용)']
+  updated_at datetime(6) [note: '수정 일시 (DB NULL 허용)']
+  user_id bigint [not null, unique, note: '사용자 FK. 사용자당 온보딩 1개']
+}
+
+Table tags {
+  id bigint [pk, increment, note: '태그 PK']
+  created_at datetime(6) [note: '생성 일시 (DB NULL 허용)']
+  updated_at datetime(6) [note: '수정 일시 (DB NULL 허용)']
+  name varchar(50) [not null, note: '태그명']
+  type varchar(50) [not null, note: 'TOPIC_CATEGORY, PREFERENCE_TAG, ACTIVITY_CATEGORY']
+  tag_group_type varchar(50) [note: 'MOOD, INTENSITY, PURPOSE, DURATION, SIZE']
+
+  indexes {
+    (name, type) [unique, name: 'uk_tags_name_type']
+  }
+}
+
+Table user_onboarding_regions {
+  id bigint [pk, increment, note: '온보딩-지역 매핑 PK']
+  created_at datetime(6) [note: '생성 일시 (DB NULL 허용)']
+  updated_at datetime(6) [note: '수정 일시 (DB NULL 허용)']
+  user_onboarding_id bigint [not null]
+  region_id bigint [not null]
+
+  indexes {
+    (user_onboarding_id, region_id) [unique, name: 'uk_user_onboarding_regions_onboarding_region']
+  }
+}
+
+Table user_onboarding_tags {
+  id bigint [pk, increment, note: '온보딩-태그 매핑 PK']
+  created_at datetime(6) [note: '생성 일시 (DB NULL 허용)']
+  updated_at datetime(6) [note: '수정 일시 (DB NULL 허용)']
+  user_onboarding_id bigint [not null]
+  tag_id bigint [not null]
+
+  indexes {
+    (user_onboarding_id, tag_id) [unique, name: 'uk_user_onboarding_tags_onboarding_tag']
+  }
+}
+
+Table activities {
+  id bigint [pk, increment, note: '활동 PK']
+  created_at datetime(6) [note: '생성 일시 (DB NULL 허용)']
+  updated_at datetime(6) [note: '수정 일시 (DB NULL 허용)']
+  region_id bigint [not null, note: '활동 지역 FK']
+  title text [not null]
+  description text [not null]
+  thumbnail_url text [note: '대표 이미지 URL']
+  source_url text [not null, note: '원본/신청 페이지 URL']
+  address text
+  organizer text
+  contact_info text
+  target text [note: '참여 대상']
+  start_at datetime(6)
+  end_at datetime(6)
+  recruit_start_at datetime(6)
+  recruit_end_at datetime(6)
+  price int [not null, note: '애플리케이션 생성 기본값 0']
+  activity_type varchar(50) [not null, note: 'PROGRAM, ONE_DAY, EVENT, CLUB. 애플리케이션 생성 기본값 EVENT']
+  category varchar(50) [not null, note: 'SPORTS, CULTURE, CRAFT, COOKING, PHOTO_VIDEO, HUMANITIES, TRAVEL, LANGUAGE, VOLUNTEER, CAREER']
+  source_type varchar(50) [not null, note: 'KOPIS, EXHIBITION, SEOUL_CULTURE, SEOUL_RESERVATION, DISCOVERY, URL_MANUAL']
+  external_id text [note: '외부 시스템 활동 ID']
+  approval_status varchar(50) [not null, note: 'PENDING, APPROVED, REJECTED. 애플리케이션 생성 기본값 PENDING']
+  view_count int [not null, note: '애플리케이션 생성 기본값 0']
+  like_count int [not null, note: '애플리케이션 생성 기본값 0']
+  review_count int [not null, note: '애플리케이션 생성 기본값 0']
+  is_active boolean [not null, note: '애플리케이션 생성 기본값 true']
+
+  Note: 'DB CHECK: source_type은 현재 SourceType 6개 값만 허용'
+}
+
+Table activity_tags {
+  id bigint [pk, increment, note: '활동-태그 매핑 PK']
+  created_at datetime(6) [note: '생성 일시 (DB NULL 허용)']
+  updated_at datetime(6) [note: '수정 일시 (DB NULL 허용)']
+  activity_id bigint [not null]
+  tag_id bigint [not null]
+
+  indexes {
+    (activity_id, tag_id) [unique, name: 'uk_activity_tags_activity_tag']
+  }
+}
+
+Table activity_images {
+  id bigint [pk, increment, note: '활동 이미지 PK']
+  created_at datetime(6) [note: '생성 일시 (DB NULL 허용)']
+  updated_at datetime(6) [note: '수정 일시 (DB NULL 허용)']
+  activity_id bigint [not null]
+  image_url varchar(500) [not null]
+  sort_order int [not null, note: '애플리케이션 생성 기본값 0']
+  is_thumbnail boolean [not null, note: '애플리케이션 생성 기본값 false']
+
+  indexes {
+    (activity_id, sort_order) [unique, name: 'uk_activity_images_activity_sort_order']
+  }
+}
+
+Table activity_favorites {
+  id bigint [pk, increment, note: '활동 찜 PK']
+  created_at datetime(6) [note: '생성 일시 (DB NULL 허용)']
+  updated_at datetime(6) [note: '수정 일시 (DB NULL 허용)']
+  user_id bigint [not null]
+  activity_id bigint [not null]
+
+  indexes {
+    (user_id, activity_id) [unique, name: 'uk_activity_favorites_user_activity']
+  }
+}
+
+Table activity_reviews {
+  id bigint [pk, increment, note: '활동 후기 PK']
+  created_at datetime(6) [note: '생성 일시 (DB NULL 허용)']
+  updated_at datetime(6) [note: '수정 일시 (DB NULL 허용)']
+  user_id bigint [not null]
+  activity_id bigint [not null]
+  rating int [not null, note: 'API 검증 범위 1~5; DB CHECK는 없음']
+  reason text
+  like_count int [not null, note: '애플리케이션 생성 기본값 0']
+
+  indexes {
+    (user_id, activity_id) [unique, name: 'uk_activity_reviews_user_activity']
+  }
+}
+
+Table advertisements {
+  id bigint [pk, increment, note: '광고 PK']
+  created_at datetime(6) [note: '생성 일시 (DB NULL 허용)']
+  updated_at datetime(6) [note: '수정 일시 (DB NULL 허용)']
+  title varchar(100) [not null]
+  image_url varchar(500) [not null]
+  redirect_url varchar(500) [not null]
+  position varchar(50) [not null, note: 'ACTIVITY_LIST, MAIN_BANNER']
+  sort_order int [not null, note: '애플리케이션 생성 기본값 0']
+  start_at datetime(6)
+  end_at datetime(6)
+  view_count int [not null, note: '애플리케이션 생성 기본값 0']
+  click_count int [not null, note: '애플리케이션 생성 기본값 0']
+  is_active boolean [not null, note: '애플리케이션 생성 기본값 true']
+}
+
+Table raw_activities {
+  id bigint [pk, increment, note: '외부 수집 원본 활동 PK']
+  created_at datetime(6) [note: '생성 일시 (DB NULL 허용)']
+  updated_at datetime(6) [note: '수정 일시 (DB NULL 허용)']
+  source_type varchar(50) [not null, note: 'KOPIS, EXHIBITION, SEOUL_CULTURE, SEOUL_RESERVATION, DISCOVERY, URL_MANUAL']
+  external_id varchar(100)
+  request_url varchar(1000) [not null]
+  content_type varchar(50) [not null]
+  payload text [not null, note: '수집 원본 응답']
+
+  Note: 'DB CHECK: source_type은 현재 SourceType 6개 값만 허용'
+}
+
+Table activity_preference_vectors {
+  id bigint [pk, increment, note: '활동 취향 벡터 PK']
+  activity_id bigint [not null, unique, note: '활동당 벡터 1개']
+  embedding json [not null, note: '애플리케이션에서 검증하는 14차원 float 배열']
+  vector_version int [not null, note: '현재 애플리케이션 버전 1']
+  created_at datetime(6) [not null]
+  updated_at datetime(6) [not null]
+}
+
+Table user_preference_vectors {
+  id bigint [pk, increment, note: '사용자 취향 벡터 PK']
+  user_id bigint [not null, unique, note: '사용자당 벡터 1개']
+  embedding json [not null, note: '애플리케이션에서 검증하는 14차원 float 배열']
+  vector_version int [not null, note: '현재 애플리케이션 버전 1']
+  created_at datetime(6) [not null]
+  updated_at datetime(6) [not null]
+}
+
+Table tag_preference_vectors {
+  id bigint [pk, increment, note: '태그 취향 벡터 PK']
+  tag_id bigint [not null, unique, note: '태그당 벡터 1개']
+  embedding json [not null, note: '애플리케이션에서 검증하는 14차원 float 배열']
+  vector_version int [not null, note: '현재 애플리케이션 버전 1']
+  created_at datetime(6) [not null]
+  updated_at datetime(6) [not null]
+}
+
+Ref: regions.parent_id > regions.id [delete: set null]
+Ref: user_profiles.user_id > users.id [delete: cascade]
+Ref: user_onboardings.user_id > users.id [delete: cascade]
+Ref: user_onboarding_regions.user_onboarding_id > user_onboardings.id [delete: cascade]
+Ref: user_onboarding_regions.region_id > regions.id [delete: cascade]
+Ref: user_onboarding_tags.user_onboarding_id > user_onboardings.id [delete: cascade]
+Ref: user_onboarding_tags.tag_id > tags.id [delete: cascade]
+Ref: activities.region_id > regions.id
+Ref: activity_tags.activity_id > activities.id [delete: cascade]
+Ref: activity_tags.tag_id > tags.id [delete: cascade]
+Ref: activity_images.activity_id > activities.id [delete: cascade]
+Ref: activity_favorites.user_id > users.id [delete: cascade]
+Ref: activity_favorites.activity_id > activities.id [delete: cascade]
+Ref: activity_reviews.user_id > users.id [delete: cascade]
+Ref: activity_reviews.activity_id > activities.id [delete: cascade]
+Ref: activity_preference_vectors.activity_id > activities.id [delete: cascade]
+Ref: user_preference_vectors.user_id > users.id [delete: cascade]
+Ref: tag_preference_vectors.tag_id > tags.id [delete: cascade]
